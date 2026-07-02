@@ -19,26 +19,27 @@ async function main() {
     });
   }
 
-  const adminPasswordHash = await bcrypt.hash("Admin123!", 10);
+  const SEED_PASSWORD = "12345";
+  const seedPasswordHash = await bcrypt.hash(SEED_PASSWORD, 10);
+
   await prisma.user.upsert({
-    where: { email: "admin@ikstore.dev" },
-    update: {},
+    where: { email: "admin@test.com" },
+    update: { passwordHash: seedPasswordHash },
     create: {
-      email: "admin@ikstore.dev",
-      passwordHash: adminPasswordHash,
-      firstName: "Ik",
+      email: "admin@test.com",
+      passwordHash: seedPasswordHash,
+      firstName: "Super",
       lastName: "Admin",
       role: UserRole.ADMIN,
     },
   });
 
-  const vendorPasswordHash = await bcrypt.hash("Vendor123!", 10);
   const vendorUser = await prisma.user.upsert({
     where: { email: "vendor@ikstore.dev" },
-    update: {},
+    update: { passwordHash: seedPasswordHash },
     create: {
       email: "vendor@ikstore.dev",
-      passwordHash: vendorPasswordHash,
+      passwordHash: seedPasswordHash,
       firstName: "Sample",
       lastName: "Vendor",
       role: UserRole.VENDOR,
@@ -113,18 +114,21 @@ async function main() {
     });
   }
 
-  const buyerPasswordHash = await bcrypt.hash("Buyer123!", 10);
   await prisma.user.upsert({
     where: { email: "buyer@ikstore.dev" },
-    update: {},
+    update: { passwordHash: seedPasswordHash },
     create: {
       email: "buyer@ikstore.dev",
-      passwordHash: buyerPasswordHash,
+      passwordHash: seedPasswordHash,
       firstName: "Sample",
       lastName: "Buyer",
       role: UserRole.BUYER,
     },
   });
+
+  // Older seed runs created this account before the superadmin email changed
+  // to admin@test.com — remove it so there's a single, unambiguous admin.
+  await prisma.user.deleteMany({ where: { email: "admin@ikstore.dev" } });
 
   const SETTINGS_ID = "00000000-0000-4000-8000-000000000001";
   await prisma.appSettings.upsert({
@@ -161,9 +165,9 @@ async function main() {
   }
 
   console.log("Seed complete.");
-  console.log("  admin@ikstore.dev / Admin123!");
-  console.log("  vendor@ikstore.dev / Vendor123!");
-  console.log("  buyer@ikstore.dev / Buyer123!");
+  console.log(`  admin@test.com / ${SEED_PASSWORD}`);
+  console.log(`  vendor@ikstore.dev / ${SEED_PASSWORD}`);
+  console.log(`  buyer@ikstore.dev / ${SEED_PASSWORD}`);
 }
 
 main()

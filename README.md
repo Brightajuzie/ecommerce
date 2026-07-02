@@ -63,9 +63,9 @@ pnpm db:seed           # creates an admin, a sample vendor + 3 products, and a b
 Seeded accounts (password shown next to each):
 | Role   | Email               | Password    |
 |--------|---------------------|-------------|
-| Admin  | admin@ikstore.dev   | Admin123!   |
-| Vendor | vendor@ikstore.dev  | Vendor123!  |
-| Buyer  | buyer@ikstore.dev   | Buyer123!   |
+| Admin  | admin@test.com      | 12345       |
+| Vendor | vendor@ikstore.dev  | 12345       |
+| Buyer  | buyer@ikstore.dev   | 12345       |
 
 ## Running
 
