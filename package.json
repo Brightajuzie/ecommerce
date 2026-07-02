@@ -1,0 +1,19 @@
+{
+  "name": "ikstore",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Multivendor cross-platform e-commerce platform",
+  "scripts": {
+    "dev:api": "pnpm --filter api start:dev",
+    "dev:mobile": "pnpm --filter mobile start",
+    "build:api": "pnpm --filter api build",
+    "test:api": "pnpm --filter api test",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:migrate": "pnpm --filter api prisma migrate dev",
+    "db:seed": "pnpm --filter api prisma db seed"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
