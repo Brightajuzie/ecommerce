@@ -5,6 +5,7 @@ import {
   UserRole,
   VendorOrderStatus,
   VendorStatus,
+  VendorVerificationStatus,
 } from "./enums";
 
 export interface UserDto {
@@ -39,6 +40,8 @@ export interface VendorProfileDto {
   logoUrl: string | null;
   status: VendorStatus;
   commissionRate: number;
+  verificationStatus: VendorVerificationStatus;
+  verifiedAt: string | null;
 }
 
 export interface CategoryDto {

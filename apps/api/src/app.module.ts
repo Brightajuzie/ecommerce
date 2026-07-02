@@ -17,6 +17,7 @@ import { PaymentsModule } from "./payments/payments.module";
 import { SettingsModule } from "./settings/settings.module";
 import { SlidesModule } from "./slides/slides.module";
 import { UploadsModule } from "./uploads/uploads.module";
+import { KycModule } from "./kyc/kyc.module";
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { UploadsModule } from "./uploads/uploads.module";
     SettingsModule,
     SlidesModule,
     UploadsModule,
+    KycModule,
   ],
   controllers: [AppController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

@@ -1,11 +1,8 @@
-export type AuthStackParamList = {
-  Login: undefined;
-  Register: undefined;
-};
-
 export type BuyerStackParamList = {
   BuyerTabs: undefined;
   ProductDetail: { productId: string };
+  Login: { redirectTo?: "Checkout" } | undefined;
+  Register: { redirectTo?: "Checkout" } | undefined;
   Checkout: undefined;
   PaymentWebView: { checkoutUrl: string; orderId: string };
   OrderDetail: { orderId: string };

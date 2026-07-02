@@ -18,6 +18,9 @@ run through Flutterwave and Opay. Built as an MVP scaffold — solid foundations
   auto-format/quality and a 2000px size cap).
 - **Biometric login**: `expo-local-authentication` — after one password login, Face ID/Touch
   ID/fingerprint can unlock the app on return instead of retyping credentials.
+- **Vendor KYC**: Smile ID (`smile-identity-core`) — biometric identity verification (selfie
+  matched against a national ID) for vendor onboarding, reviewed by an admin alongside the
+  existing approval flow.
 
 ## Repo layout
 
@@ -45,6 +48,8 @@ ikstore/
 - Flutterwave and Opay **sandbox/test** API keys, for exercising payments (see below).
 - A free [Cloudinary](https://cloudinary.com) account, for exercising image uploads (logo,
   slides, product photos) — see below.
+- A [Smile ID](https://usesmileid.com) partner account, for exercising vendor identity
+  verification — see below.
 
 ## Setup
 
@@ -126,6 +131,42 @@ home-page banners are managed via `GET/POST/PATCH/DELETE /slides` plus a `PATCH 
 for drag-free up/down reordering. Buyers see the configured colors (buttons, active tabs/chips)
 and slides without needing to be logged in — `/settings` and `/slides` are public reads.
 
+## Guest browsing & cart
+
+Anyone can browse products, view details, and build a cart without an account — `/products`,
+`/categories`, `/settings`, and `/slides` are public reads, and guest cart items live entirely
+client-side (`apps/mobile/src/store/guestCartStore.ts`, persisted the same way the auth session
+is). Sign-in/registration is only required at checkout: tapping "Checkout" on a guest cart routes
+to Login/Register first, and on success the local cart is pushed to the now-authenticated user's
+server-side cart (`syncGuestCartToServer`) before continuing straight to Checkout.
+
+## Vendor identity verification (Smile ID)
+
+Vendors can submit a selfie + government ID number for biometric verification from the "pending
+approval" screen (`POST /kyc/verify`, multipart: selfie file + `idType`/`idNumber`/`country`).
+This uses Smile ID's Biometric KYC job type via their official `smile-identity-core` SDK — the
+real submission protocol (a signed, multi-image ZIP upload to a pre-signed URL) isn't something
+to hand-roll, so the SDK's `WebApi.submit_job` is used directly rather than reimplementing it.
+Set `SMILE_ID_PARTNER_ID`, `SMILE_ID_API_KEY`, `SMILE_ID_ENVIRONMENT` (`sandbox`/`production`) in
+`apps/api/.env` (from your Smile ID partner portal) to exercise it; without them `/kyc/verify`
+returns a clear `502`, same pattern as the other third-party integrations.
+
+The job result arrives asynchronously via `POST /kyc/webhook` (signature-verified using the SDK's
+`Signature.confirm_signature`, the same HMAC scheme Smile ID uses for outbound request signing).
+Verification is **informational, not a hard gate** — admins still approve/reject vendors manually
+via the existing `PATCH /vendors/:id/approve` flow, now with a color-coded verification badge
+(not started / pending / verified / failed) next to each pending application. This keeps a human
+in the loop, since automated KYC can false-negative.
+
+**Before going live**, confirm the webhook payload shape (`job_id`/`job_success` field names and
+nesting) against a real Smile ID sandbox event — their docs site blocks automated fetching, so
+this was built from the SDK's public TypeScript source (`smile-identity-core-js` on GitHub) and a
+web search summary of the job-status response fields, not a live test. The code defensively
+checks a couple of likely field locations, but that's not a substitute for testing against a real
+callback. Selfie capture currently uses the photo library picker (`expo-image-picker`), not a
+live camera prompt — a live-camera capture would be a stronger anti-spoofing measure worth adding
+before production use.
+
 ## Biometric login
 
 Opt in from the Profile tab (any role). It's a saved-session unlock, not a second auth factor
@@ -146,6 +187,8 @@ These are natural next phases, not oversights:
   roles (buyer/vendor/admin) with role-based views in one codebase.
 - **Custom color-wheel picker** — Store Settings uses preset swatches + a hex input rather than
   pulling in a third-party color-wheel component for marginal gain.
+- **Live-camera selfie capture for KYC** — currently a photo library pick; a real camera prompt
+  is a meaningful anti-spoofing improvement worth adding before production use.
 
 ## Architecture notes
 
@@ -158,4 +201,5 @@ These are natural next phases, not oversights:
   (`BUYER`/`VENDOR`/`ADMIN`) via `RolesGuard` + `@Roles()`.
 - **Vendor onboarding**: registering with `role: VENDOR` creates a `VendorProfile` in `PENDING`
   status; an admin must approve it (`PATCH /vendors/:id/approve`) before the vendor can list
-  products. The mobile app shows a "pending approval" screen until then.
+  products. The mobile app shows a "pending approval" screen until then, where the vendor can
+  also submit identity verification (see Vendor identity verification above).

@@ -5,13 +5,19 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { CartItemDto } from "@ikstore/shared";
 import { CartApi } from "../../api/endpoints";
 import { PrimaryButton } from "../../components/PrimaryButton";
+import { useAuthStore } from "../../store/authStore";
+import { useGuestCartStore } from "../../store/guestCartStore";
 import type { BuyerStackParamList } from "../../navigation/types";
 
 export function CartScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<BuyerStackParamList>>();
   const queryClient = useQueryClient();
+  const user = useAuthStore((s) => s.user);
+  const guestItems = useGuestCartStore((s) => s.items);
+  const guestUpdateItem = useGuestCartStore((s) => s.updateItem);
+  const guestRemoveItem = useGuestCartStore((s) => s.removeItem);
 
-  const cartQuery = useQuery({ queryKey: ["cart"], queryFn: CartApi.get });
+  const cartQuery = useQuery({ queryKey: ["cart"], queryFn: CartApi.get, enabled: !!user });
 
   const updateItem = useMutation({
     mutationFn: ({ itemId, quantity }: { itemId: string; quantity: number }) =>
@@ -24,7 +30,23 @@ export function CartScreen() {
     onSuccess: (data) => queryClient.setQueryData(["cart"], data),
   });
 
-  if (cartQuery.isLoading || !cartQuery.data) {
+  const handleUpdate = (item: CartItemDto, quantity: number) => {
+    if (user) {
+      updateItem.mutate({ itemId: item.id, quantity });
+    } else {
+      guestUpdateItem(item.productId, quantity);
+    }
+  };
+
+  const handleRemove = (item: CartItemDto) => {
+    if (user) {
+      removeItem.mutate(item.id);
+    } else {
+      guestRemoveItem(item.productId);
+    }
+  };
+
+  if (user && (cartQuery.isLoading || !cartQuery.data)) {
     return (
       <View style={styles.center}>
         <ActivityIndicator />
@@ -32,7 +54,7 @@ export function CartScreen() {
     );
   }
 
-  const items = cartQuery.data.items;
+  const items = user ? (cartQuery.data?.items ?? []) : guestItems;
   const total = items.reduce((sum, item) => sum + Number(item.priceAtAdd) * item.quantity, 0);
 
   return (
@@ -56,20 +78,15 @@ export function CartScreen() {
               <View style={styles.actionsRow}>
                 <Text
                   style={styles.actionText}
-                  onPress={() =>
-                    updateItem.mutate({ itemId: item.id, quantity: Math.max(1, item.quantity - 1) })
-                  }
+                  onPress={() => handleUpdate(item, Math.max(1, item.quantity - 1))}
                 >
                   −
                 </Text>
                 <Text style={styles.actionQuantity}>{item.quantity}</Text>
-                <Text
-                  style={styles.actionText}
-                  onPress={() => updateItem.mutate({ itemId: item.id, quantity: item.quantity + 1 })}
-                >
+                <Text style={styles.actionText} onPress={() => handleUpdate(item, item.quantity + 1)}>
                   +
                 </Text>
-                <Text style={styles.removeText} onPress={() => removeItem.mutate(item.id)}>
+                <Text style={styles.removeText} onPress={() => handleRemove(item)}>
                   Remove
                 </Text>
               </View>
@@ -83,7 +100,14 @@ export function CartScreen() {
           <Text style={styles.totalText}>
             Total: {items[0].product.currency} {total.toLocaleString()}
           </Text>
-          <PrimaryButton title="Checkout" onPress={() => navigation.navigate("Checkout")} />
+          <PrimaryButton
+            title="Checkout"
+            onPress={() =>
+              user
+                ? navigation.navigate("Checkout")
+                : navigation.navigate("Login", { redirectTo: "Checkout" })
+            }
+          />
         </View>
       )}
     </View>

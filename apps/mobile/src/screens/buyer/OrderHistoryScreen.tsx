@@ -4,11 +4,28 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import type { OrderDto } from "@ikstore/shared";
 import { OrdersApi } from "../../api/endpoints";
+import { PrimaryButton } from "../../components/PrimaryButton";
+import { useAuthStore } from "../../store/authStore";
 import type { BuyerStackParamList } from "../../navigation/types";
 
 export function OrderHistoryScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<BuyerStackParamList>>();
-  const ordersQuery = useQuery({ queryKey: ["orders"], queryFn: OrdersApi.myOrders });
+  const user = useAuthStore((s) => s.user);
+  const ordersQuery = useQuery({
+    queryKey: ["orders"],
+    queryFn: OrdersApi.myOrders,
+    enabled: !!user,
+  });
+
+  if (!user) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>Your orders</Text>
+        <Text style={styles.empty}>Sign in to view your orders.</Text>
+        <PrimaryButton title="Sign in" onPress={() => navigation.navigate("Login")} />
+      </View>
+    );
+  }
 
   if (ordersQuery.isLoading) {
     return (

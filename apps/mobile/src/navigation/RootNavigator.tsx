@@ -2,7 +2,6 @@ import { ActivityIndicator, View } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { UserRole } from "@ikstore/shared";
 import { useAuthStore } from "../store/authStore";
-import { AuthNavigator } from "./AuthNavigator";
 import { BuyerNavigator } from "./BuyerNavigator";
 import { VendorNavigator } from "./VendorNavigator";
 import { AdminNavigator } from "./AdminNavigator";
@@ -24,13 +23,11 @@ export function RootNavigator() {
 
   return (
     <NavigationContainer>
-      {!user ? (
-        <AuthNavigator />
-      ) : biometricEnabled && !isUnlocked ? (
+      {user && biometricEnabled && !isUnlocked ? (
         <LockScreen />
-      ) : user.role === UserRole.VENDOR ? (
+      ) : user?.role === UserRole.VENDOR ? (
         <VendorNavigator />
-      ) : user.role === UserRole.ADMIN ? (
+      ) : user?.role === UserRole.ADMIN ? (
         <AdminNavigator />
       ) : (
         <BuyerNavigator />

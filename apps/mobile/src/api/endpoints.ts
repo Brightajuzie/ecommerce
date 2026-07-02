@@ -25,6 +25,7 @@ import type {
   UserDto,
   VendorOrderDto,
   VendorProfileDto,
+  VendorVerificationStatus,
 } from "@ikstore/shared";
 import { apiClient } from "./client";
 
@@ -108,4 +109,13 @@ export const SlidesApi = {
   remove: (id: string) => apiClient.delete(`/slides/${id}`).then((r) => r.data),
   reorder: (input: ReorderSlidesInput) =>
     apiClient.patch<SlideDto[]>("/slides/reorder", input).then((r) => r.data),
+};
+
+export const KycApi = {
+  status: () =>
+    apiClient
+      .get<{ verificationStatus: VendorVerificationStatus; verifiedAt: string | null }>(
+        "/kyc/status",
+      )
+      .then((r) => r.data),
 };

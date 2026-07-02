@@ -7,6 +7,7 @@ allowBuilds:
   '@prisma/engines': true
   '@scarf/scarf': true
   prisma: true
+  smile-identity-core: true
   unrs-resolver: true
 minimumReleaseAgeExclude:
   - '@expo/cli@57.0.3'

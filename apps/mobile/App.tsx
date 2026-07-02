@@ -4,6 +4,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RootNavigator } from "./src/navigation/RootNavigator";
 import { useAuthStore } from "./src/store/authStore";
+import { useGuestCartStore } from "./src/store/guestCartStore";
 import { ThemeProvider } from "./src/theme/ThemeContext";
 
 const queryClient = new QueryClient({
@@ -14,10 +15,12 @@ const queryClient = new QueryClient({
 
 export default function App() {
   const hydrate = useAuthStore((s) => s.hydrate);
+  const hydrateGuestCart = useGuestCartStore((s) => s.hydrate);
 
   useEffect(() => {
     hydrate();
-  }, [hydrate]);
+    hydrateGuestCart();
+  }, [hydrate, hydrateGuestCart]);
 
   return (
     <SafeAreaProvider>

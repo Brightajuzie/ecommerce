@@ -9,17 +9,21 @@ import {
   Text,
   View,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useQueryClient } from "@tanstack/react-query";
 import { UserRole } from "@ikstore/shared";
 import { FormInput } from "../../components/FormInput";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { AuthApi } from "../../api/endpoints";
 import { useAuthStore } from "../../store/authStore";
-import type { AuthStackParamList } from "../../navigation/types";
+import { syncGuestCartToServer } from "../../store/guestCartStore";
+import type { BuyerStackParamList } from "../../navigation/types";
 
 export function RegisterScreen() {
-  const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
+  const navigation = useNavigation<NativeStackNavigationProp<BuyerStackParamList>>();
+  const route = useRoute<RouteProp<BuyerStackParamList, "Register">>();
+  const queryClient = useQueryClient();
   const setSession = useAuthStore((s) => s.setSession);
 
   const [firstName, setFirstName] = useState("");
@@ -51,6 +55,14 @@ export function RegisterScreen() {
         businessName: asVendor ? businessName : undefined,
       });
       await setSession(result.accessToken, result.refreshToken, result.user);
+      await syncGuestCartToServer();
+      queryClient.invalidateQueries({ queryKey: ["cart"] });
+
+      if (route.params?.redirectTo === "Checkout") {
+        navigation.replace("Checkout");
+      } else {
+        navigation.replace("BuyerTabs");
+      }
     } catch (error: any) {
       Alert.alert(
         "Registration failed",
@@ -95,7 +107,7 @@ export function RegisterScreen() {
 
         <PrimaryButton title="Sign up" onPress={handleRegister} loading={loading} />
 
-        <Text style={styles.link} onPress={() => navigation.navigate("Login")}>
+        <Text style={styles.link} onPress={() => navigation.navigate("Login", route.params)}>
           Already have an account? Log in
         </Text>
       </ScrollView>

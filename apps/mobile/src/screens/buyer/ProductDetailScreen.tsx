@@ -5,12 +5,16 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ProductsApi, CartApi } from "../../api/endpoints";
 import { PrimaryButton } from "../../components/PrimaryButton";
+import { useAuthStore } from "../../store/authStore";
+import { useGuestCartStore } from "../../store/guestCartStore";
 import type { BuyerStackParamList } from "../../navigation/types";
 
 export function ProductDetailScreen() {
   const route = useRoute<RouteProp<BuyerStackParamList, "ProductDetail">>();
   const navigation = useNavigation<NativeStackNavigationProp<BuyerStackParamList>>();
   const queryClient = useQueryClient();
+  const user = useAuthStore((s) => s.user);
+  const addGuestItem = useGuestCartStore((s) => s.addItem);
   const [quantity, setQuantity] = useState(1);
 
   const productQuery = useQuery({
@@ -19,7 +23,13 @@ export function ProductDetailScreen() {
   });
 
   const addToCart = useMutation({
-    mutationFn: () => CartApi.addItem({ productId: route.params.productId, quantity }),
+    mutationFn: async () => {
+      if (!user) {
+        addGuestItem(productQuery.data!, quantity);
+        return;
+      }
+      await CartApi.addItem({ productId: route.params.productId, quantity });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cart"] });
       Alert.alert("Added to cart", "Item added to your cart.", [

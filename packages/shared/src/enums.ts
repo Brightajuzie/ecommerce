@@ -10,6 +10,13 @@ export enum VendorStatus {
   SUSPENDED = "SUSPENDED",
 }
 
+export enum VendorVerificationStatus {
+  NOT_STARTED = "NOT_STARTED",
+  PENDING = "PENDING",
+  VERIFIED = "VERIFIED",
+  FAILED = "FAILED",
+}
+
 export enum ProductStatus {
   DRAFT = "DRAFT",
   ACTIVE = "ACTIVE",

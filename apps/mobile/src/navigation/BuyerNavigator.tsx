@@ -1,6 +1,8 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { BuyerTabNavigator } from "./BuyerTabNavigator";
 import { ProductDetailScreen } from "../screens/buyer/ProductDetailScreen";
+import { LoginScreen } from "../screens/auth/LoginScreen";
+import { RegisterScreen } from "../screens/auth/RegisterScreen";
 import { CheckoutScreen } from "../screens/buyer/CheckoutScreen";
 import { PaymentWebViewScreen } from "../screens/buyer/PaymentWebViewScreen";
 import { OrderDetailScreen } from "../screens/buyer/OrderDetailScreen";
@@ -17,6 +19,8 @@ export function BuyerNavigator() {
         component={ProductDetailScreen}
         options={{ title: "Product" }}
       />
+      <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Checkout" component={CheckoutScreen} options={{ headerShown: false }} />
       <Stack.Screen
         name="PaymentWebView"

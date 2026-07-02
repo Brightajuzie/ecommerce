@@ -1,15 +1,19 @@
 import { useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useQueryClient } from "@tanstack/react-query";
 import { FormInput } from "../../components/FormInput";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { AuthApi } from "../../api/endpoints";
 import { useAuthStore } from "../../store/authStore";
-import type { AuthStackParamList } from "../../navigation/types";
+import { syncGuestCartToServer } from "../../store/guestCartStore";
+import type { BuyerStackParamList } from "../../navigation/types";
 
 export function LoginScreen() {
-  const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
+  const navigation = useNavigation<NativeStackNavigationProp<BuyerStackParamList>>();
+  const route = useRoute<RouteProp<BuyerStackParamList, "Login">>();
+  const queryClient = useQueryClient();
   const setSession = useAuthStore((s) => s.setSession);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -24,6 +28,14 @@ export function LoginScreen() {
     try {
       const result = await AuthApi.login({ email: email.trim(), password });
       await setSession(result.accessToken, result.refreshToken, result.user);
+      await syncGuestCartToServer();
+      queryClient.invalidateQueries({ queryKey: ["cart"] });
+
+      if (route.params?.redirectTo === "Checkout") {
+        navigation.replace("Checkout");
+      } else {
+        navigation.replace("BuyerTabs");
+      }
     } catch (error: any) {
       Alert.alert(
         "Login failed",
@@ -60,7 +72,10 @@ export function LoginScreen() {
 
         <PrimaryButton title="Log in" onPress={handleLogin} loading={loading} />
 
-        <Text style={styles.link} onPress={() => navigation.navigate("Register")}>
+        <Text
+          style={styles.link}
+          onPress={() => navigation.navigate("Register", route.params)}
+        >
           Don't have an account? Sign up
         </Text>
       </View>

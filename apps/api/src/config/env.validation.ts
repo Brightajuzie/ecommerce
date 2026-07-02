@@ -23,4 +23,8 @@ export const envValidationSchema = Joi.object({
   CLOUDINARY_CLOUD_NAME: Joi.string().allow("").default(""),
   CLOUDINARY_API_KEY: Joi.string().allow("").default(""),
   CLOUDINARY_API_SECRET: Joi.string().allow("").default(""),
+
+  SMILE_ID_PARTNER_ID: Joi.string().allow("").default(""),
+  SMILE_ID_API_KEY: Joi.string().allow("").default(""),
+  SMILE_ID_ENVIRONMENT: Joi.string().valid("sandbox", "production").default("sandbox"),
 });
