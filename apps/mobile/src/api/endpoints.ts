@@ -6,6 +6,7 @@ import type {
   CategoryDto,
   CheckoutInput,
   CreateProductInput,
+  CreateSlideInput,
   InitiatePaymentInput,
   LoginInput,
   OrderDto,
@@ -13,8 +14,13 @@ import type {
   ProductDto,
   ProductQueryInput,
   RegisterInput,
+  ReorderSlidesInput,
+  SettingsDto,
+  SlideDto,
   UpdateCartItemInput,
   UpdateProductInput,
+  UpdateSettingsInput,
+  UpdateSlideInput,
   UpdateVendorOrderStatusInput,
   UserDto,
   VendorOrderDto,
@@ -85,4 +91,21 @@ export const VendorsApi = {
   pending: () => apiClient.get<VendorProfileDto[]>("/vendors/pending").then((r) => r.data),
   approve: (id: string) => apiClient.patch<VendorProfileDto>(`/vendors/${id}/approve`).then((r) => r.data),
   suspend: (id: string) => apiClient.patch<VendorProfileDto>(`/vendors/${id}/suspend`).then((r) => r.data),
+};
+
+export const SettingsApi = {
+  get: () => apiClient.get<SettingsDto>("/settings").then((r) => r.data),
+  update: (input: UpdateSettingsInput) =>
+    apiClient.patch<SettingsDto>("/settings", input).then((r) => r.data),
+};
+
+export const SlidesApi = {
+  listActive: () => apiClient.get<SlideDto[]>("/slides").then((r) => r.data),
+  listAll: () => apiClient.get<SlideDto[]>("/slides/all").then((r) => r.data),
+  create: (input: CreateSlideInput) => apiClient.post<SlideDto>("/slides", input).then((r) => r.data),
+  update: (id: string, input: UpdateSlideInput) =>
+    apiClient.patch<SlideDto>(`/slides/${id}`, input).then((r) => r.data),
+  remove: (id: string) => apiClient.delete(`/slides/${id}`).then((r) => r.data),
+  reorder: (input: ReorderSlidesInput) =>
+    apiClient.patch<SlideDto[]>("/slides/reorder", input).then((r) => r.data),
 };

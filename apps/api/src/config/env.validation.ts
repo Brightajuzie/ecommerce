@@ -19,4 +19,8 @@ export const envValidationSchema = Joi.object({
   OPAY_MERCHANT_ID: Joi.string().allow("").default(""),
   OPAY_PUBLIC_KEY: Joi.string().allow("").default(""),
   OPAY_SECRET_KEY: Joi.string().allow("").default(""),
+
+  CLOUDINARY_CLOUD_NAME: Joi.string().allow("").default(""),
+  CLOUDINARY_API_KEY: Joi.string().allow("").default(""),
+  CLOUDINARY_API_SECRET: Joi.string().allow("").default(""),
 });

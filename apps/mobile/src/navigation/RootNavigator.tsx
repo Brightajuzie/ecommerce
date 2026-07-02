@@ -5,11 +5,14 @@ import { useAuthStore } from "../store/authStore";
 import { AuthNavigator } from "./AuthNavigator";
 import { BuyerNavigator } from "./BuyerNavigator";
 import { VendorNavigator } from "./VendorNavigator";
-import { PendingVendorsScreen } from "../screens/admin/PendingVendorsScreen";
+import { AdminNavigator } from "./AdminNavigator";
+import { LockScreen } from "../screens/auth/LockScreen";
 
 export function RootNavigator() {
   const isHydrated = useAuthStore((s) => s.isHydrated);
   const user = useAuthStore((s) => s.user);
+  const biometricEnabled = useAuthStore((s) => s.biometricEnabled);
+  const isUnlocked = useAuthStore((s) => s.isUnlocked);
 
   if (!isHydrated) {
     return (
@@ -23,10 +26,12 @@ export function RootNavigator() {
     <NavigationContainer>
       {!user ? (
         <AuthNavigator />
+      ) : biometricEnabled && !isUnlocked ? (
+        <LockScreen />
       ) : user.role === UserRole.VENDOR ? (
         <VendorNavigator />
       ) : user.role === UserRole.ADMIN ? (
-        <PendingVendorsScreen />
+        <AdminNavigator />
       ) : (
         <BuyerNavigator />
       )}

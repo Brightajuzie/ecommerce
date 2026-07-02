@@ -15,10 +15,13 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import type { ProductDto } from "@ikstore/shared";
 import { ProductsApi, CategoriesApi } from "../../api/endpoints";
+import { SlideCarousel } from "../../components/SlideCarousel";
+import { useTheme } from "../../theme/ThemeContext";
 import type { BuyerStackParamList } from "../../navigation/types";
 
 export function HomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<BuyerStackParamList>>();
+  const theme = useTheme();
   const [search, setSearch] = useState("");
   const [categoryId, setCategoryId] = useState<string | undefined>(undefined);
 
@@ -36,7 +39,14 @@ export function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>IkStore</Text>
+      {theme.logoUrl ? (
+        <Image source={{ uri: theme.logoUrl }} style={styles.logo} resizeMode="contain" />
+      ) : (
+        <Text style={styles.title}>IkStore</Text>
+      )}
+
+      <SlideCarousel />
+
       <TextInput
         style={styles.search}
         placeholder="Search products..."
@@ -53,7 +63,10 @@ export function HomeScreen() {
         renderItem={({ item }) => (
           <Pressable
             onPress={() => setCategoryId(categoryId === item.id ? undefined : item.id)}
-            style={[styles.categoryChip, categoryId === item.id && styles.categoryChipActive]}
+            style={[
+              styles.categoryChip,
+              categoryId === item.id && { backgroundColor: theme.primaryColor },
+            ]}
           >
             <Text
               style={[
@@ -105,6 +118,7 @@ export function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff", paddingTop: 60, paddingHorizontal: 16 },
   title: { fontSize: 28, fontWeight: "800", color: "#111827", marginBottom: 16 },
+  logo: { height: 36, width: 160, marginBottom: 16, alignSelf: "flex-start" },
   search: {
     borderWidth: 1,
     borderColor: "#D1D5DB",
@@ -121,7 +135,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#F3F4F6",
     marginRight: 8,
   },
-  categoryChipActive: { backgroundColor: "#111827" },
   categoryChipText: { color: "#374151", fontWeight: "600" },
   categoryChipTextActive: { color: "#fff" },
   loading: { marginTop: 40 },

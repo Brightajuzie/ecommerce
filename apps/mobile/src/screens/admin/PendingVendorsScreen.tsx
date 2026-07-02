@@ -3,10 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { VendorProfileDto } from "@ikstore/shared";
 import { VendorsApi } from "../../api/endpoints";
 import { PrimaryButton } from "../../components/PrimaryButton";
-import { useAuthStore } from "../../store/authStore";
 
 export function PendingVendorsScreen() {
-  const logout = useAuthStore((s) => s.logout);
   const queryClient = useQueryClient();
   const pendingQuery = useQuery({ queryKey: ["pendingVendors"], queryFn: VendorsApi.pending });
 
@@ -29,10 +27,7 @@ export function PendingVendorsScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Pending vendors</Text>
-        <PrimaryButton title="Log out" variant="secondary" onPress={() => logout()} />
-      </View>
+      <Text style={styles.title}>Pending vendors</Text>
       <FlatList
         data={pendingQuery.data ?? []}
         keyExtractor={(item: VendorProfileDto) => item.id}
@@ -59,8 +54,7 @@ export function PendingVendorsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff", paddingTop: 60, paddingHorizontal: 16 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
-  title: { fontSize: 28, fontWeight: "800", color: "#111827" },
+  title: { fontSize: 28, fontWeight: "800", color: "#111827", marginBottom: 16 },
   empty: { textAlign: "center", marginTop: 40, color: "#6B7280" },
   card: { backgroundColor: "#F9FAFB", borderRadius: 10, padding: 14, marginBottom: 12 },
   businessName: { fontWeight: "700", fontSize: 16, color: "#111827" },

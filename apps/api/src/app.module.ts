@@ -14,6 +14,9 @@ import { ProductsModule } from "./products/products.module";
 import { CartModule } from "./cart/cart.module";
 import { OrdersModule } from "./orders/orders.module";
 import { PaymentsModule } from "./payments/payments.module";
+import { SettingsModule } from "./settings/settings.module";
+import { SlidesModule } from "./slides/slides.module";
+import { UploadsModule } from "./uploads/uploads.module";
 
 @Module({
   imports: [
@@ -40,6 +43,9 @@ import { PaymentsModule } from "./payments/payments.module";
     CartModule,
     OrdersModule,
     PaymentsModule,
+    SettingsModule,
+    SlidesModule,
+    UploadsModule,
   ],
   controllers: [AppController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

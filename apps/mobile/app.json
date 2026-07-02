@@ -8,7 +8,10 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "IkStore uses Face ID to let you unlock the app instead of retyping your password."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -21,6 +24,20 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow IkStore to use Face ID to unlock the app."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "IkStore uses your photo library to upload product photos, logos, and banner images."
+        }
+      ]
+    ]
   }
 }

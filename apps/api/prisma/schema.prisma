@@ -244,3 +244,28 @@ model Payment {
   @@index([orderId])
   @@map("payments")
 }
+
+model AppSettings {
+  id             String   @id @default(uuid())
+  primaryColor   String   @default("#111827")
+  secondaryColor String   @default("#4B5563")
+  accentColor    String?
+  logoUrl        String?
+  updatedAt      DateTime @updatedAt
+
+  @@map("app_settings")
+}
+
+model Slide {
+  id        String   @id @default(uuid())
+  imageUrl  String
+  title     String?
+  linkUrl   String?
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+  @@map("slides")
+}

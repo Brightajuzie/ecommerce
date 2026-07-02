@@ -30,5 +30,13 @@ export type VendorTabParamList = {
 };
 
 export type AdminStackParamList = {
+  AdminTabs: undefined;
+  SlideForm: { slideId?: string } | undefined;
+};
+
+export type AdminTabParamList = {
   PendingVendors: undefined;
+  StoreSettings: undefined;
+  Slides: undefined;
+  Profile: undefined;
 };

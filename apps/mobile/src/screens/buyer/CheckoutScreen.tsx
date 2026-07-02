@@ -8,11 +8,13 @@ import { PaymentProvider } from "@ikstore/shared";
 import { UsersApi, OrdersApi, PaymentsApi } from "../../api/endpoints";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { FormInput } from "../../components/FormInput";
+import { useTheme } from "../../theme/ThemeContext";
 import type { BuyerStackParamList } from "../../navigation/types";
 
 export function CheckoutScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<BuyerStackParamList>>();
   const queryClient = useQueryClient();
+  const theme = useTheme();
 
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [showNewAddress, setShowNewAddress] = useState(false);
@@ -65,7 +67,13 @@ export function CheckoutScreen() {
         style={styles.addressList}
         renderItem={({ item }) => (
           <Pressable
-            style={[styles.addressCard, selectedAddressId === item.id && styles.addressCardActive]}
+            style={[
+              styles.addressCard,
+              selectedAddressId === item.id && [
+                styles.addressCardActive,
+                { borderColor: theme.primaryColor },
+              ],
+            ]}
             onPress={() => setSelectedAddressId(item.id)}
           >
             <Text style={styles.addressLabel}>{item.label}</Text>
@@ -122,7 +130,7 @@ export function CheckoutScreen() {
         <Pressable
           style={[
             styles.providerChip,
-            provider === PaymentProvider.FLUTTERWAVE && styles.providerChipActive,
+            provider === PaymentProvider.FLUTTERWAVE && { backgroundColor: theme.primaryColor },
           ]}
           onPress={() => setProvider(PaymentProvider.FLUTTERWAVE)}
         >
@@ -136,7 +144,10 @@ export function CheckoutScreen() {
           </Text>
         </Pressable>
         <Pressable
-          style={[styles.providerChip, provider === PaymentProvider.OPAY && styles.providerChipActive]}
+          style={[
+            styles.providerChip,
+            provider === PaymentProvider.OPAY && { backgroundColor: theme.primaryColor },
+          ]}
           onPress={() => setProvider(PaymentProvider.OPAY)}
         >
           <Text
@@ -188,7 +199,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: "#F3F4F6",
   },
-  providerChipActive: { backgroundColor: "#111827" },
   providerChipText: { color: "#374151", fontWeight: "600" },
   providerChipTextActive: { color: "#fff" },
 });

@@ -126,6 +126,40 @@ async function main() {
     },
   });
 
+  const SETTINGS_ID = "00000000-0000-4000-8000-000000000001";
+  await prisma.appSettings.upsert({
+    where: { id: SETTINGS_ID },
+    update: {},
+    create: {
+      id: SETTINGS_ID,
+      primaryColor: "#111827",
+      secondaryColor: "#4B5563",
+    },
+  });
+
+  const sampleSlides = [
+    {
+      id: "9f4b6b7a-2f0a-4b9e-8f7b-4d3f1c2a9b01",
+      imageUrl: "https://placehold.co/1200x500?text=Big+Sale",
+      title: "Big Sale — up to 30% off",
+      sortOrder: 0,
+    },
+    {
+      id: "9f4b6b7a-2f0a-4b9e-8f7b-4d3f1c2a9b02",
+      imageUrl: "https://placehold.co/1200x500?text=New+Arrivals",
+      title: "New arrivals every week",
+      sortOrder: 1,
+    },
+  ];
+
+  for (const slide of sampleSlides) {
+    await prisma.slide.upsert({
+      where: { id: slide.id },
+      update: {},
+      create: slide,
+    });
+  }
+
   console.log("Seed complete.");
   console.log("  admin@ikstore.dev / Admin123!");
   console.log("  vendor@ikstore.dev / Vendor123!");

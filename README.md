@@ -13,6 +13,11 @@ run through Flutterwave and Opay. Built as an MVP scaffold — solid foundations
 - **Shared**: `@ikstore/shared` — TypeScript types + zod schemas used by both apps.
 - **Payments**: Flutterwave (Standard Checkout, primary) and Opay (Cashier Checkout, secondary),
   both as hosted checkout links opened in an in-app WebView.
+- **Images**: Cloudinary — uploads (product photos, logo, home-page slides) are enhanced
+  automatically on upload (auto contrast/brightness via Cloudinary's `e_improve`, plus
+  auto-format/quality and a 2000px size cap).
+- **Biometric login**: `expo-local-authentication` — after one password login, Face ID/Touch
+  ID/fingerprint can unlock the app on return instead of retyping credentials.
 
 ## Repo layout
 
@@ -38,6 +43,8 @@ ikstore/
     ```
 - Expo Go app (iOS/Android) or a simulator, for running the mobile app.
 - Flutterwave and Opay **sandbox/test** API keys, for exercising payments (see below).
+- A free [Cloudinary](https://cloudinary.com) account, for exercising image uploads (logo,
+  slides, product photos) — see below.
 
 ## Setup
 
@@ -104,6 +111,30 @@ checkout URL, the mobile app opens it in a WebView, and the gateway's server-to-
 Without gateway keys configured, `/payments/initiate` returns a clear `502` instead of a
 misleading crash — useful for developing the rest of the app before you have sandbox credentials.
 
+## Image uploads & storefront customization
+
+`POST /uploads/image` (any authenticated user, ~5MB limit, JPEG/PNG/WEBP/GIF only) proxies
+through Cloudinary and applies an enhancement + optimization transform on every upload — this is
+shared by three flows: vendors adding product photos, and admins uploading a store logo or
+home-page slide images. Set `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
+in `apps/api/.env` (from your Cloudinary console) to exercise it; without them the endpoint
+returns a clear `502`, same pattern as the payment gateways.
+
+Admins manage the storefront from the **Store Settings** and **Slides** tabs (mobile app, admin
+role): brand colors (preset swatches + hex input) and logo apply live via `GET/PATCH /settings`;
+home-page banners are managed via `GET/POST/PATCH/DELETE /slides` plus a `PATCH /slides/reorder`
+for drag-free up/down reordering. Buyers see the configured colors (buttons, active tabs/chips)
+and slides without needing to be logged in — `/settings` and `/slides` are public reads.
+
+## Biometric login
+
+Opt in from the Profile tab (any role). It's a saved-session unlock, not a second auth factor
+server-side: the JWT refresh token already sits in secure storage after a normal login, and
+enabling the toggle just gates the next app open behind a biometric prompt
+(`expo-local-authentication`) before revealing that session. Disabling it removes the gate.
+Web preview can't exercise real Face ID/Touch ID/fingerprint prompts — verify on a physical
+device or simulator.
+
 ## What's deliberately out of scope for this MVP
 
 These are natural next phases, not oversights:
@@ -111,9 +142,10 @@ These are natural next phases, not oversights:
   (`VendorOrder.vendorPayoutAmount`) as a ledger, but settlement to vendor bank accounts is
   manual for now. Flutterwave Subaccounts is the documented upgrade path for automatic splits.
 - **Reviews & ratings, push notifications, full-text search** (currently basic `ILIKE` search).
-- **Image upload/CDN pipeline** — product images are plain URLs today (paste a hosted image URL).
 - **Dedicated web dashboards** for vendors/admins — the mobile app currently covers all three
   roles (buyer/vendor/admin) with role-based views in one codebase.
+- **Custom color-wheel picker** — Store Settings uses preset swatches + a hex input rather than
+  pulling in a third-party color-wheel component for marginal gain.
 
 ## Architecture notes
 

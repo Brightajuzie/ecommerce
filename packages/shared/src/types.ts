@@ -117,3 +117,26 @@ export interface PaginatedResult<T> {
   pageSize: number;
   total: number;
 }
+
+export interface SettingsDto {
+  id: string;
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string | null;
+  logoUrl: string | null;
+  updatedAt: string;
+}
+
+export interface SlideDto {
+  id: string;
+  imageUrl: string;
+  title: string | null;
+  linkUrl: string | null;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface UploadResultDto {
+  url: string;
+}
