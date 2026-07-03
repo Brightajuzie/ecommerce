@@ -133,11 +133,11 @@ async function main() {
   const SETTINGS_ID = "00000000-0000-4000-8000-000000000001";
   await prisma.appSettings.upsert({
     where: { id: SETTINGS_ID },
-    update: {},
+    update: { primaryColor: "#16A34A", secondaryColor: "#0284C7" },
     create: {
       id: SETTINGS_ID,
-      primaryColor: "#111827",
-      secondaryColor: "#4B5563",
+      primaryColor: "#16A34A",
+      secondaryColor: "#0284C7",
     },
   });
 
