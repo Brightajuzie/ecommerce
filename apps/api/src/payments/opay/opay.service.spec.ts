@@ -1,14 +1,17 @@
 import * as crypto from "crypto";
+import type { ConfigService } from "@nestjs/config";
 import { OpayService, OpayCallbackPayload } from "./opay.service";
 
 describe("OpayService.verifyCallbackSignature", () => {
   const secretKey = "test-opay-secret";
 
   const makeService = () => {
-    const configService = {
-      get: jest.fn((key: string) => (key === "OPAY_SECRET_KEY" ? secretKey : "")),
-    } as any;
-    return new OpayService(configService);
+    const configService: Pick<ConfigService, "get"> = {
+      get: jest.fn((key: string) =>
+        key === "OPAY_SECRET_KEY" ? secretKey : "",
+      ) as ConfigService["get"],
+    };
+    return new OpayService(configService as ConfigService);
   };
 
   const payload: OpayCallbackPayload = {
@@ -28,7 +31,10 @@ describe("OpayService.verifyCallbackSignature", () => {
       `Reference:"${p.reference}",Refunded:${p.refunded ? "t" : "f"},` +
       `Status:"${p.status}",Timestamp:"${p.timestamp}",` +
       `Token:"${p.token}",TransactionID:"${p.transactionId}"}`;
-    return crypto.createHmac("sha3-512", secretKey).update(template).digest("hex");
+    return crypto
+      .createHmac("sha3-512", secretKey)
+      .update(template)
+      .digest("hex");
   }
 
   it("accepts a correctly signed callback payload", () => {

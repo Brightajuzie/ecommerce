@@ -55,8 +55,14 @@ export class UsersService {
     return this.prisma.address.create({ data: { ...dto, userId } });
   }
 
-  async updateAddress(userId: string, addressId: string, dto: Partial<AddressDto>) {
-    const address = await this.prisma.address.findUnique({ where: { id: addressId } });
+  async updateAddress(
+    userId: string,
+    addressId: string,
+    dto: Partial<AddressDto>,
+  ) {
+    const address = await this.prisma.address.findUnique({
+      where: { id: addressId },
+    });
     if (!address || address.userId !== userId) {
       throw new NotFoundException("Address not found");
     }
@@ -72,7 +78,9 @@ export class UsersService {
   }
 
   async deleteAddress(userId: string, addressId: string) {
-    const address = await this.prisma.address.findUnique({ where: { id: addressId } });
+    const address = await this.prisma.address.findUnique({
+      where: { id: addressId },
+    });
     if (!address || address.userId !== userId) {
       throw new NotFoundException("Address not found");
     }

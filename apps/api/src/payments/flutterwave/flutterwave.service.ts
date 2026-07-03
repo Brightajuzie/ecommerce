@@ -22,6 +22,19 @@ export interface VerifyResult {
   txRef: string;
 }
 
+interface FlutterwavePaymentResponse {
+  data?: { link?: string };
+}
+
+interface FlutterwaveVerifyResponse {
+  data?: {
+    status?: "successful" | "failed" | "pending";
+    amount?: number;
+    currency?: string;
+    tx_ref?: string;
+  };
+}
+
 @Injectable()
 export class FlutterwaveService {
   private readonly logger = new Logger(FlutterwaveService.name);
@@ -44,11 +57,13 @@ export class FlutterwaveService {
     customer: FlutterwaveCustomer,
   ): Promise<InitializeResult> {
     if (!this.secretKey) {
-      throw new BadGatewayException("Flutterwave is not configured on this server");
+      throw new BadGatewayException(
+        "Flutterwave is not configured on this server",
+      );
     }
 
     try {
-      const response = await axios.post(
+      const response = await axios.post<FlutterwavePaymentResponse>(
         `${FLW_BASE_URL}/payments`,
         {
           tx_ref: txRef,
@@ -78,11 +93,13 @@ export class FlutterwaveService {
 
   async verifyByReference(txRef: string): Promise<VerifyResult> {
     if (!this.secretKey) {
-      throw new BadGatewayException("Flutterwave is not configured on this server");
+      throw new BadGatewayException(
+        "Flutterwave is not configured on this server",
+      );
     }
 
     try {
-      const response = await axios.get(
+      const response = await axios.get<FlutterwaveVerifyResponse>(
         `${FLW_BASE_URL}/transactions/verify_by_reference`,
         {
           params: { tx_ref: txRef },
@@ -92,10 +109,10 @@ export class FlutterwaveService {
 
       const data = response.data?.data;
       return {
-        status: data?.status,
-        amount: data?.amount,
-        currency: data?.currency,
-        txRef: data?.tx_ref,
+        status: data?.status ?? "failed",
+        amount: data?.amount ?? 0,
+        currency: data?.currency ?? "",
+        txRef: data?.tx_ref ?? txRef,
       };
     } catch (error) {
       this.logger.error("Flutterwave verify transaction failed", error);
@@ -107,7 +124,10 @@ export class FlutterwaveService {
    * Verifies the `flutterwave-signature` webhook header: HMAC-SHA256 over the
    * raw request body, base64-encoded, keyed with the configured webhook hash.
    */
-  verifyWebhookSignature(rawBody: Buffer | string, signatureHeader: string | undefined): boolean {
+  verifyWebhookSignature(
+    rawBody: Buffer | string,
+    signatureHeader: string | undefined,
+  ): boolean {
     if (!signatureHeader || !this.webhookSecret) {
       return false;
     }

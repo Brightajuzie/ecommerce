@@ -1,4 +1,9 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { Prisma, VendorOrderStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { CheckoutDto } from "./dto/checkout.dto";
@@ -13,14 +18,18 @@ export class OrdersService {
   constructor(private readonly prisma: PrismaService) {}
 
   async checkout(userId: string, dto: CheckoutDto) {
-    const address = await this.prisma.address.findUnique({ where: { id: dto.addressId } });
+    const address = await this.prisma.address.findUnique({
+      where: { id: dto.addressId },
+    });
     if (!address || address.userId !== userId) {
       throw new NotFoundException("Address not found");
     }
 
     const cart = await this.prisma.cart.findUnique({
       where: { userId },
-      include: { items: { include: { product: { include: { vendor: true } } } } },
+      include: {
+        items: { include: { product: { include: { vendor: true } } } },
+      },
     });
 
     if (!cart || cart.items.length === 0) {
@@ -29,7 +38,9 @@ export class OrdersService {
 
     for (const item of cart.items) {
       if (item.product.stock < item.quantity) {
-        throw new BadRequestException(`Insufficient stock for "${item.product.title}"`);
+        throw new BadRequestException(
+          `Insufficient stock for "${item.product.title}"`,
+        );
       }
     }
 
@@ -62,8 +73,10 @@ export class OrdersService {
           0,
         );
         const commissionRate = Number(items[0].product.vendor.commissionRate);
-        const commissionAmount = Math.round(subtotal * (commissionRate / 100) * 100) / 100;
-        const vendorPayoutAmount = Math.round((subtotal - commissionAmount) * 100) / 100;
+        const commissionAmount =
+          Math.round(subtotal * (commissionRate / 100) * 100) / 100;
+        const vendorPayoutAmount =
+          Math.round((subtotal - commissionAmount) * 100) / 100;
 
         await tx.vendorOrder.create({
           data: {
@@ -122,14 +135,21 @@ export class OrdersService {
   }
 
   async findVendorOrders(userId: string) {
-    const vendorProfile = await this.prisma.vendorProfile.findUnique({ where: { userId } });
+    const vendorProfile = await this.prisma.vendorProfile.findUnique({
+      where: { userId },
+    });
     if (!vendorProfile) {
-      throw new ForbiddenException("No vendor profile is associated with this account");
+      throw new ForbiddenException(
+        "No vendor profile is associated with this account",
+      );
     }
 
     return this.prisma.vendorOrder.findMany({
       where: { vendorId: vendorProfile.id },
-      include: { items: true, order: { select: { id: true, status: true, createdAt: true } } },
+      include: {
+        items: true,
+        order: { select: { id: true, status: true, createdAt: true } },
+      },
       orderBy: { createdAt: "desc" },
     });
   }
@@ -139,17 +159,25 @@ export class OrdersService {
     vendorOrderId: string,
     dto: UpdateVendorOrderStatusDto,
   ) {
-    const vendorProfile = await this.prisma.vendorProfile.findUnique({ where: { userId } });
+    const vendorProfile = await this.prisma.vendorProfile.findUnique({
+      where: { userId },
+    });
     if (!vendorProfile) {
-      throw new ForbiddenException("No vendor profile is associated with this account");
+      throw new ForbiddenException(
+        "No vendor profile is associated with this account",
+      );
     }
 
-    const vendorOrder = await this.prisma.vendorOrder.findUnique({ where: { id: vendorOrderId } });
+    const vendorOrder = await this.prisma.vendorOrder.findUnique({
+      where: { id: vendorOrderId },
+    });
     if (!vendorOrder || vendorOrder.vendorId !== vendorProfile.id) {
       throw new NotFoundException("Order not found");
     }
     if (vendorOrder.status === VendorOrderStatus.PENDING) {
-      throw new BadRequestException("Cannot update an order that has not been paid for yet");
+      throw new BadRequestException(
+        "Cannot update an order that has not been paid for yet",
+      );
     }
 
     return this.prisma.vendorOrder.update({

@@ -12,12 +12,20 @@ export class UploadsService {
   private ensureConfigured() {
     if (this.configured) return;
 
-    const cloudName = this.configService.get<string>("CLOUDINARY_CLOUD_NAME", "");
+    const cloudName = this.configService.get<string>(
+      "CLOUDINARY_CLOUD_NAME",
+      "",
+    );
     const apiKey = this.configService.get<string>("CLOUDINARY_API_KEY", "");
-    const apiSecret = this.configService.get<string>("CLOUDINARY_API_SECRET", "");
+    const apiSecret = this.configService.get<string>(
+      "CLOUDINARY_API_SECRET",
+      "",
+    );
 
     if (!cloudName || !apiKey || !apiSecret) {
-      throw new BadGatewayException("Image uploads are not configured on this server");
+      throw new BadGatewayException(
+        "Image uploads are not configured on this server",
+      );
     }
 
     cloudinary.config({

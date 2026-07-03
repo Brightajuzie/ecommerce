@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { VendorStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { ApplyVendorDto } from "./dto/apply-vendor.dto";
@@ -8,9 +12,13 @@ export class VendorsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async apply(userId: string, dto: ApplyVendorDto) {
-    const existing = await this.prisma.vendorProfile.findUnique({ where: { userId } });
+    const existing = await this.prisma.vendorProfile.findUnique({
+      where: { userId },
+    });
     if (existing) {
-      throw new ConflictException("A vendor profile already exists for this account");
+      throw new ConflictException(
+        "A vendor profile already exists for this account",
+      );
     }
 
     return this.prisma.vendorProfile.create({
@@ -38,15 +46,22 @@ export class VendorsService {
   }
 
   async setStatus(vendorId: string, status: VendorStatus) {
-    const vendor = await this.prisma.vendorProfile.findUnique({ where: { id: vendorId } });
+    const vendor = await this.prisma.vendorProfile.findUnique({
+      where: { id: vendorId },
+    });
     if (!vendor) {
       throw new NotFoundException("Vendor not found");
     }
-    return this.prisma.vendorProfile.update({ where: { id: vendorId }, data: { status } });
+    return this.prisma.vendorProfile.update({
+      where: { id: vendorId },
+      data: { status },
+    });
   }
 
   async getMyVendorProfile(userId: string) {
-    const vendor = await this.prisma.vendorProfile.findUnique({ where: { userId } });
+    const vendor = await this.prisma.vendorProfile.findUnique({
+      where: { userId },
+    });
     if (!vendor) {
       throw new NotFoundException("No vendor profile found for this account");
     }

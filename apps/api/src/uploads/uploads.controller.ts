@@ -12,7 +12,12 @@ import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { UploadsService } from "./uploads.service";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
-const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const ALLOWED_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+]);
 
 @ApiTags("uploads")
 @ApiBearerAuth()
@@ -33,7 +38,9 @@ export class UploadsController {
       throw new BadRequestException("No file was uploaded");
     }
     if (!ALLOWED_MIME_TYPES.has(file.mimetype)) {
-      throw new BadRequestException("Only JPEG, PNG, WEBP, and GIF images are allowed");
+      throw new BadRequestException(
+        "Only JPEG, PNG, WEBP, and GIF images are allowed",
+      );
     }
     return this.uploadsService.uploadImage(file.buffer);
   }

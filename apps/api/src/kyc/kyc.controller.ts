@@ -18,6 +18,7 @@ import { Roles } from "../common/decorators/roles.decorator";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import type { AuthenticatedUser } from "../auth/types/authenticated-user.type";
 import { KycService } from "./kyc.service";
+import type { SmileIdWebhookBody } from "./kyc.service";
 import { SubmitKycDto } from "./dto/submit-kyc.dto";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
@@ -33,7 +34,9 @@ export class KycController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.VENDOR)
   @Post("verify")
-  @UseInterceptors(FileInterceptor("file", { limits: { fileSize: MAX_FILE_SIZE_BYTES } }))
+  @UseInterceptors(
+    FileInterceptor("file", { limits: { fileSize: MAX_FILE_SIZE_BYTES } }),
+  )
   async verify(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: SubmitKycDto,
@@ -43,7 +46,9 @@ export class KycController {
       throw new BadRequestException("No selfie image was uploaded");
     }
     if (!ALLOWED_MIME_TYPES.has(file.mimetype)) {
-      throw new BadRequestException("Only JPEG, PNG, and WEBP images are allowed");
+      throw new BadRequestException(
+        "Only JPEG, PNG, and WEBP images are allowed",
+      );
     }
     return this.kycService.submit(user.userId, dto, file.buffer);
   }
@@ -58,12 +63,12 @@ export class KycController {
 
   @Post("webhook")
   webhook(
-    @Body() body: any,
+    @Body() body: SmileIdWebhookBody,
     @Headers("timestamp") headerTimestamp: string | undefined,
     @Headers("signature") headerSignature: string | undefined,
   ) {
-    const timestamp = headerTimestamp ?? body?.timestamp;
-    const signature = headerSignature ?? body?.signature;
+    const timestamp = headerTimestamp ?? body.timestamp ?? "";
+    const signature = headerSignature ?? body.signature ?? "";
     return this.kycService.handleWebhook(body, timestamp, signature);
   }
 }

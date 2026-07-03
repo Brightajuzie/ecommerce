@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { Prisma, ProductStatus, VendorStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateProductDto } from "./dto/create-product.dto";
@@ -10,9 +14,13 @@ export class ProductsService {
   constructor(private readonly prisma: PrismaService) {}
 
   private async getVendorProfileOrThrow(userId: string) {
-    const vendorProfile = await this.prisma.vendorProfile.findUnique({ where: { userId } });
+    const vendorProfile = await this.prisma.vendorProfile.findUnique({
+      where: { userId },
+    });
     if (!vendorProfile) {
-      throw new ForbiddenException("No vendor profile is associated with this account");
+      throw new ForbiddenException(
+        "No vendor profile is associated with this account",
+      );
     }
     if (vendorProfile.status !== VendorStatus.APPROVED) {
       throw new ForbiddenException("Your vendor account is not yet approved");
@@ -84,7 +92,9 @@ export class ProductsService {
 
   async update(userId: string, productId: string, dto: UpdateProductDto) {
     const vendorProfile = await this.getVendorProfileOrThrow(userId);
-    const product = await this.prisma.product.findUnique({ where: { id: productId } });
+    const product = await this.prisma.product.findUnique({
+      where: { id: productId },
+    });
     if (!product || product.vendorId !== vendorProfile.id) {
       throw new NotFoundException("Product not found");
     }
@@ -93,7 +103,9 @@ export class ProductsService {
 
   async remove(userId: string, productId: string) {
     const vendorProfile = await this.getVendorProfileOrThrow(userId);
-    const product = await this.prisma.product.findUnique({ where: { id: productId } });
+    const product = await this.prisma.product.findUnique({
+      where: { id: productId },
+    });
     if (!product || product.vendorId !== vendorProfile.id) {
       throw new NotFoundException("Product not found");
     }

@@ -29,7 +29,10 @@ export class UsersController {
   }
 
   @Patch("me")
-  updateProfile(@CurrentUser() user: AuthenticatedUser, @Body() dto: UpdateProfileDto) {
+  updateProfile(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdateProfileDto,
+  ) {
     return this.usersService.updateProfile(user.userId, dto);
   }
 
@@ -39,7 +42,10 @@ export class UsersController {
   }
 
   @Post("me/addresses")
-  createAddress(@CurrentUser() user: AuthenticatedUser, @Body() dto: AddressDto) {
+  createAddress(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: AddressDto,
+  ) {
     return this.usersService.createAddress(user.userId, dto);
   }
 
@@ -53,7 +59,10 @@ export class UsersController {
   }
 
   @Delete("me/addresses/:id")
-  deleteAddress(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string) {
+  deleteAddress(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id") id: string,
+  ) {
     return this.usersService.deleteAddress(user.userId, id);
   }
 }

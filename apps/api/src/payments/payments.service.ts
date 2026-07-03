@@ -10,12 +10,24 @@ import {
   OrderStatus,
   PaymentProvider,
   PaymentStatus,
+  Prisma,
   VendorOrderStatus,
 } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { FlutterwaveService } from "./flutterwave/flutterwave.service";
 import { OpayService, OpayCallbackPayload } from "./opay/opay.service";
 import { InitiatePaymentDto } from "./dto/initiate-payment.dto";
+
+export interface FlutterwaveWebhookBody {
+  event?: string;
+  data?: { tx_ref?: string };
+}
+
+export interface OpayWebhookBody {
+  payload: OpayCallbackPayload;
+  sha512: string;
+  type: string;
+}
 
 @Injectable()
 export class PaymentsService {
@@ -53,7 +65,11 @@ export class PaymentsService {
         amount,
         order.currency,
         `${appUrl}/api/v1/payments/redirect/flutterwave?reference=${reference}`,
-        { email: order.buyer.email, name: customerName, phoneNumber: order.buyer.phone ?? undefined },
+        {
+          email: order.buyer.email,
+          name: customerName,
+          phoneNumber: order.buyer.phone ?? undefined,
+        },
       );
       checkoutUrl = result.checkoutUrl;
     } else {
@@ -63,7 +79,11 @@ export class PaymentsService {
         order.currency,
         `${appUrl}/api/v1/payments/redirect/opay?reference=${reference}`,
         `${appUrl}/api/v1/payments/webhook/opay`,
-        { email: order.buyer.email, name: customerName, phone: order.buyer.phone ?? undefined },
+        {
+          email: order.buyer.email,
+          name: customerName,
+          phone: order.buyer.phone ?? undefined,
+        },
       );
       checkoutUrl = result.checkoutUrl;
     }
@@ -87,12 +107,16 @@ export class PaymentsService {
     return { checkoutUrl, reference };
   }
 
-  async handleFlutterwaveWebhook(rawBody: Buffer, signature: string | undefined, body: any) {
+  async handleFlutterwaveWebhook(
+    rawBody: Buffer,
+    signature: string | undefined,
+    body: FlutterwaveWebhookBody,
+  ) {
     if (!this.flutterwave.verifyWebhookSignature(rawBody, signature)) {
       throw new UnauthorizedException("Invalid Flutterwave webhook signature");
     }
 
-    const txRef: string | undefined = body?.data?.tx_ref;
+    const txRef = body.data?.tx_ref;
     if (!txRef) {
       return { received: true };
     }
@@ -109,7 +133,7 @@ export class PaymentsService {
     return { received: true };
   }
 
-  async handleOpayWebhook(body: { payload: OpayCallbackPayload; sha512: string; type: string }) {
+  async handleOpayWebhook(body: OpayWebhookBody) {
     if (!this.opay.verifyCallbackSignature(body.payload, body.sha512)) {
       throw new UnauthorizedException("Invalid Opay webhook signature");
     }
@@ -134,9 +158,13 @@ export class PaymentsService {
     currency: string,
     rawPayload: unknown,
   ) {
-    const payment = await this.prisma.payment.findUnique({ where: { providerReference } });
+    const payment = await this.prisma.payment.findUnique({
+      where: { providerReference },
+    });
     if (!payment) {
-      this.logger.warn(`Received webhook for unknown payment reference ${providerReference}`);
+      this.logger.warn(
+        `Received webhook for unknown payment reference ${providerReference}`,
+      );
       return;
     }
     if (payment.status === PaymentStatus.SUCCESSFUL) {
@@ -149,7 +177,10 @@ export class PaymentsService {
     if (!successful || !amountMatches || !currencyMatches) {
       await this.prisma.payment.update({
         where: { id: payment.id },
-        data: { status: PaymentStatus.FAILED, rawWebhookPayload: rawPayload as any },
+        data: {
+          status: PaymentStatus.FAILED,
+          rawWebhookPayload: rawPayload as Prisma.InputJsonValue,
+        },
       });
       await this.prisma.order.update({
         where: { id: payment.orderId },
@@ -161,7 +192,10 @@ export class PaymentsService {
     await this.prisma.$transaction([
       this.prisma.payment.update({
         where: { id: payment.id },
-        data: { status: PaymentStatus.SUCCESSFUL, rawWebhookPayload: rawPayload as any },
+        data: {
+          status: PaymentStatus.SUCCESSFUL,
+          rawWebhookPayload: rawPayload as Prisma.InputJsonValue,
+        },
       }),
       this.prisma.order.update({
         where: { id: payment.orderId },

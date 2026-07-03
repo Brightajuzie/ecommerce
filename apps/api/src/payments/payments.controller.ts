@@ -1,10 +1,24 @@
-import { Body, Controller, Get, Headers, Param, Post, Req, Res, UseGuards } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  Param,
+  Post,
+  Req,
+  Res,
+  UseGuards,
+} from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import type { Request, Response } from "express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import type { AuthenticatedUser } from "../auth/types/authenticated-user.type";
 import { PaymentsService } from "./payments.service";
+import type {
+  FlutterwaveWebhookBody,
+  OpayWebhookBody,
+} from "./payments.service";
 import { InitiatePaymentDto } from "./dto/initiate-payment.dto";
 
 @ApiTags("payments")
@@ -15,14 +29,20 @@ export class PaymentsController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Post("initiate")
-  initiate(@CurrentUser() user: AuthenticatedUser, @Body() dto: InitiatePaymentDto) {
+  initiate(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: InitiatePaymentDto,
+  ) {
     return this.paymentsService.initiate(user.userId, dto);
   }
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Get("verify/:reference")
-  verify(@CurrentUser() user: AuthenticatedUser, @Param("reference") reference: string) {
+  verify(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("reference") reference: string,
+  ) {
     return this.paymentsService.verifyByReference(user.userId, reference);
   }
 
@@ -31,7 +51,7 @@ export class PaymentsController {
     @Req() req: Request & { rawBody?: Buffer },
     @Headers("verif-hash") legacyHash: string | undefined,
     @Headers("flutterwave-signature") signature: string | undefined,
-    @Body() body: unknown,
+    @Body() body: FlutterwaveWebhookBody,
   ) {
     return this.paymentsService.handleFlutterwaveWebhook(
       req.rawBody ?? Buffer.from(JSON.stringify(body)),
@@ -41,7 +61,7 @@ export class PaymentsController {
   }
 
   @Post("webhook/opay")
-  handleOpayWebhook(@Body() body: any) {
+  handleOpayWebhook(@Body() body: OpayWebhookBody) {
     return this.paymentsService.handleOpayWebhook(body);
   }
 

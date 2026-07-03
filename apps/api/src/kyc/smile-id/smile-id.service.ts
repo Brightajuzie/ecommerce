@@ -25,7 +25,10 @@ export class SmileIdService {
   }
 
   private get server(): number {
-    return this.configService.get<string>("SMILE_ID_ENVIRONMENT") === "production" ? 1 : 0;
+    return this.configService.get<string>("SMILE_ID_ENVIRONMENT") ===
+      "production"
+      ? 1
+      : 0;
   }
 
   private get callbackUrl(): string {
@@ -35,7 +38,9 @@ export class SmileIdService {
 
   private ensureConfigured() {
     if (!this.partnerId || !this.apiKey) {
-      throw new BadGatewayException("Identity verification is not configured on this server");
+      throw new BadGatewayException(
+        "Identity verification is not configured on this server",
+      );
     }
   }
 
@@ -44,22 +49,37 @@ export class SmileIdService {
    * Fire-and-forget: the result arrives asynchronously via the /kyc/webhook
    * callback, not in this response.
    */
-  async submitBiometricKyc(params: SubmitBiometricKycParams): Promise<{ jobId: string }> {
+  async submitBiometricKyc(
+    params: SubmitBiometricKycParams,
+  ): Promise<{ jobId: string }> {
     this.ensureConfigured();
 
-    const webApi = new WebApi(this.partnerId, this.callbackUrl, this.apiKey, this.server);
+    const webApi = new WebApi(
+      this.partnerId,
+      this.callbackUrl,
+      this.apiKey,
+      this.server,
+    );
     const jobId = `${params.vendorProfileId}-${Date.now()}`;
 
     try {
       await webApi.submit_job(
-        { user_id: params.vendorProfileId, job_id: jobId, job_type: JOB_TYPE.BIOMETRIC_KYC },
+        {
+          user_id: params.vendorProfileId,
+          job_id: jobId,
+          job_type: JOB_TYPE.BIOMETRIC_KYC,
+        },
         [
           {
             image_type_id: IMAGE_TYPE.SELFIE_IMAGE_BASE64,
             image: params.selfieBuffer.toString("base64"),
           },
         ],
-        { id_type: params.idType, id_number: params.idNumber, country: params.country },
+        {
+          id_type: params.idType,
+          id_number: params.idNumber,
+          country: params.country,
+        },
         { return_job_status: false },
       );
       return { jobId };
@@ -73,7 +93,10 @@ export class SmileIdService {
    * Verifies the signature/timestamp pair Smile ID sends with webhook
    * callbacks, using the same HMAC scheme as outbound request signing.
    */
-  confirmWebhookSignature(timestamp: string | number, signature: string): boolean {
+  confirmWebhookSignature(
+    timestamp: string | number,
+    signature: string,
+  ): boolean {
     if (!this.partnerId || !this.apiKey || !signature || !timestamp) {
       return false;
     }

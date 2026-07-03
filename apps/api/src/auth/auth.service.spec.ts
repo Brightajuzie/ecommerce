@@ -1,13 +1,24 @@
 import { ConflictException, UnauthorizedException } from "@nestjs/common";
+import type { ConfigService } from "@nestjs/config";
+import type { JwtService } from "@nestjs/jwt";
 import { UserRole, VendorStatus } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import { AuthService } from "./auth.service";
+import type { PrismaService } from "../prisma/prisma.service";
+
+interface MockPrisma {
+  user: {
+    findUnique: jest.Mock;
+    findUniqueOrThrow: jest.Mock;
+    create: jest.Mock;
+  };
+}
 
 describe("AuthService", () => {
   let service: AuthService;
-  let prisma: any;
-  let jwtService: any;
-  let configService: any;
+  let prisma: MockPrisma;
+  let jwtService: Pick<JwtService, "signAsync" | "verifyAsync">;
+  let configService: Pick<ConfigService, "get" | "getOrThrow">;
 
   beforeEach(() => {
     prisma = {
@@ -18,15 +29,25 @@ describe("AuthService", () => {
       },
     };
     jwtService = {
-      signAsync: jest.fn().mockResolvedValue("signed-token"),
-      verifyAsync: jest.fn(),
+      signAsync: jest
+        .fn()
+        .mockResolvedValue("signed-token") as JwtService["signAsync"],
+      verifyAsync: jest.fn() as JwtService["verifyAsync"],
     };
     configService = {
-      getOrThrow: jest.fn((key: string) => `${key}-value`),
-      get: jest.fn((_key: string, fallback: string) => fallback),
+      getOrThrow: jest.fn(
+        (key: string) => `${key}-value`,
+      ) as ConfigService["getOrThrow"],
+      get: jest.fn(
+        (_key: string, fallback: string) => fallback,
+      ) as ConfigService["get"],
     };
 
-    service = new AuthService(prisma, jwtService, configService);
+    service = new AuthService(
+      prisma as unknown as PrismaService,
+      jwtService as JwtService,
+      configService as ConfigService,
+    );
   });
 
   describe("register", () => {
@@ -39,7 +60,7 @@ describe("AuthService", () => {
           password: "password123",
           firstName: "A",
           lastName: "B",
-        } as any),
+        }),
       ).rejects.toBeInstanceOf(ConflictException);
     });
 
@@ -67,7 +88,7 @@ describe("AuthService", () => {
         lastName: "Endor",
         role: UserRole.VENDOR,
         businessName: "Vendor Biz",
-      } as any);
+      });
 
       expect(prisma.user.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -102,7 +123,10 @@ describe("AuthService", () => {
       });
 
       await expect(
-        service.login({ email: "user@example.com", password: "wrong-password" }),
+        service.login({
+          email: "user@example.com",
+          password: "wrong-password",
+        }),
       ).rejects.toBeInstanceOf(UnauthorizedException);
     });
 

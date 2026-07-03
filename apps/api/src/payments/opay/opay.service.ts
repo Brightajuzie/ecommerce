@@ -24,6 +24,10 @@ export interface OpayCallbackPayload {
   transactionId: string;
 }
 
+interface OpayCreateResponse {
+  data?: { cashierUrl?: string };
+}
+
 /**
  * Integrates with OPay's Cashier Checkout API. Endpoint paths/headers follow
  * OPay's documented "Cashier Create Payment" contract as of this writing;
@@ -67,7 +71,7 @@ export class OpayService {
     }
 
     try {
-      const response = await axios.post(
+      const response = await axios.post<OpayCreateResponse>(
         `${this.baseUrl}/api/v1/international/cashier/create`,
         {
           country: "NG",
@@ -76,7 +80,11 @@ export class OpayService {
           returnUrl,
           callbackUrl,
           product: { name: "IkStore order", description: `Order ${reference}` },
-          userInfo: { userName: customer.name, userEmail: customer.email, userMobile: customer.phone },
+          userInfo: {
+            userName: customer.name,
+            userEmail: customer.email,
+            userMobile: customer.phone,
+          },
         },
         {
           headers: {
@@ -102,7 +110,10 @@ export class OpayService {
    * Verifies OPay's callback signature: HMAC-SHA3-512 over a fixed template
    * built from eight payload fields, keyed with the merchant's secret key.
    */
-  verifyCallbackSignature(payload: OpayCallbackPayload, sha512: string | undefined): boolean {
+  verifyCallbackSignature(
+    payload: OpayCallbackPayload,
+    sha512: string | undefined,
+  ): boolean {
     if (!sha512 || !this.secretKey) {
       return false;
     }

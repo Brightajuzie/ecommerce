@@ -4,6 +4,14 @@ import { PrismaService } from "../prisma/prisma.service";
 import { SmileIdService } from "./smile-id/smile-id.service";
 import { SubmitKycDto } from "./dto/submit-kyc.dto";
 
+export interface SmileIdWebhookBody {
+  job_id?: string;
+  partner_params?: { job_id?: string };
+  job_success?: boolean;
+  timestamp?: string | number;
+  signature?: string;
+}
+
 @Injectable()
 export class KycService {
   private readonly logger = new Logger(KycService.name);
@@ -26,7 +34,10 @@ export class KycService {
 
     return this.prisma.vendorProfile.update({
       where: { id: vendorProfile.id },
-      data: { verificationStatus: VendorVerificationStatus.PENDING, verificationJobId: jobId },
+      data: {
+        verificationStatus: VendorVerificationStatus.PENDING,
+        verificationJobId: jobId,
+      },
     });
   }
 
@@ -46,13 +57,17 @@ export class KycService {
    * the exact callback nesting should be confirmed against a live sandbox
    * event before production use).
    */
-  async handleWebhook(body: any, timestamp: string | number, signature: string) {
+  async handleWebhook(
+    body: SmileIdWebhookBody,
+    timestamp: string | number,
+    signature: string,
+  ) {
     if (!this.smileId.confirmWebhookSignature(timestamp, signature)) {
       this.logger.warn("Rejected Smile ID webhook with invalid signature");
       return { received: false };
     }
 
-    const jobId: string | undefined = body?.job_id ?? body?.partner_params?.job_id;
+    const jobId = body.job_id ?? body.partner_params?.job_id;
     if (!jobId) {
       this.logger.warn("Smile ID webhook missing job_id");
       return { received: true };
@@ -66,7 +81,7 @@ export class KycService {
       return { received: true };
     }
 
-    const success = body?.job_success === true;
+    const success = body.job_success === true;
     await this.prisma.vendorProfile.update({
       where: { id: vendorProfile.id },
       data: {
@@ -81,7 +96,9 @@ export class KycService {
   }
 
   private async getVendorProfileOrThrow(userId: string) {
-    const vendorProfile = await this.prisma.vendorProfile.findUnique({ where: { userId } });
+    const vendorProfile = await this.prisma.vendorProfile.findUnique({
+      where: { userId },
+    });
     if (!vendorProfile) {
       throw new NotFoundException("No vendor profile found for this account");
     }

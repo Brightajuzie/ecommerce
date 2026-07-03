@@ -1,9 +1,27 @@
 import { BadRequestException } from "@nestjs/common";
 import { OrdersService } from "./orders.service";
+import type { PrismaService } from "../prisma/prisma.service";
+
+interface VendorOrderCreateData {
+  vendorId: string;
+  subtotal: number;
+  commissionAmount: number;
+  vendorPayoutAmount: number;
+}
+
+interface MockPrisma {
+  address: { findUnique: jest.Mock };
+  cart: { findUnique: jest.Mock };
+  order: { create: jest.Mock; findUniqueOrThrow: jest.Mock };
+  vendorOrder: { create: jest.Mock };
+  product: { update: jest.Mock };
+  cartItem: { deleteMany: jest.Mock };
+  $transaction: jest.Mock;
+}
 
 describe("OrdersService.checkout", () => {
   let service: OrdersService;
-  let prisma: any;
+  let prisma: MockPrisma;
 
   beforeEach(() => {
     prisma = {
@@ -15,11 +33,14 @@ describe("OrdersService.checkout", () => {
       cartItem: { deleteMany: jest.fn() },
       $transaction: jest.fn(),
     };
-    service = new OrdersService(prisma);
+    service = new OrdersService(prisma as unknown as PrismaService);
   });
 
   it("throws when the address does not belong to the buyer", async () => {
-    prisma.address.findUnique.mockResolvedValue({ id: "addr-1", userId: "someone-else" });
+    prisma.address.findUnique.mockResolvedValue({
+      id: "addr-1",
+      userId: "someone-else",
+    });
 
     await expect(
       service.checkout("buyer-1", { addressId: "addr-1" }),
@@ -27,7 +48,10 @@ describe("OrdersService.checkout", () => {
   });
 
   it("throws when the cart is empty", async () => {
-    prisma.address.findUnique.mockResolvedValue({ id: "addr-1", userId: "buyer-1" });
+    prisma.address.findUnique.mockResolvedValue({
+      id: "addr-1",
+      userId: "buyer-1",
+    });
     prisma.cart.findUnique.mockResolvedValue({ id: "cart-1", items: [] });
 
     await expect(
@@ -36,7 +60,10 @@ describe("OrdersService.checkout", () => {
   });
 
   it("throws when requested quantity exceeds stock", async () => {
-    prisma.address.findUnique.mockResolvedValue({ id: "addr-1", userId: "buyer-1" });
+    prisma.address.findUnique.mockResolvedValue({
+      id: "addr-1",
+      userId: "buyer-1",
+    });
     prisma.cart.findUnique.mockResolvedValue({
       id: "cart-1",
       items: [
@@ -44,7 +71,14 @@ describe("OrdersService.checkout", () => {
           productId: "p1",
           quantity: 5,
           priceAtAdd: 1000,
-          product: { id: "p1", title: "Widget", stock: 2, vendorId: "v1", currency: "NGN", vendor: { commissionRate: 10 } },
+          product: {
+            id: "p1",
+            title: "Widget",
+            stock: 2,
+            vendorId: "v1",
+            currency: "NGN",
+            vendor: { commissionRate: 10 },
+          },
         },
       ],
     });
@@ -55,7 +89,10 @@ describe("OrdersService.checkout", () => {
   });
 
   it("splits a multi-vendor cart into one VendorOrder per vendor with correct commission math", async () => {
-    prisma.address.findUnique.mockResolvedValue({ id: "addr-1", userId: "buyer-1" });
+    prisma.address.findUnique.mockResolvedValue({
+      id: "addr-1",
+      userId: "buyer-1",
+    });
     prisma.cart.findUnique.mockResolvedValue({
       id: "cart-1",
       items: [
@@ -88,31 +125,44 @@ describe("OrdersService.checkout", () => {
       ],
     });
 
-    const createdVendorOrders: any[] = [];
-    prisma.vendorOrder.create.mockImplementation(({ data }: any) => {
-      createdVendorOrders.push(data);
-      return Promise.resolve(data);
-    });
+    const createdVendorOrders: VendorOrderCreateData[] = [];
+    prisma.vendorOrder.create.mockImplementation(
+      ({ data }: { data: VendorOrderCreateData }) => {
+        createdVendorOrders.push(data);
+        return Promise.resolve(data);
+      },
+    );
     prisma.order.create.mockResolvedValue({ id: "order-1" });
-    prisma.order.findUniqueOrThrow.mockResolvedValue({ id: "order-1", vendorOrders: createdVendorOrders });
+    prisma.order.findUniqueOrThrow.mockResolvedValue({
+      id: "order-1",
+      vendorOrders: createdVendorOrders,
+    });
 
-    prisma.$transaction.mockImplementation(async (cb: any) => cb(prisma));
+    prisma.$transaction.mockImplementation(
+      async (cb: (tx: MockPrisma) => Promise<unknown>) => cb(prisma),
+    );
 
     const result = await service.checkout("buyer-1", { addressId: "addr-1" });
 
     expect(prisma.vendorOrder.create).toHaveBeenCalledTimes(2);
 
-    const vendorAOrder = createdVendorOrders.find((o) => o.vendorId === "vendor-A");
-    expect(vendorAOrder.subtotal).toBe(2000);
-    expect(vendorAOrder.commissionAmount).toBe(200);
-    expect(vendorAOrder.vendorPayoutAmount).toBe(1800);
+    const vendorAOrder = createdVendorOrders.find(
+      (o) => o.vendorId === "vendor-A",
+    );
+    expect(vendorAOrder?.subtotal).toBe(2000);
+    expect(vendorAOrder?.commissionAmount).toBe(200);
+    expect(vendorAOrder?.vendorPayoutAmount).toBe(1800);
 
-    const vendorBOrder = createdVendorOrders.find((o) => o.vendorId === "vendor-B");
-    expect(vendorBOrder.subtotal).toBe(5000);
-    expect(vendorBOrder.commissionAmount).toBe(1000);
-    expect(vendorBOrder.vendorPayoutAmount).toBe(4000);
+    const vendorBOrder = createdVendorOrders.find(
+      (o) => o.vendorId === "vendor-B",
+    );
+    expect(vendorBOrder?.subtotal).toBe(5000);
+    expect(vendorBOrder?.commissionAmount).toBe(1000);
+    expect(vendorBOrder?.vendorPayoutAmount).toBe(4000);
 
-    expect(prisma.cartItem.deleteMany).toHaveBeenCalledWith({ where: { cartId: "cart-1" } });
+    expect(prisma.cartItem.deleteMany).toHaveBeenCalledWith({
+      where: { cartId: "cart-1" },
+    });
     expect(result).toBeDefined();
   });
 });

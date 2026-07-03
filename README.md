@@ -62,15 +62,17 @@ cp apps/mobile/.env.example apps/mobile/.env
 
 pnpm db:up            # if using Docker; skip if you set up Postgres natively
 pnpm db:migrate        # applies prisma/migrations against DATABASE_URL
-pnpm db:seed           # creates an admin, a sample vendor + 3 products, and a buyer account
+pnpm db:seed           # creates an admin, two vendors (electronics/fashion + groceries/food)
+                       # with 18 sample products across 5 categories, and a buyer account
 ```
 
 Seeded accounts (password shown next to each):
-| Role   | Email               | Password    |
-|--------|---------------------|-------------|
-| Admin  | admin@test.com      | 12345       |
-| Vendor | vendor@ikstore.dev  | 12345       |
-| Buyer  | buyer@ikstore.dev   | 12345       |
+| Role   | Email                  | Password    |
+|--------|------------------------|-------------|
+| Admin  | admin@test.com         | 12345       |
+| Vendor | vendor@ikstore.dev     | 12345       |
+| Vendor | freshmart@ikstore.dev  | 12345       |
+| Buyer  | buyer@ikstore.dev      | 12345       |
 
 ## Running
 
@@ -189,6 +191,36 @@ These are natural next phases, not oversights:
   pulling in a third-party color-wheel component for marginal gain.
 - **Live-camera selfie capture for KYC** — currently a photo library pick; a real camera prompt
   is a meaningful anti-spoofing improvement worth adding before production use.
+
+## Deploying to production
+
+```bash
+pnpm --filter api build       # compiles apps/api to apps/api/dist
+pnpm --filter api exec prisma migrate deploy   # applies migrations without prompting or diffing schema
+node apps/api/dist/main.js    # or: pnpm --filter api start:prod
+```
+
+Beyond the gateway/Cloudinary/Smile ID keys already covered above, set these before running in
+production:
+
+| Var              | Purpose                                                                 |
+|-------------------|--------------------------------------------------------------------------|
+| `CORS_ORIGIN`     | Comma-separated list of allowed browser origins. Leave unset in dev (any origin allowed); set explicitly for any browser-based client (e.g. a future admin web dashboard) — the mobile app isn't a browser origin and is unaffected either way. |
+| `TRUST_PROXY`     | Set to `true` only when the API sits behind a reverse proxy/load balancer that sets `X-Forwarded-*` headers. Affects client IP detection used by rate limiting and request logging. |
+| `SWAGGER_ENABLED` | Set to `false` to unmount `/docs` in production if you don't want the API surface publicly documented. |
+
+Also worth knowing:
+- `GET /health` pings the database (`SELECT 1`) and returns `503` if it's unreachable, rather than
+  just confirming the process is alive — point an orchestrator's readiness probe at it so traffic
+  isn't routed to an instance that's up but can't serve requests.
+- `/auth/register`, `/auth/login`, and `/auth/refresh` are throttled tighter than the rest of the
+  API (10 req/min vs the global 100 req/min) to slow down credential-stuffing attempts.
+- The process exits with a logged error on startup failure (e.g. bad `DATABASE_URL`) instead of
+  hanging or silently swallowing an unhandled rejection — check process logs/exit code in your
+  deployment platform if the API doesn't come up.
+- `app.enableShutdownHooks()` is on, so `SIGTERM`/`SIGINT` (container stop, rolling deploy) let
+  Nest run its shutdown lifecycle, including Prisma's `$disconnect()`, instead of dropping
+  connections mid-request.
 
 ## Architecture notes
 
