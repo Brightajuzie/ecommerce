@@ -10,9 +10,9 @@ export interface Theme {
 }
 
 const DEFAULT_THEME: Theme = {
-  primaryColor: "#16A34A",
-  secondaryColor: "#0284C7",
-  accentColor: null,
+  primaryColor: "#15803D",
+  secondaryColor: "#65A30D",
+  accentColor: "#ECFDF5",
   logoUrl: null,
 };
 
