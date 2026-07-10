@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "description": "Multivendor cross-platform e-commerce platform",
+  "license": "MIT",
   "scripts": {
     "dev:api": "pnpm --filter api start:dev",
     "dev:mobile": "pnpm --filter mobile start",

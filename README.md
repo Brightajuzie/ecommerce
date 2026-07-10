@@ -1,5 +1,7 @@
 # IkStore — Multivendor E-commerce Platform
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 A cross-platform (iOS/Android) multivendor marketplace: buyers browse and buy from many
 independent vendors in one app; vendors manage their own catalog and fulfillment; payments
 run through Flutterwave and Opay. Built as an MVP scaffold — solid foundations, ready to grow.
