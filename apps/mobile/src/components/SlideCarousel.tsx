@@ -1,14 +1,22 @@
-import { Dimensions, FlatList, Image, Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import {
+  FlatList,
+  Image,
+  type LayoutChangeEvent,
+  Linking,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import type { SlideDto } from "@ikstore/shared";
 import { SlidesApi } from "../api/endpoints";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const SLIDE_WIDTH = SCREEN_WIDTH - 32;
-
 export function SlideCarousel() {
   const slidesQuery = useQuery({ queryKey: ["slides"], queryFn: SlidesApi.listActive });
   const slides = slidesQuery.data ?? [];
+  const [slideWidth, setSlideWidth] = useState(0);
 
   if (slides.length === 0) {
     return null;
@@ -20,36 +28,45 @@ export function SlideCarousel() {
     }
   };
 
+  const onWrapperLayout = (event: LayoutChangeEvent) => {
+    setSlideWidth(event.nativeEvent.layout.width);
+  };
+
   return (
-    <View style={styles.wrapper}>
-      <FlatList
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        data={slides}
-        keyExtractor={(item: SlideDto) => item.id}
-        snapToInterval={SLIDE_WIDTH}
-        decelerationRate="fast"
-        renderItem={({ item }) => (
-          <Pressable style={styles.slide} onPress={() => openSlideLink(item.linkUrl)}>
-            <Image source={{ uri: item.imageUrl }} style={styles.image} />
-            {item.title ? (
-              <View style={styles.captionOverlay}>
-                <Text style={styles.captionText} numberOfLines={2}>
-                  {item.title}
-                </Text>
-              </View>
-            ) : null}
-          </Pressable>
-        )}
-      />
+    <View style={styles.wrapper} onLayout={onWrapperLayout}>
+      {slideWidth > 0 && (
+        <FlatList
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          data={slides}
+          keyExtractor={(item: SlideDto) => item.id}
+          snapToInterval={slideWidth}
+          decelerationRate="fast"
+          renderItem={({ item }) => (
+            <Pressable
+              style={[styles.slide, { width: slideWidth }]}
+              onPress={() => openSlideLink(item.linkUrl)}
+            >
+              <Image source={{ uri: item.imageUrl }} style={styles.image} />
+              {item.title ? (
+                <View style={styles.captionOverlay}>
+                  <Text style={styles.captionText} numberOfLines={2}>
+                    {item.title}
+                  </Text>
+                </View>
+              ) : null}
+            </Pressable>
+          )}
+        />
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrapper: { marginBottom: 16 },
-  slide: { width: SLIDE_WIDTH, height: 140, borderRadius: 12, overflow: "hidden" },
+  slide: { height: 140, borderRadius: 12, overflow: "hidden" },
   image: { width: "100%", height: "100%", backgroundColor: "#E5E7EB" },
   captionOverlay: {
     position: "absolute",

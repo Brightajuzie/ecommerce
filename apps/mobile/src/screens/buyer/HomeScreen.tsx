@@ -9,6 +9,7 @@ import {
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -24,6 +25,14 @@ import type { BuyerStackParamList } from "../../navigation/types";
 
 const NEW_PRODUCT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 const LOW_STOCK_THRESHOLD = 5;
+const MAX_CONTENT_WIDTH = 1200;
+
+function columnsForWidth(width: number): number {
+  if (width >= 1200) return 5;
+  if (width >= 900) return 4;
+  if (width >= 640) return 3;
+  return 2;
+}
 
 const CATEGORY_ICONS: { match: RegExp; icon: keyof typeof Ionicons.glyphMap }[] = [
   { match: /grocer/i, icon: "nutrition" },
@@ -41,6 +50,9 @@ export function HomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<BuyerStackParamList>>();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
+  const numColumns = columnsForWidth(windowWidth);
+  const cardMaxWidthPercent = 100 / numColumns - (numColumns > 2 ? 1.5 : 3);
   const [search, setSearch] = useState("");
   const [categoryId, setCategoryId] = useState<string | undefined>(undefined);
 
@@ -65,32 +77,34 @@ export function HomeScreen() {
         end={{ x: 1, y: 1 }}
         style={[styles.hero, { paddingTop: insets.top + 14 }]}
       >
-        <View style={styles.heroTop}>
-          {theme.logoUrl ? (
-            <Image source={{ uri: theme.logoUrl }} style={styles.logo} resizeMode="contain" />
-          ) : (
-            <View style={styles.brandRow}>
-              <Ionicons name="leaf" size={22} color="#fff" />
-              <Text style={styles.title}>IkStore</Text>
-            </View>
-          )}
-          <Text style={styles.tagline}>Fresh finds, everyday prices 🌿</Text>
-        </View>
+        <View style={styles.heroInner}>
+          <View style={styles.heroTop}>
+            {theme.logoUrl ? (
+              <Image source={{ uri: theme.logoUrl }} style={styles.logo} resizeMode="contain" />
+            ) : (
+              <View style={styles.brandRow}>
+                <Ionicons name="leaf" size={22} color="#fff" />
+                <Text style={styles.title}>IkStore</Text>
+              </View>
+            )}
+            <Text style={styles.tagline}>Fresh finds, everyday prices 🌿</Text>
+          </View>
 
-        <View style={styles.searchBar}>
-          <Ionicons name="search" size={18} color="#9CA3AF" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search products..."
-            placeholderTextColor="#9CA3AF"
-            value={search}
-            onChangeText={setSearch}
-          />
-          {search.length > 0 && (
-            <Pressable onPress={() => setSearch("")} hitSlop={8}>
-              <Ionicons name="close-circle" size={18} color="#9CA3AF" />
-            </Pressable>
-          )}
+          <View style={styles.searchBar}>
+            <Ionicons name="search" size={18} color="#9CA3AF" />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search products..."
+              placeholderTextColor="#9CA3AF"
+              value={search}
+              onChangeText={setSearch}
+            />
+            {search.length > 0 && (
+              <Pressable onPress={() => setSearch("")} hitSlop={8}>
+                <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+              </Pressable>
+            )}
+          </View>
         </View>
       </LinearGradient>
 
@@ -133,9 +147,10 @@ export function HomeScreen() {
         <ActivityIndicator style={styles.loading} color={theme.primaryColor} />
       ) : (
         <FlatList
+          key={numColumns}
           data={products}
           keyExtractor={(item: ProductDto) => item.id}
-          numColumns={2}
+          numColumns={numColumns}
           contentContainerStyle={styles.grid}
           ListHeaderComponent={
             <>
@@ -161,7 +176,7 @@ export function HomeScreen() {
             const isLowStock = item.stock > 0 && item.stock <= LOW_STOCK_THRESHOLD;
             return (
               <Pressable
-                style={styles.card}
+                style={[styles.card, { maxWidth: `${cardMaxWidthPercent}%` }]}
                 onPress={() => navigation.navigate("ProductDetail", { productId: item.id })}
               >
                 <View style={styles.cardImageWrap}>
@@ -206,6 +221,7 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
   },
+  heroInner: { width: "100%", maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" },
   heroTop: { marginBottom: 14 },
   brandRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   title: { fontSize: 24, fontWeight: "800", color: "#fff" },
@@ -248,7 +264,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   sectionHeaderText: { fontSize: 16, fontWeight: "800" },
-  grid: { paddingBottom: 24, paddingHorizontal: 10 },
+  grid: { paddingBottom: 24, paddingHorizontal: 10, width: "100%", maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" },
   card: {
     flex: 1,
     margin: 6,
