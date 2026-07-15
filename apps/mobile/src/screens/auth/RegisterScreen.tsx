@@ -20,6 +20,8 @@ import { useAuthStore } from "../../store/authStore";
 import { syncGuestCartToServer } from "../../store/guestCartStore";
 import type { BuyerStackParamList } from "../../navigation/types";
 
+const MAX_CONTENT_WIDTH = 440;
+
 export function RegisterScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<BuyerStackParamList>>();
   const route = useRoute<RouteProp<BuyerStackParamList, "Register">>();
@@ -54,6 +56,10 @@ export function RegisterScreen() {
         role: asVendor ? UserRole.VENDOR : UserRole.BUYER,
         businessName: asVendor ? businessName : undefined,
       });
+      // Setting a VENDOR session flips RootNavigator to VendorNavigator on the next
+      // render (unmounting this screen), which is what carries a new vendor straight
+      // into VendorPendingScreen's identity-verification step — see that screen for
+      // the "live check" continuation of registration.
       await setSession(result.accessToken, result.refreshToken, result.user);
       await syncGuestCartToServer();
       queryClient.invalidateQueries({ queryKey: ["cart"] });
@@ -79,37 +85,39 @@ export function RegisterScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>Create account</Text>
+        <View style={styles.centeredColumn}>
+          <Text style={styles.title}>Create account</Text>
 
-        <FormInput label="First name" value={firstName} onChangeText={setFirstName} />
-        <FormInput label="Last name" value={lastName} onChangeText={setLastName} />
-        <FormInput
-          label="Email"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-        />
-        <FormInput label="Password" value={password} onChangeText={setPassword} secureTextEntry />
-
-        <View style={styles.toggleRow}>
-          <Text style={styles.toggleLabel}>Register as a vendor</Text>
-          <Switch value={asVendor} onValueChange={setAsVendor} />
-        </View>
-
-        {asVendor && (
+          <FormInput label="First name" value={firstName} onChangeText={setFirstName} />
+          <FormInput label="Last name" value={lastName} onChangeText={setLastName} />
           <FormInput
-            label="Business name"
-            value={businessName}
-            onChangeText={setBusinessName}
-            placeholder="e.g. Ada's Fashion House"
+            label="Email"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
           />
-        )}
+          <FormInput label="Password" value={password} onChangeText={setPassword} secureTextEntry />
 
-        <PrimaryButton title="Sign up" onPress={handleRegister} loading={loading} />
+          <View style={styles.toggleRow}>
+            <Text style={styles.toggleLabel}>Register as a vendor</Text>
+            <Switch value={asVendor} onValueChange={setAsVendor} />
+          </View>
 
-        <Text style={styles.link} onPress={() => navigation.navigate("Login", route.params)}>
-          Already have an account? Log in
-        </Text>
+          {asVendor && (
+            <FormInput
+              label="Business name"
+              value={businessName}
+              onChangeText={setBusinessName}
+              placeholder="e.g. Ada's Fashion House"
+            />
+          )}
+
+          <PrimaryButton title="Sign up" onPress={handleRegister} loading={loading} />
+
+          <Text style={styles.link} onPress={() => navigation.navigate("Login", route.params)}>
+            Already have an account? Log in
+          </Text>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -118,6 +126,7 @@ export function RegisterScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: { padding: 24, backgroundColor: "#fff", flexGrow: 1, justifyContent: "center" },
+  centeredColumn: { width: "100%", maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" },
   title: { fontSize: 28, fontWeight: "800", color: "#111827", marginBottom: 24 },
   toggleRow: {
     flexDirection: "row",

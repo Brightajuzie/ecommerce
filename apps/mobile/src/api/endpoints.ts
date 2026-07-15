@@ -86,6 +86,7 @@ export const PaymentsApi = {
 };
 
 export const VendorsApi = {
+  listApproved: () => apiClient.get<VendorProfileDto[]>("/vendors").then((r) => r.data),
   apply: (input: { businessName: string; description?: string }) =>
     apiClient.post<VendorProfileDto>("/vendors/apply", input).then((r) => r.data),
   me: () => apiClient.get<VendorProfileDto>("/vendors/me").then((r) => r.data),

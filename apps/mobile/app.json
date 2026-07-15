@@ -14,6 +14,7 @@
       }
     },
     "android": {
+      "package": "com.ikstore.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -37,7 +38,8 @@
         {
           "photosPermission": "IkStore uses your photo library to upload product photos, logos, and banner images."
         }
-      ]
+      ],
+      "expo-secure-store"
     ]
   }
 }

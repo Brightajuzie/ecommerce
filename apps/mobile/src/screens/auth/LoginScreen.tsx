@@ -10,6 +10,8 @@ import { useAuthStore } from "../../store/authStore";
 import { syncGuestCartToServer } from "../../store/guestCartStore";
 import type { BuyerStackParamList } from "../../navigation/types";
 
+const MAX_CONTENT_WIDTH = 440;
+
 export function LoginScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<BuyerStackParamList>>();
   const route = useRoute<RouteProp<BuyerStackParamList, "Login">>();
@@ -52,32 +54,34 @@ export function LoginScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <View style={styles.container}>
-        <Text style={styles.title}>IkStore</Text>
-        <Text style={styles.subtitle}>Sign in to continue</Text>
+        <View style={styles.centeredColumn}>
+          <Text style={styles.title}>IkStore</Text>
+          <Text style={styles.subtitle}>Sign in to continue</Text>
 
-        <FormInput
-          label="Email"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          placeholder="you@example.com"
-        />
-        <FormInput
-          label="Password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          placeholder="••••••••"
-        />
+          <FormInput
+            label="Email"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            placeholder="you@example.com"
+          />
+          <FormInput
+            label="Password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            placeholder="••••••••"
+          />
 
-        <PrimaryButton title="Log in" onPress={handleLogin} loading={loading} />
+          <PrimaryButton title="Log in" onPress={handleLogin} loading={loading} />
 
-        <Text
-          style={styles.link}
-          onPress={() => navigation.navigate("Register", route.params)}
-        >
-          Don't have an account? Sign up
-        </Text>
+          <Text
+            style={styles.link}
+            onPress={() => navigation.navigate("Register", route.params)}
+          >
+            Don't have an account? Sign up
+          </Text>
+        </View>
       </View>
     </KeyboardAvoidingView>
   );
@@ -86,6 +90,7 @@ export function LoginScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: { flex: 1, justifyContent: "center", padding: 24, backgroundColor: "#fff" },
+  centeredColumn: { width: "100%", maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" },
   title: { fontSize: 32, fontWeight: "800", color: "#111827", marginBottom: 4 },
   subtitle: { fontSize: 16, color: "#6B7280", marginBottom: 32 },
   link: { marginTop: 20, textAlign: "center", color: "#111827", fontWeight: "600" },
