@@ -224,6 +224,114 @@ Also worth knowing:
   Nest run its shutdown lifecycle, including Prisma's `$disconnect()`, instead of dropping
   connections mid-request.
 
+### Hosting the database on Supabase
+
+Supabase gives you a managed PostgreSQL instance — this project doesn't use any Supabase-specific
+features (auth, storage, realtime), just the plain Postgres connection string, so it's a drop-in
+replacement for the local/native Postgres setup described above.
+
+1. Create a project at [supabase.com](https://supabase.com/dashboard) (free tier is enough to
+   start). Pick a strong database password when prompted — you'll need it in the connection string.
+2. In the project dashboard, go to **Project Settings → Database → Connection string** and copy
+   **two** URIs:
+   - The **Transaction pooler** (port `6543`) — most PaaS hosts (e.g. Render) are IPv4-only, and
+     Supabase's *direct* connection is IPv6-only, so the pooler is what the running app should
+     actually connect through day to day.
+   - The **Direct connection** (port `5432`) — needed only for running migrations, since the
+     pooler's transaction mode doesn't support the advisory locks `prisma migrate` takes.
+3. Set the pooler URL as `DATABASE_URL` and the direct URL as `DIRECT_URL` wherever the API runs
+   (`apps/api/prisma/schema.prisma` already declares both — `directUrl` falls back to being unused
+   for any non-pooled setup, e.g. local dev, where both vars can just be identical):
+   ```
+   DATABASE_URL="postgresql://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres"
+   DIRECT_URL="postgresql://postgres:<password>@db.<project-ref>.supabase.co:5432/postgres"
+   ```
+4. Run migrations against it once, from your machine or a one-off CI/deploy step (both vars need
+   to be set, since `migrate deploy` reads `DIRECT_URL` per the schema):
+   ```bash
+   DATABASE_URL="<pooler URL>" DIRECT_URL="<direct URL>" pnpm --filter api exec prisma migrate deploy
+   ```
+5. Optionally seed it the same way — only against a fresh project; the seed script upserts fixed
+   sample data, which is fine to re-run but not something you want against a database with real
+   customer data:
+   ```bash
+   DATABASE_URL="<pooler URL>" DIRECT_URL="<direct URL>" pnpm --filter api exec prisma db seed
+   ```
+
+### Hosting the API on Render
+
+A `render.yaml` [Blueprint](https://render.com/docs/blueprint-spec) is already set up at the repo
+root, so Render can create and configure the service from the repo directly:
+
+```yaml
+services:
+  - type: web
+    name: ikstore-api
+    runtime: node
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @ikstore/shared build && pnpm --filter api build
+    startCommand: node apps/api/dist/main.js
+    healthCheckPath: /api/v1/health
+```
+
+**Steps:**
+1. Push this repo to GitHub (already done if you're reading this from the hosted repo).
+2. In the Render dashboard: **New → Blueprint**, connect the repo, and Render will detect
+   `render.yaml` and propose the `ikstore-api` service automatically.
+3. Before the first deploy, Render will prompt for the env vars marked `sync: false` in
+   `render.yaml` — at minimum you need `DATABASE_URL` (your Supabase connection string from
+   above). The rest (`CORS_ORIGIN`, payment/Cloudinary/Smile ID keys) can be left blank and filled
+   in later; those integrations return a clear `502` when unconfigured rather than crashing, per
+   the existing pattern in this README.
+4. `JWT_SECRET` and `JWT_REFRESH_SECRET` are marked `generateValue: true`, so Render generates
+   strong random secrets for you automatically — you don't need to supply these.
+5. Deploy. Render builds and runs `apps/api/dist/main.js` directly (no Docker needed) and exposes
+   it at `https://ikstore-api.onrender.com` (or whatever you rename the service to — if you
+   rename it, update the `APP_URL` env var to match, since Render doesn't know that URL until
+   after the first deploy assigns it).
+6. Once live, come back to `CORS_ORIGIN` and set it to your web app's domain (see the Vercel
+   section below) so browser requests aren't blocked, and redeploy.
+
+**Free-tier note**: Render's free web services spin down after 15 minutes of inactivity and take
+~30-60s to cold-start on the next request — fine for testing, not for a production launch. Upgrade
+to a paid plan (or switch `plan: free` to `plan: starter` in `render.yaml`) once you're past
+testing.
+
+### Deploying the web app to Vercel
+
+Vercel hosts static sites, not long-running stateful servers — so what goes there is the mobile
+app's **web export** (`expo export -p web`), not the NestJS API. Deploy the API separately first
+(see above) on a platform that runs a persistent Node process, then point the web build at it.
+
+A root-level `vercel.json` is already set up for this pnpm workspace:
+
+```json
+{
+  "buildCommand": "pnpm --filter @ikstore/shared build && pnpm --filter mobile build:web",
+  "outputDirectory": "apps/mobile/dist",
+  "installCommand": "pnpm install"
+}
+```
+
+**Steps:**
+1. Import the repo into Vercel (dashboard → Add New → Project). Leave the project's Root Directory
+   as the repo root — `vercel.json` already handles building from there, including the
+   `@ikstore/shared` workspace package, which Expo's bundler needs pre-compiled (see the
+   `eas-build-post-install` note above — the same requirement applies here).
+2. In the Vercel project's Environment Variables, set `EXPO_PUBLIC_API_URL` to your **deployed**
+   API's URL (e.g. `https://your-api.example.com/api/v1`) — not `localhost`. This is baked into
+   the JS bundle at build time (Expo's `EXPO_PUBLIC_*` convention), so redeploy on Vercel any time
+   the API's URL changes.
+3. Deploy. Vercel auto-detects pushes to your configured branch.
+4. Once you have the Vercel domain, set `CORS_ORIGIN` on the **API** deployment to that domain
+   (comma-separated if you also keep a preview domain) and redeploy the API — without this,
+   the browser will block API requests from the Vercel-hosted site.
+
+**Known limitations of the web build** (pre-existing, not Vercel-specific): biometric login and
+the native selfie-capture KYC flow have no web equivalent — `expo-local-authentication` and the
+camera/selfie step simply aren't available in a browser. Guest cart and auth session storage both
+already fall back to `localStorage` on web (via the app's `secureStorage` wrapper), so those work
+identically to native.
+
 ## Architecture notes
 
 - **Multivendor checkout**: a buyer's cart can span several vendors. Checkout
