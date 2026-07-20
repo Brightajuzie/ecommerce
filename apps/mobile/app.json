@@ -14,13 +14,19 @@
       }
     },
     "android": {
+      "package": "com.ikstore.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -37,7 +43,14 @@
         {
           "photosPermission": "IkStore uses your photo library to upload product photos, logos, and banner images."
         }
-      ]
-    ]
+      ],
+      "expo-secure-store"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "dab8d0aa-a66b-4eb5-a8ac-3e7998bba905"
+      }
+    },
+    "owner": "brightajuzie"
   }
 }

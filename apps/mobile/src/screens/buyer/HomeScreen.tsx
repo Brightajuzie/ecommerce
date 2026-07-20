@@ -19,6 +19,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import type { CategoryDto, ProductDto } from "@ikstore/shared";
 import { ProductsApi, CategoriesApi } from "../../api/endpoints";
+import { AppDownloadBanner } from "../../components/AppDownloadBanner";
 import { SlideCarousel } from "../../components/SlideCarousel";
 import { useTheme } from "../../theme/ThemeContext";
 import type { BuyerStackParamList } from "../../navigation/types";
@@ -155,6 +156,7 @@ export function HomeScreen() {
           ListHeaderComponent={
             <>
               <SlideCarousel />
+              <AppDownloadBanner />
               <View style={styles.sectionHeader}>
                 <Ionicons name="leaf" size={16} color={theme.primaryColor} />
                 <Text style={[styles.sectionHeaderText, { color: theme.primaryColor }]}>

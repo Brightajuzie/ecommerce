@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { kycIdTypes, VendorVerificationStatus } from "@ikstore/shared";
@@ -26,6 +26,7 @@ export function VendorPendingScreen() {
   const logout = useAuthStore((s) => s.logout);
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
+  const [autoOpened, setAutoOpened] = useState(false);
   const [idType, setIdType] = useState<(typeof kycIdTypes)[number]>("NIN");
   const [idNumber, setIdNumber] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -38,6 +39,17 @@ export function VendorPendingScreen() {
   });
 
   const status = kycQuery.data?.verificationStatus ?? VendorVerificationStatus.NOT_STARTED;
+
+  // Open the verification form immediately the first time we see NOT_STARTED, so a
+  // freshly-registered vendor lands straight in the flow instead of needing an extra
+  // tap — this is what makes identity verification feel like a live continuation of
+  // registration rather than a separate later step.
+  useEffect(() => {
+    if (!autoOpened && !kycQuery.isLoading && status === VendorVerificationStatus.NOT_STARTED) {
+      setAutoOpened(true);
+      setShowForm(true);
+    }
+  }, [autoOpened, kycQuery.isLoading, status]);
 
   const handleSubmit = async () => {
     if (!idNumber) {
