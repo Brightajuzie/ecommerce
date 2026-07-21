@@ -268,10 +268,14 @@ services:
   - type: web
     name: ikstore-api
     runtime: node
-    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @ikstore/shared build && pnpm --filter api build
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @ikstore/shared build && pnpm --filter api exec prisma generate && pnpm --filter api build
     startCommand: node apps/api/dist/main.js
     healthCheckPath: /api/v1/health
 ```
+
+`apps/api/package.json` also runs `prisma generate` as its own `postinstall` script, so the
+Prisma Client regenerates on every `pnpm install` regardless of what build command any given host
+happens to be using — belt-and-suspenders after hitting the gotcha below.
 
 **Steps:**
 1. Push this repo to GitHub (already done if you're reading this from the hosted repo).
@@ -295,6 +299,13 @@ services:
 ~30-60s to cold-start on the next request — fine for testing, not for a production launch. Upgrade
 to a paid plan (or switch `plan: free` to `plan: starter` in `render.yaml`) once you're past
 testing.
+
+**Blueprint-sync gotcha**: editing `render.yaml` and pushing does **not** automatically update a
+service Render already created from an earlier version of the file — Render only re-reads
+`buildCommand`/`startCommand`/etc. on a manual **Blueprint sync**. If a deploy keeps failing the
+same way after you've fixed `render.yaml`, go to the Blueprint in the Render dashboard and trigger
+**Manual Sync** before re-deploying (this is why `prisma generate` lives in `postinstall` too —
+it's immune to this).
 
 ### Deploying the web app to Vercel
 
