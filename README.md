@@ -244,9 +244,20 @@ replacement for the local/native Postgres setup described above.
    (`apps/api/prisma/schema.prisma` already declares both — `directUrl` falls back to being unused
    for any non-pooled setup, e.g. local dev, where both vars can just be identical):
    ```
-   DATABASE_URL="postgresql://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres"
+   DATABASE_URL="postgresql://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres?pgbouncer=true"
    DIRECT_URL="postgresql://postgres:<password>@db.<project-ref>.supabase.co:5432/postgres"
    ```
+   The `?pgbouncer=true` on `DATABASE_URL` is required, not optional — without it Prisma caches
+   prepared statements against what it assumes is a stable connection, but the transaction pooler
+   hands out a different backend connection per query, so you'll intermittently hit
+   `prepared statement "sNN" already exists` / `does not exist` errors under any real traffic.
+   `pgbouncer=true` tells Prisma to use the simple query protocol instead, which is compatible with
+   transaction-mode pooling.
+   If `db.<project-ref>.supabase.co` (the direct-connection host) doesn't resolve on your network —
+   it's IPv6-only, and some networks have no IPv6 route — use the **Session pooler** for
+   `DIRECT_URL` instead: the same pooler host as `DATABASE_URL`, but port `5432`. Session mode is
+   IPv4-reachable and, unlike the transaction pooler on `6543`, supports the advisory locks
+   `prisma migrate` needs.
 4. Run migrations against it once, from your machine or a one-off CI/deploy step (both vars need
    to be set, since `migrate deploy` reads `DIRECT_URL` per the schema):
    ```bash

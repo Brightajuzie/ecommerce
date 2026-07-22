@@ -3,6 +3,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import * as LocalAuthentication from "expo-local-authentication";
+import { UserRole } from "@ikaystores/shared";
 import { UsersApi } from "../../api/endpoints";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { useAuthStore } from "../../store/authStore";
@@ -14,6 +15,8 @@ export function ProfileScreen() {
   const logout = useAuthStore((s) => s.logout);
   const biometricEnabled = useAuthStore((s) => s.biometricEnabled);
   const setBiometricEnabled = useAuthStore((s) => s.setBiometricEnabled);
+  const viewAsBuyer = useAuthStore((s) => s.viewAsBuyer);
+  const setViewAsBuyer = useAuthStore((s) => s.setViewAsBuyer);
   const meQuery = useQuery({ queryKey: ["me"], queryFn: UsersApi.me, enabled: !!user });
 
   const handleToggleBiometrics = async (nextValue: boolean) => {
@@ -67,6 +70,17 @@ export function ProfileScreen() {
           <Text style={styles.email}>{meQuery.data.email}</Text>
           <Text style={styles.role}>{meQuery.data.role}</Text>
         </View>
+      )}
+
+      {user.role !== UserRole.BUYER && (
+        <>
+          <PrimaryButton
+            title={viewAsBuyer ? "Back to dashboard" : "View store"}
+            variant="secondary"
+            onPress={() => setViewAsBuyer(!viewAsBuyer)}
+          />
+          <View style={styles.spacer} />
+        </>
       )}
 
       <View style={styles.toggleRow}>
