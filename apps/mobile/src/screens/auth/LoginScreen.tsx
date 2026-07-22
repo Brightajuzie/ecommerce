@@ -55,7 +55,7 @@ export function LoginScreen() {
     >
       <View style={styles.container}>
         <View style={styles.centeredColumn}>
-          <Text style={styles.title}>IkStore</Text>
+          <Text style={styles.title}>Ikaystores</Text>
           <Text style={styles.subtitle}>Sign in to continue</Text>
 
           <FormInput

@@ -3,8 +3,8 @@ import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View }
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { AddressDto } from "@ikstore/shared";
-import { PaymentProvider } from "@ikstore/shared";
+import type { AddressDto } from "@ikaystores/shared";
+import { PaymentProvider } from "@ikaystores/shared";
 import { UsersApi, OrdersApi, PaymentsApi } from "../../api/endpoints";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { FormInput } from "../../components/FormInput";

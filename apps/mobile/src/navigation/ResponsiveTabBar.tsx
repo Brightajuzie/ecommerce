@@ -55,7 +55,7 @@ export function ResponsiveTabBar({ state, descriptors, navigation }: BottomTabBa
   const Brand = (
     <View style={styles.brandRow}>
       {theme.logoUrl ? null : <Ionicons name="leaf" size={20} color={theme.primaryColor} />}
-      <Text style={[styles.brandText, { color: theme.primaryColor }]}>IkStore</Text>
+      <Text style={[styles.brandText, { color: theme.primaryColor }]}>Ikaystores</Text>
     </View>
   );
 

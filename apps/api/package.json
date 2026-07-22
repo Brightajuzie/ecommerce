@@ -1,7 +1,7 @@
 {
   "name": "api",
   "version": "0.0.1",
-  "description": "IkStore multivendor e-commerce API",
+  "description": "Ikaystores multivendor e-commerce API",
   "author": "",
   "private": true,
   "license": "MIT",
@@ -28,7 +28,7 @@
     "seed": "ts-node prisma/seed.ts"
   },
   "dependencies": {
-    "@ikstore/shared": "workspace:*",
+    "@ikaystores/shared": "workspace:*",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.0",
     "@nestjs/core": "^11.0.1",

@@ -75,7 +75,7 @@ export class FlutterwaveService {
             name: customer.name,
             phonenumber: customer.phoneNumber,
           },
-          customizations: { title: "IkStore" },
+          customizations: { title: "Ikaystores" },
         },
         { headers: { Authorization: `Bearer ${this.secretKey}` } },
       );

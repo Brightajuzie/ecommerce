@@ -26,7 +26,7 @@ import type {
   VendorOrderDto,
   VendorProfileDto,
   VendorVerificationStatus,
-} from "@ikstore/shared";
+} from "@ikaystores/shared";
 import { apiClient } from "./client";
 
 export const AuthApi = {

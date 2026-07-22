@@ -15,7 +15,7 @@ export function LockScreen() {
     setLastFailed(false);
     try {
       const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: "Unlock IkStore",
+        promptMessage: "Unlock Ikaystores",
         disableDeviceFallback: false,
       });
       if (result.success) {
@@ -34,7 +34,7 @@ export function LockScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>IkStore is locked</Text>
+      <Text style={styles.title}>Ikaystores is locked</Text>
       <Text style={styles.subtitle}>
         {lastFailed
           ? "Authentication failed. Try again, or log out to sign in with your password."

@@ -79,7 +79,10 @@ export class OpayService {
           amount: { total: amountKobo, currency },
           returnUrl,
           callbackUrl,
-          product: { name: "IkStore order", description: `Order ${reference}` },
+          product: {
+            name: "Ikaystores order",
+            description: `Order ${reference}`,
+          },
           userInfo: {
             userName: customer.name,
             userEmail: customer.email,

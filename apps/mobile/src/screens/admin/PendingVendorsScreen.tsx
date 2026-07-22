@@ -1,7 +1,7 @@
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { VendorProfileDto } from "@ikstore/shared";
-import { VendorVerificationStatus } from "@ikstore/shared";
+import type { VendorProfileDto } from "@ikaystores/shared";
+import { VendorVerificationStatus } from "@ikaystores/shared";
 import { VendorsApi } from "../../api/endpoints";
 import { PrimaryButton } from "../../components/PrimaryButton";
 

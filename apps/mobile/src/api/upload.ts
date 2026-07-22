@@ -1,5 +1,5 @@
 import * as ImagePicker from "expo-image-picker";
-import type { UploadResultDto } from "@ikstore/shared";
+import type { UploadResultDto } from "@ikaystores/shared";
 import { apiClient } from "./client";
 
 export class ImagePickerCancelledError extends Error {}

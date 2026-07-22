@@ -64,7 +64,7 @@ export function OrderDetailScreen() {
             </View>
 
             <View style={styles.qrWrap}>
-              <QRCode value={`IKSTORE:ORDER:${order.id}`} size={160} color="#111827" backgroundColor="#fff" />
+              <QRCode value={`IKAYSTORES:ORDER:${order.id}`} size={160} color="#111827" backgroundColor="#fff" />
               <Text style={styles.qrHint}>Scan at pickup or for order verification</Text>
             </View>
 

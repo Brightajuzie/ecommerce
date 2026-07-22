@@ -1,6 +1,6 @@
 import { ActivityIndicator, View } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
-import { UserRole } from "@ikstore/shared";
+import { UserRole } from "@ikaystores/shared";
 import { useAuthStore } from "../store/authStore";
 import { BuyerNavigator } from "./BuyerNavigator";
 import { VendorNavigator } from "./VendorNavigator";

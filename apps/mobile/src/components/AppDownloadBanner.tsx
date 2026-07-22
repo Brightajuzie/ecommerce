@@ -42,7 +42,7 @@ export function AppDownloadBanner() {
   return (
     <View style={styles.wrapper}>
       <View style={styles.textBlock}>
-        <Text style={styles.title}>Get the IkStore app</Text>
+        <Text style={styles.title}>Get the Ikaystores app</Text>
         <Text style={styles.subtitle}>Faster browsing, biometric login, and order tracking.</Text>
       </View>
       <View style={styles.buttonRow}>
