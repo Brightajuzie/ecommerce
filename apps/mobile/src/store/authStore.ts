@@ -14,12 +14,17 @@ interface AuthState {
   isHydrated: boolean;
   biometricEnabled: boolean;
   isUnlocked: boolean;
+  // Lets a vendor/admin temporarily browse the buyer storefront (RootNavigator
+  // otherwise mounts a completely separate nav tree per role). Session-only —
+  // deliberately not persisted, so it resets on every fresh app launch.
+  viewAsBuyer: boolean;
   hydrate: () => Promise<void>;
   setSession: (accessToken: string, refreshToken: string, user: UserDto) => Promise<void>;
   updateTokens: (accessToken: string, refreshToken: string) => Promise<void>;
   logout: () => Promise<void>;
   unlock: () => void;
   setBiometricEnabled: (enabled: boolean) => Promise<void>;
+  setViewAsBuyer: (value: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -29,6 +34,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isHydrated: false,
   biometricEnabled: false,
   isUnlocked: true,
+  viewAsBuyer: false,
 
   hydrate: async () => {
     const [accessToken, refreshToken, userJson, biometricFlag] = await Promise.all([
@@ -72,7 +78,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       secureStorage.deleteItem(REFRESH_TOKEN_KEY),
       secureStorage.deleteItem(USER_KEY),
     ]);
-    set({ accessToken: null, refreshToken: null, user: null, isUnlocked: true });
+    set({ accessToken: null, refreshToken: null, user: null, isUnlocked: true, viewAsBuyer: false });
   },
 
   unlock: () => set({ isUnlocked: true }),
@@ -81,4 +87,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     await secureStorage.setItem(BIOMETRIC_ENABLED_KEY, enabled ? "true" : "false");
     set({ biometricEnabled: enabled, isUnlocked: get().isUnlocked || !enabled });
   },
+
+  setViewAsBuyer: (value: boolean) => set({ viewAsBuyer: value }),
 }));

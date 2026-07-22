@@ -12,6 +12,7 @@ export function RootNavigator() {
   const user = useAuthStore((s) => s.user);
   const biometricEnabled = useAuthStore((s) => s.biometricEnabled);
   const isUnlocked = useAuthStore((s) => s.isUnlocked);
+  const viewAsBuyer = useAuthStore((s) => s.viewAsBuyer);
 
   if (!isHydrated) {
     return (
@@ -25,6 +26,8 @@ export function RootNavigator() {
     <NavigationContainer>
       {user && biometricEnabled && !isUnlocked ? (
         <LockScreen />
+      ) : user && viewAsBuyer ? (
+        <BuyerNavigator />
       ) : user?.role === UserRole.VENDOR ? (
         <VendorNavigator />
       ) : user?.role === UserRole.ADMIN ? (
