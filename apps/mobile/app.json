@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "IkStore",
-    "slug": "ikstore",
-    "scheme": "ikstore",
+    "name": "Ikaystores",
+    "slug": "ikaystores",
+    "scheme": "ikaystores",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -10,11 +10,11 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSFaceIDUsageDescription": "IkStore uses Face ID to let you unlock the app instead of retyping your password."
+        "NSFaceIDUsageDescription": "Ikaystores uses Face ID to let you unlock the app instead of retyping your password."
       }
     },
     "android": {
-      "package": "com.ikstore.app",
+      "package": "com.ikaystores.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -35,13 +35,13 @@
       [
         "expo-local-authentication",
         {
-          "faceIDPermission": "Allow IkStore to use Face ID to unlock the app."
+          "faceIDPermission": "Allow Ikaystores to use Face ID to unlock the app."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "IkStore uses your photo library to upload product photos, logos, and banner images."
+          "photosPermission": "Ikaystores uses your photo library to upload product photos, logos, and banner images."
         }
       ],
       "expo-secure-store"

@@ -4,7 +4,7 @@
   "main": "index.ts",
   "dependencies": {
     "@expo/vector-icons": "^15.1.1",
-    "@ikstore/shared": "workspace:*",
+    "@ikaystores/shared": "workspace:*",
     "@react-navigation/bottom-tabs": "^7.2.0",
     "@react-navigation/native": "^7.0.14",
     "@react-navigation/native-stack": "^7.2.0",
@@ -39,7 +39,7 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "build:web": "expo export -p web",
-    "eas-build-post-install": "pnpm --filter @ikstore/shared build"
+    "eas-build-post-install": "pnpm --filter @ikaystores/shared build"
   },
   "private": true
 }

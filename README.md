@@ -1,4 +1,4 @@
-# IkStore — Multivendor E-commerce Platform
+# Ikaystores — Multivendor E-commerce Platform
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -12,7 +12,7 @@ run through Flutterwave and Opay. Built as an MVP scaffold — solid foundations
   rate limiting, class-validator DTOs.
 - **Mobile**: React Native (Expo, TypeScript), React Navigation, TanStack Query, Zustand,
   react-hook-form + zod.
-- **Shared**: `@ikstore/shared` — TypeScript types + zod schemas used by both apps.
+- **Shared**: `@ikaystores/shared` — TypeScript types + zod schemas used by both apps.
 - **Payments**: Flutterwave (Standard Checkout, primary) and Opay (Cashier Checkout, secondary),
   both as hosted checkout links opened in an in-app WebView.
 - **Images**: Cloudinary — uploads (product photos, logo, home-page slides) are enhanced
@@ -27,12 +27,12 @@ run through Flutterwave and Opay. Built as an MVP scaffold — solid foundations
 ## Repo layout
 
 ```
-ikstore/
+ikaystores/
   apps/
     api/       NestJS backend
     mobile/    Expo React Native app
   packages/
-    shared/    @ikstore/shared — types + zod schemas
+    shared/    @ikaystores/shared — types + zod schemas
 ```
 
 ## Prerequisites
@@ -57,24 +57,25 @@ ikstore/
 
 ```bash
 pnpm install
-pnpm --filter @ikstore/shared build   # shared package compiles to dist/, rebuild after editing it
+pnpm --filter @ikaystores/shared build   # shared package compiles to dist/, rebuild after editing it
 
 cp apps/api/.env.example apps/api/.env       # fill in JWT secrets + gateway keys
 cp apps/mobile/.env.example apps/mobile/.env
 
 pnpm db:up            # if using Docker; skip if you set up Postgres natively
 pnpm db:migrate        # applies prisma/migrations against DATABASE_URL
-pnpm db:seed           # creates an admin, two vendors (electronics/fashion + groceries/food)
-                       # with 18 sample products across 5 categories, and a buyer account
+pnpm db:seed           # creates an admin, two vendors (household essentials + groceries)
+                       # with 19 sample products across 9 African-grocery-focused categories,
+                       # and a buyer account
 ```
 
 Seeded accounts (password shown next to each):
-| Role   | Email                  | Password    |
-|--------|------------------------|-------------|
-| Admin  | admin@test.com         | 12345       |
-| Vendor | vendor@ikstore.dev     | 12345       |
-| Vendor | freshmart@ikstore.dev  | 12345       |
-| Buyer  | buyer@ikstore.dev      | 12345       |
+| Role   | Email                    | Password    |
+|--------|--------------------------|-------------|
+| Admin  | admin@test.com           | 12345       |
+| Vendor | vendor@ikaystores.dev    | 12345       |
+| Vendor | freshmart@ikaystores.dev | 12345       |
+| Buyer  | buyer@ikaystores.dev     | 12345       |
 
 ## Running
 
@@ -266,9 +267,9 @@ root, so Render can create and configure the service from the repo directly:
 ```yaml
 services:
   - type: web
-    name: ikstore-api
+    name: ikaystores-api
     runtime: node
-    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @ikstore/shared build && pnpm --filter api exec prisma generate && pnpm --filter api build
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @ikaystores/shared build && pnpm --filter api exec prisma generate && pnpm --filter api build
     startCommand: node apps/api/dist/main.js
     healthCheckPath: /api/v1/health
 ```
@@ -280,7 +281,7 @@ happens to be using — belt-and-suspenders after hitting the gotcha below.
 **Steps:**
 1. Push this repo to GitHub (already done if you're reading this from the hosted repo).
 2. In the Render dashboard: **New → Blueprint**, connect the repo, and Render will detect
-   `render.yaml` and propose the `ikstore-api` service automatically.
+   `render.yaml` and propose the `ikaystores-api` service automatically.
 3. Before the first deploy, Render will prompt for the env vars marked `sync: false` in
    `render.yaml` — at minimum you need `DATABASE_URL` (your Supabase connection string from
    above). The rest (`CORS_ORIGIN`, payment/Cloudinary/Smile ID keys) can be left blank and filled
@@ -289,7 +290,7 @@ happens to be using — belt-and-suspenders after hitting the gotcha below.
 4. `JWT_SECRET` and `JWT_REFRESH_SECRET` are marked `generateValue: true`, so Render generates
    strong random secrets for you automatically — you don't need to supply these.
 5. Deploy. Render builds and runs `apps/api/dist/main.js` directly (no Docker needed) and exposes
-   it at `https://ikstore-api.onrender.com` (or whatever you rename the service to — if you
+   it at `https://ikaystores-api.onrender.com` (or whatever you rename the service to — if you
    rename it, update the `APP_URL` env var to match, since Render doesn't know that URL until
    after the first deploy assigns it).
 6. Once live, come back to `CORS_ORIGIN` and set it to your web app's domain (see the Vercel
@@ -317,7 +318,7 @@ A root-level `vercel.json` is already set up for this pnpm workspace:
 
 ```json
 {
-  "buildCommand": "pnpm --filter @ikstore/shared build && pnpm --filter mobile build:web",
+  "buildCommand": "pnpm --filter @ikaystores/shared build && pnpm --filter mobile build:web",
   "outputDirectory": "apps/mobile/dist",
   "installCommand": "pnpm install"
 }
@@ -326,7 +327,7 @@ A root-level `vercel.json` is already set up for this pnpm workspace:
 **Steps:**
 1. Import the repo into Vercel (dashboard → Add New → Project). Leave the project's Root Directory
    as the repo root — `vercel.json` already handles building from there, including the
-   `@ikstore/shared` workspace package, which Expo's bundler needs pre-compiled (see the
+   `@ikaystores/shared` workspace package, which Expo's bundler needs pre-compiled (see the
    `eas-build-post-install` note above — the same requirement applies here).
 2. In the Vercel project's Environment Variables, set `EXPO_PUBLIC_API_URL` to your **deployed**
    API's URL (e.g. `https://your-api.example.com/api/v1`) — not `localhost`. This is baked into

@@ -42,7 +42,7 @@ export class UploadsService {
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
-          folder: "ikstore",
+          folder: "ikaystores",
           resource_type: "image",
           transformation: [
             { effect: "improve" },

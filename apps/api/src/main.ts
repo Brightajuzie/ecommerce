@@ -41,7 +41,7 @@ async function bootstrap() {
 
   if (configService.get<boolean>("SWAGGER_ENABLED", true)) {
     const swaggerConfig = new DocumentBuilder()
-      .setTitle("IkStore API")
+      .setTitle("Ikaystores API")
       .setDescription("Multivendor e-commerce API")
       .setVersion("0.1.0")
       .addBearerAuth()
@@ -55,6 +55,6 @@ async function bootstrap() {
 }
 
 bootstrap().catch((error: unknown) => {
-  console.error("Failed to start IkStore API", error);
+  console.error("Failed to start Ikaystores API", error);
   process.exit(1);
 });

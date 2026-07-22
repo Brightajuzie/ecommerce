@@ -1,7 +1,7 @@
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { VendorOrderStatus } from "@ikstore/shared";
-import type { UpdateVendorOrderStatusInput, VendorOrderDto } from "@ikstore/shared";
+import { VendorOrderStatus } from "@ikaystores/shared";
+import type { UpdateVendorOrderStatusInput, VendorOrderDto } from "@ikaystores/shared";
 import { OrdersApi } from "../../api/endpoints";
 
 const NEXT_STATUS: Partial<

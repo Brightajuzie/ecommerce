@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { kycIdTypes, VendorVerificationStatus } from "@ikstore/shared";
+import { kycIdTypes, VendorVerificationStatus } from "@ikaystores/shared";
 import { KycApi } from "../../api/endpoints";
 import { pickAndSubmitKyc, ImagePickerCancelledError } from "../../api/upload";
 import { FormInput } from "../../components/FormInput";

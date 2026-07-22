@@ -2,7 +2,7 @@ import { ActivityIndicator, Alert, FlatList, Image, Pressable, StyleSheet, Text,
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { SlideDto } from "@ikstore/shared";
+import type { SlideDto } from "@ikaystores/shared";
 import { SlidesApi } from "../../api/endpoints";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import type { AdminStackParamList } from "../../navigation/types";

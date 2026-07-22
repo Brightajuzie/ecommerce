@@ -5,11 +5,15 @@ const prisma = new PrismaClient();
 
 async function main() {
   const categories = [
-    { name: "Electronics", slug: "electronics" },
-    { name: "Fashion", slug: "fashion" },
-    { name: "Home & Living", slug: "home-living" },
-    { name: "Groceries", slug: "groceries" },
-    { name: "Food & Beverages", slug: "food-beverages" },
+    { name: "Rice & Grains", slug: "rice-grains" },
+    { name: "Beans & Legumes", slug: "beans-legumes" },
+    { name: "Garri, Swallow & Flours", slug: "garri-swallow-flours" },
+    { name: "Spices & Seasonings", slug: "spices-seasonings" },
+    { name: "Oils & Cooking Essentials", slug: "oils-cooking-essentials" },
+    { name: "Snacks & Beverages", slug: "snacks-beverages" },
+    { name: "Canned & Packaged Foods", slug: "canned-packaged-foods" },
+    { name: "Fresh Produce", slug: "fresh-produce" },
+    { name: "Household & Essentials", slug: "household-essentials" },
   ];
 
   for (const category of categories) {
@@ -36,10 +40,10 @@ async function main() {
   });
 
   const vendorUser = await prisma.user.upsert({
-    where: { email: "vendor@ikstore.dev" },
+    where: { email: "vendor@ikaystores.dev" },
     update: { passwordHash: seedPasswordHash },
     create: {
-      email: "vendor@ikstore.dev",
+      email: "vendor@ikaystores.dev",
       passwordHash: seedPasswordHash,
       firstName: "Sample",
       lastName: "Vendor",
@@ -60,10 +64,10 @@ async function main() {
   });
 
   const groceryVendorUser = await prisma.user.upsert({
-    where: { email: "freshmart@ikstore.dev" },
+    where: { email: "freshmart@ikaystores.dev" },
     update: { passwordHash: seedPasswordHash },
     create: {
-      email: "freshmart@ikstore.dev",
+      email: "freshmart@ikaystores.dev",
       passwordHash: seedPasswordHash,
       firstName: "FreshMart",
       lastName: "Groceries",
@@ -83,24 +87,40 @@ async function main() {
     },
   });
 
-  const electronics = await prisma.category.findUniqueOrThrow({
-    where: { slug: "electronics" },
+  const riceGrains = await prisma.category.findUniqueOrThrow({
+    where: { slug: "rice-grains" },
   });
-  const fashion = await prisma.category.findUniqueOrThrow({
-    where: { slug: "fashion" },
+  const beansLegumes = await prisma.category.findUniqueOrThrow({
+    where: { slug: "beans-legumes" },
   });
-  const groceries = await prisma.category.findUniqueOrThrow({
-    where: { slug: "groceries" },
+  const garriSwallowFlours = await prisma.category.findUniqueOrThrow({
+    where: { slug: "garri-swallow-flours" },
   });
-  const foodBeverages = await prisma.category.findUniqueOrThrow({
-    where: { slug: "food-beverages" },
+  const spicesSeasonings = await prisma.category.findUniqueOrThrow({
+    where: { slug: "spices-seasonings" },
+  });
+  const oilsCookingEssentials = await prisma.category.findUniqueOrThrow({
+    where: { slug: "oils-cooking-essentials" },
+  });
+  const snacksBeverages = await prisma.category.findUniqueOrThrow({
+    where: { slug: "snacks-beverages" },
+  });
+  const cannedPackagedFoods = await prisma.category.findUniqueOrThrow({
+    where: { slug: "canned-packaged-foods" },
+  });
+  const freshProduce = await prisma.category.findUniqueOrThrow({
+    where: { slug: "fresh-produce" },
+  });
+  const householdEssentials = await prisma.category.findUniqueOrThrow({
+    where: { slug: "household-essentials" },
   });
 
   const sampleProducts = [
+    // Household & Essentials
     {
       id: "ab8df624-353a-4940-bf7d-768a2383966f",
       vendorId: vendorProfile.id,
-      categoryId: electronics.id,
+      categoryId: householdEssentials.id,
       title: "Wireless Earbuds",
       description: "Bluetooth 5.3 wireless earbuds with charging case.",
       price: 15000,
@@ -110,7 +130,7 @@ async function main() {
     {
       id: "6f1c3e6e-8e2e-4c34-9f2d-2a4c3f9b6a11",
       vendorId: vendorProfile.id,
-      categoryId: electronics.id,
+      categoryId: householdEssentials.id,
       title: "Portable Power Bank 20000mAh",
       description: "Fast-charging power bank with dual USB output.",
       price: 9500,
@@ -120,38 +140,40 @@ async function main() {
     {
       id: "3d9a2b7c-1f5e-4a6b-8c3d-7e5f9a1b2c4d",
       vendorId: vendorProfile.id,
-      categoryId: fashion.id,
+      categoryId: householdEssentials.id,
       title: "Ankara Print Tote Bag",
       description: "Handmade Ankara print tote bag, lined interior.",
       price: 7000,
       stock: 30,
       images: ["https://images.unsplash.com/photo-1660695828417-9cc2724bf656?w=600&h=400&fit=crop&auto=format"],
     },
-    // Groceries
+    // Rice & Grains
     {
       id: "b9cbc376-0608-43c3-8d0a-1f461e441f1a",
       vendorId: groceryVendorProfile.id,
-      categoryId: groceries.id,
+      categoryId: riceGrains.id,
       title: "Long Grain Rice - 5kg Bag",
       description: "Premium long grain parboiled rice, 5kg bag.",
       price: 8500,
       stock: 120,
       images: ["https://images.unsplash.com/photo-1568347355280-d33fdf77d42a?w=600&h=400&fit=crop&auto=format"],
     },
+    // Beans & Legumes
     {
       id: "a62fc350-54a1-4cd1-995e-3ad22506e572",
       vendorId: groceryVendorProfile.id,
-      categoryId: groceries.id,
+      categoryId: beansLegumes.id,
       title: "Brown Beans - 5kg",
       description: "Sorted brown beans (oloyin), 5kg bag.",
       price: 9000,
       stock: 90,
       images: ["https://images.unsplash.com/photo-1613758235402-745466bb7efe?w=600&h=400&fit=crop&auto=format"],
     },
+    // Oils & Cooking Essentials
     {
       id: "eb4c3b8a-b4a2-4018-b237-6c478adf43a9",
       vendorId: groceryVendorProfile.id,
-      categoryId: groceries.id,
+      categoryId: oilsCookingEssentials.id,
       title: "Vegetable Oil - 5 Litres",
       description: "Pure vegetable cooking oil, 5-litre keg.",
       price: 12000,
@@ -159,9 +181,20 @@ async function main() {
       images: ["https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=600&h=400&fit=crop&auto=format"],
     },
     {
+      id: "b011496f-c7a7-4f12-8a6a-79ef047d4695",
+      vendorId: groceryVendorProfile.id,
+      categoryId: oilsCookingEssentials.id,
+      title: "Granulated Sugar - 1kg",
+      description: "Refined granulated white sugar, 1kg pack.",
+      price: 1800,
+      stock: 200,
+      images: ["https://images.unsplash.com/photo-1673791031093-eb8eefa60083?w=600&h=400&fit=crop&auto=format"],
+    },
+    // Garri, Swallow & Flours
+    {
       id: "201a9804-3f5f-43a6-acaa-de367c06b35d",
       vendorId: groceryVendorProfile.id,
-      categoryId: groceries.id,
+      categoryId: garriSwallowFlours.id,
       title: "Yellow Garri - 2kg",
       description: "Well-sifted yellow garri, 2kg bag.",
       price: 2500,
@@ -171,17 +204,18 @@ async function main() {
     {
       id: "0d035d54-f7af-4e05-b3ea-c05ebdbeb563",
       vendorId: groceryVendorProfile.id,
-      categoryId: groceries.id,
+      categoryId: garriSwallowFlours.id,
       title: "Semovita - 2kg",
       description: "Smooth semolina meal, 2kg pack.",
       price: 3200,
       stock: 100,
       images: ["https://images.unsplash.com/photo-1749169439872-7cee08d9a71b?w=600&h=400&fit=crop&auto=format"],
     },
+    // Canned & Packaged Foods
     {
       id: "a7e12255-63ed-408a-9c9e-3df7ee342703",
       vendorId: groceryVendorProfile.id,
-      categoryId: groceries.id,
+      categoryId: cannedPackagedFoods.id,
       title: "Tomato Paste - Carton of 12",
       description: "210g tins of tomato paste, carton of 12.",
       price: 8000,
@@ -189,30 +223,9 @@ async function main() {
       images: ["https://images.unsplash.com/photo-1619995746608-bef3de4f075a?w=600&h=400&fit=crop&auto=format"],
     },
     {
-      id: "b011496f-c7a7-4f12-8a6a-79ef047d4695",
-      vendorId: groceryVendorProfile.id,
-      categoryId: groceries.id,
-      title: "Granulated Sugar - 1kg",
-      description: "Refined granulated white sugar, 1kg pack.",
-      price: 1800,
-      stock: 200,
-      images: ["https://images.unsplash.com/photo-1673791031093-eb8eefa60083?w=600&h=400&fit=crop&auto=format"],
-    },
-    {
-      id: "0318fc2f-e491-4e52-bff4-bef4ab5d5f21",
-      vendorId: groceryVendorProfile.id,
-      categoryId: groceries.id,
-      title: "Iodized Salt - 500g",
-      description: "Refined iodized table salt, 500g pack.",
-      price: 500,
-      stock: 300,
-      images: ["https://images.unsplash.com/photo-1646722670581-974d084e0ec0?w=600&h=400&fit=crop&auto=format"],
-    },
-    // Food & Beverages
-    {
       id: "22c036eb-0f55-4765-8078-e71f582f3c91",
       vendorId: groceryVendorProfile.id,
-      categoryId: foodBeverages.id,
+      categoryId: cannedPackagedFoods.id,
       title: "Instant Noodles - Carton of 40",
       description: "Chicken-flavored instant noodles, carton of 40 packs.",
       price: 10500,
@@ -220,9 +233,72 @@ async function main() {
       images: ["https://images.unsplash.com/photo-1612929633738-8fe44f7ec841?w=600&h=400&fit=crop&auto=format"],
     },
     {
+      id: "4f6aeff5-6c44-4607-b898-cadae0bd4926",
+      vendorId: groceryVendorProfile.id,
+      categoryId: cannedPackagedFoods.id,
+      title: "Digestive Biscuits - Pack of 10",
+      description: "Wholewheat digestive biscuits, pack of 10.",
+      price: 3000,
+      stock: 110,
+      images: ["https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=600&h=400&fit=crop&auto=format"],
+    },
+    // Spices & Seasonings
+    {
+      id: "0318fc2f-e491-4e52-bff4-bef4ab5d5f21",
+      vendorId: groceryVendorProfile.id,
+      categoryId: spicesSeasonings.id,
+      title: "Iodized Salt - 500g",
+      description: "Refined iodized table salt, 500g pack.",
+      price: 500,
+      stock: 300,
+      images: ["https://images.unsplash.com/photo-1646722670581-974d084e0ec0?w=600&h=400&fit=crop&auto=format"],
+    },
+    {
+      id: "7679b17c-9e63-4a58-a25e-bd72d1504c10",
+      vendorId: groceryVendorProfile.id,
+      categoryId: spicesSeasonings.id,
+      title: "Maggi Seasoning Cubes - Pack of 50",
+      description: "All-purpose seasoning cubes for soups and stews, pack of 50.",
+      price: 1200,
+      stock: 250,
+      images: ["https://images.unsplash.com/photo-1574586595680-e7388293c9bb?w=600&h=400&fit=crop&auto=format"],
+    },
+    {
+      id: "696a4a7a-fd7e-45fa-b594-a5d79ca0a497",
+      vendorId: groceryVendorProfile.id,
+      categoryId: spicesSeasonings.id,
+      title: "Ground Egusi (Melon Seeds) - 500g",
+      description: "Ground melon seeds for egusi soup, 500g pack.",
+      price: 3500,
+      stock: 70,
+      images: ["https://images.unsplash.com/photo-1503810473512-f64b56827964?w=600&h=400&fit=crop&auto=format"],
+    },
+    // Fresh Produce
+    {
+      id: "b4414f9b-7a0d-44d1-a695-b1569bf51cf5",
+      vendorId: groceryVendorProfile.id,
+      categoryId: freshProduce.id,
+      title: "Fresh Tomatoes - 1 Basket",
+      description: "Farm-fresh tomatoes, sold by the basket.",
+      price: 6500,
+      stock: 40,
+      images: ["https://images.unsplash.com/photo-1631021967261-c57ee4dfa9bb?w=600&h=400&fit=crop&auto=format"],
+    },
+    {
+      id: "e0abccdb-485c-405e-a017-c88cb5d8f6fd",
+      vendorId: groceryVendorProfile.id,
+      categoryId: freshProduce.id,
+      title: "Red Onions - 2kg",
+      description: "Fresh red onions, 2kg bag.",
+      price: 2200,
+      stock: 60,
+      images: ["https://images.unsplash.com/photo-1678568759241-a4b2edc9cfd0?w=600&h=400&fit=crop&auto=format"],
+    },
+    // Snacks & Beverages
+    {
       id: "d720a090-a3e1-4954-b3e5-afe272290d30",
       vendorId: groceryVendorProfile.id,
-      categoryId: foodBeverages.id,
+      categoryId: snacksBeverages.id,
       title: "Bottled Water - Pack of 12",
       description: "75cl bottled table water, pack of 12.",
       price: 2000,
@@ -232,7 +308,7 @@ async function main() {
     {
       id: "139909c3-3029-49d3-b0b1-df1234c0f211",
       vendorId: groceryVendorProfile.id,
-      categoryId: foodBeverages.id,
+      categoryId: snacksBeverages.id,
       title: "Cola Soft Drink - Pack of 24",
       description: "35cl cola soft drink cans, pack of 24.",
       price: 9600,
@@ -242,7 +318,7 @@ async function main() {
     {
       id: "04c102dc-652f-4934-ba13-83a41151f628",
       vendorId: groceryVendorProfile.id,
-      categoryId: foodBeverages.id,
+      categoryId: snacksBeverages.id,
       title: "Chocolate Malt Drink - 500g Tin",
       description: "Fortified chocolate malt drink powder, 500g tin.",
       price: 4200,
@@ -252,7 +328,7 @@ async function main() {
     {
       id: "25c0f382-4833-4d63-8257-1d1198e2eed6",
       vendorId: groceryVendorProfile.id,
-      categoryId: foodBeverages.id,
+      categoryId: snacksBeverages.id,
       title: "Instant Coffee - 200g Jar",
       description: "Rich roast instant coffee, 200g jar.",
       price: 5500,
@@ -260,19 +336,9 @@ async function main() {
       images: ["https://images.unsplash.com/photo-1618401375129-8c6a8ef678b9?w=600&h=400&fit=crop&auto=format"],
     },
     {
-      id: "4f6aeff5-6c44-4607-b898-cadae0bd4926",
-      vendorId: groceryVendorProfile.id,
-      categoryId: foodBeverages.id,
-      title: "Digestive Biscuits - Pack of 10",
-      description: "Wholewheat digestive biscuits, pack of 10.",
-      price: 3000,
-      stock: 110,
-      images: ["https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=600&h=400&fit=crop&auto=format"],
-    },
-    {
       id: "615e8817-a4cf-4aca-aa4f-91c55b76ef42",
       vendorId: groceryVendorProfile.id,
-      categoryId: foodBeverages.id,
+      categoryId: snacksBeverages.id,
       title: "Yellow Label Tea - 100 Bags",
       description: "Classic black tea, box of 100 tea bags.",
       price: 2800,
@@ -284,7 +350,7 @@ async function main() {
   for (const product of sampleProducts) {
     await prisma.product.upsert({
       where: { id: product.id },
-      update: { images: product.images },
+      update: { categoryId: product.categoryId, images: product.images },
       create: {
         id: product.id,
         vendorId: product.vendorId,
@@ -300,11 +366,18 @@ async function main() {
     });
   }
 
+  // Older seed runs created these categories before the catalog switched to an
+  // African-groceries focus — every product above has been reassigned off of
+  // them, so they're safe to drop now.
+  await prisma.category.deleteMany({
+    where: { slug: { in: ["electronics", "fashion", "groceries", "food-beverages", "home-living"] } },
+  });
+
   await prisma.user.upsert({
-    where: { email: "buyer@ikstore.dev" },
+    where: { email: "buyer@ikaystores.dev" },
     update: { passwordHash: seedPasswordHash },
     create: {
-      email: "buyer@ikstore.dev",
+      email: "buyer@ikaystores.dev",
       passwordHash: seedPasswordHash,
       firstName: "Sample",
       lastName: "Buyer",
@@ -357,9 +430,9 @@ async function main() {
 
   console.log("Seed complete.");
   console.log(`  admin@test.com / ${SEED_PASSWORD}`);
-  console.log(`  vendor@ikstore.dev / ${SEED_PASSWORD}`);
-  console.log(`  freshmart@ikstore.dev / ${SEED_PASSWORD}`);
-  console.log(`  buyer@ikstore.dev / ${SEED_PASSWORD}`);
+  console.log(`  vendor@ikaystores.dev / ${SEED_PASSWORD}`);
+  console.log(`  freshmart@ikaystores.dev / ${SEED_PASSWORD}`);
+  console.log(`  buyer@ikaystores.dev / ${SEED_PASSWORD}`);
 }
 
 main()

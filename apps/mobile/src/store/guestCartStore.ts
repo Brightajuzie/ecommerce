@@ -1,9 +1,9 @@
 import { create } from "zustand";
-import type { CartItemDto, ProductDto } from "@ikstore/shared";
+import type { CartItemDto, ProductDto } from "@ikaystores/shared";
 import { CartApi } from "../api/endpoints";
 import { secureStorage } from "./secureStorage";
 
-const GUEST_CART_KEY = "ikstore.guestCart";
+const GUEST_CART_KEY = "ikaystores.guestCart";
 
 interface GuestCartState {
   items: CartItemDto[];

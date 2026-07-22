@@ -10,7 +10,7 @@ import {
   View,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
-import type { SlideDto } from "@ikstore/shared";
+import type { SlideDto } from "@ikaystores/shared";
 import { SlidesApi } from "../api/endpoints";
 
 export function SlideCarousel() {

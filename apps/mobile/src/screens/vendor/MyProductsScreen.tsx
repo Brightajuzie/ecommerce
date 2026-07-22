@@ -2,7 +2,7 @@ import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
-import type { ProductDto } from "@ikstore/shared";
+import type { ProductDto } from "@ikaystores/shared";
 import { ProductsApi } from "../../api/endpoints";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import type { VendorStackParamList } from "../../navigation/types";

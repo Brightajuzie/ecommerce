@@ -1,7 +1,7 @@
 import { ActivityIndicator, View } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
-import { VendorStatus } from "@ikstore/shared";
+import { VendorStatus } from "@ikaystores/shared";
 import { VendorsApi } from "../api/endpoints";
 import { VendorTabNavigator } from "./VendorTabNavigator";
 import { ProductFormScreen } from "../screens/vendor/ProductFormScreen";

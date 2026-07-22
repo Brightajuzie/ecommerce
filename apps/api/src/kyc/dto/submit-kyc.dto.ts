@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { kycIdTypes } from "@ikstore/shared";
+import { kycIdTypes } from "@ikaystores/shared";
 import { IsIn, IsOptional, IsString, Length } from "class-validator";
 
 export class SubmitKycDto {

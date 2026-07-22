@@ -1,11 +1,11 @@
 import { create } from "zustand";
-import type { UserDto } from "@ikstore/shared";
+import type { UserDto } from "@ikaystores/shared";
 import { secureStorage } from "./secureStorage";
 
-const ACCESS_TOKEN_KEY = "ikstore.accessToken";
-const REFRESH_TOKEN_KEY = "ikstore.refreshToken";
-const USER_KEY = "ikstore.user";
-const BIOMETRIC_ENABLED_KEY = "ikstore.biometricEnabled";
+const ACCESS_TOKEN_KEY = "ikaystores.accessToken";
+const REFRESH_TOKEN_KEY = "ikaystores.refreshToken";
+const USER_KEY = "ikaystores.user";
+const BIOMETRIC_ENABLED_KEY = "ikaystores.biometricEnabled";
 
 interface AuthState {
   accessToken: string | null;

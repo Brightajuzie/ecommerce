@@ -6,7 +6,7 @@ import { AppModule } from "./../src/app.module";
 
 describe("Auth + browse smoke flow (e2e)", () => {
   let app: INestApplication<App>;
-  const email = `e2e-${Date.now()}@ikstore.dev`;
+  const email = `e2e-${Date.now()}@ikaystores.dev`;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -16,7 +16,11 @@ describe("Auth + browse smoke flow (e2e)", () => {
     app = moduleFixture.createNestApplication();
     app.setGlobalPrefix("api/v1");
     app.useGlobalPipes(
-      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
     );
     await app.init();
   });

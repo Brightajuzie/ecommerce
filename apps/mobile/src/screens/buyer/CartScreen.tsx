@@ -2,7 +2,7 @@ import { ActivityIndicator, FlatList, Image, StyleSheet, Text, View } from "reac
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { CartItemDto } from "@ikstore/shared";
+import type { CartItemDto } from "@ikaystores/shared";
 import { CartApi } from "../../api/endpoints";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { useAuthStore } from "../../store/authStore";
