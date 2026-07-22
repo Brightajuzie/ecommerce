@@ -16,7 +16,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import type { CategoryDto, ProductDto } from "@ikaystores/shared";
 import { ProductsApi, CategoriesApi } from "../../api/endpoints";
 import { AppDownloadBanner } from "../../components/AppDownloadBanner";
@@ -27,6 +27,7 @@ import type { BuyerStackParamList } from "../../navigation/types";
 const NEW_PRODUCT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 const LOW_STOCK_THRESHOLD = 5;
 const MAX_CONTENT_WIDTH = 1200;
+const PRODUCTS_PAGE_SIZE = 24;
 
 function columnsForWidth(width: number): number {
   if (width >= 1200) return 5;
@@ -66,13 +67,31 @@ export function HomeScreen() {
     queryFn: CategoriesApi.list,
   });
 
-  const productsQuery = useQuery({
+  const productsQuery = useInfiniteQuery({
     queryKey: ["products", search, categoryId],
-    queryFn: () => ProductsApi.browse({ search: search || undefined, categoryId, pageSize: 100 }),
+    queryFn: ({ pageParam }) =>
+      ProductsApi.browse({
+        search: search || undefined,
+        categoryId,
+        page: pageParam,
+        pageSize: PRODUCTS_PAGE_SIZE,
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.page * lastPage.pageSize < lastPage.total ? lastPage.page + 1 : undefined,
   });
 
-  const products = productsQuery.data?.data ?? [];
+  const products = useMemo(
+    () => productsQuery.data?.pages.flatMap((p) => p.data) ?? [],
+    [productsQuery.data],
+  );
   const categories = categoriesQuery.data ?? [];
+
+  const loadMoreProducts = () => {
+    if (productsQuery.hasNextPage && !productsQuery.isFetchingNextPage) {
+      productsQuery.fetchNextPage();
+    }
+  };
 
   // With no active filter, group the full catalog into per-category rows
   // (grocery-app style browsing); a selected category or search term instead
@@ -226,6 +245,13 @@ export function HomeScreen() {
             />
           }
           renderItem={({ item }) => renderProductCard(item, { maxWidth: `${cardMaxWidthPercent}%` })}
+          onEndReached={loadMoreProducts}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={
+            productsQuery.isFetchingNextPage ? (
+              <ActivityIndicator style={styles.loadingMore} color={theme.primaryColor} />
+            ) : null
+          }
           ListEmptyComponent={
             <View style={styles.empty}>
               <Ionicons name="leaf-outline" size={32} color="#9CA3AF" />
@@ -277,6 +303,13 @@ export function HomeScreen() {
               />
             </View>
           )}
+          onEndReached={loadMoreProducts}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={
+            productsQuery.isFetchingNextPage ? (
+              <ActivityIndicator style={styles.loadingMore} color={theme.primaryColor} />
+            ) : null
+          }
           ListEmptyComponent={
             <View style={styles.empty}>
               <Ionicons name="leaf-outline" size={32} color="#9CA3AF" />
@@ -331,6 +364,7 @@ const styles = StyleSheet.create({
   },
   categoryChipText: { fontWeight: "700", fontSize: 13 },
   loading: { marginTop: 40 },
+  loadingMore: { marginVertical: 20 },
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
