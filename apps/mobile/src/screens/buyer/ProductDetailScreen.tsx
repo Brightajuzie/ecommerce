@@ -8,7 +8,6 @@ import { ProductsApi, CartApi, CategoriesApi, VendorsApi } from "../../api/endpo
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { useTheme } from "../../theme/ThemeContext";
 import { useAuthStore } from "../../store/authStore";
-import { useGuestCartStore } from "../../store/guestCartStore";
 import type { BuyerStackParamList } from "../../navigation/types";
 
 const NEW_PRODUCT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
@@ -21,7 +20,6 @@ export function ProductDetailScreen() {
   const queryClient = useQueryClient();
   const theme = useTheme();
   const user = useAuthStore((s) => s.user);
-  const addGuestItem = useGuestCartStore((s) => s.addItem);
   const [quantity, setQuantity] = useState(1);
 
   const productQuery = useQuery({
@@ -32,13 +30,7 @@ export function ProductDetailScreen() {
   const vendorsQuery = useQuery({ queryKey: ["vendors"], queryFn: VendorsApi.listApproved });
 
   const addToCart = useMutation({
-    mutationFn: async () => {
-      if (!user) {
-        addGuestItem(productQuery.data!, quantity);
-        return;
-      }
-      await CartApi.addItem({ productId: route.params.productId, quantity });
-    },
+    mutationFn: () => CartApi.addItem({ productId: route.params.productId, quantity }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cart"] });
       Alert.alert("Added to cart", "Item added to your cart.", [
@@ -50,6 +42,16 @@ export function ProductDetailScreen() {
       Alert.alert("Could not add to cart", error?.response?.data?.message ?? "Please try again.");
     },
   });
+
+  const handleAddToCart = () => {
+    if (!user) {
+      navigation.navigate("Login", {
+        pendingCartItem: { productId: route.params.productId, quantity },
+      });
+      return;
+    }
+    addToCart.mutate();
+  };
 
   if (productQuery.isLoading || !productQuery.data) {
     return (
@@ -125,7 +127,7 @@ export function ProductDetailScreen() {
 
           <PrimaryButton
             title="Add to cart"
-            onPress={() => addToCart.mutate()}
+            onPress={handleAddToCart}
             loading={addToCart.isPending}
             disabled={product.stock === 0}
           />
