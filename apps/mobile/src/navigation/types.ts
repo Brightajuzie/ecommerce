@@ -1,8 +1,14 @@
 export type BuyerStackParamList = {
   BuyerTabs: undefined;
   ProductDetail: { productId: string };
-  Login: { redirectTo?: "Checkout" } | undefined;
-  Register: { redirectTo?: "Checkout" } | undefined;
+  Login: {
+    redirectTo?: "Checkout";
+    pendingCartItem?: { productId: string; quantity: number };
+  } | undefined;
+  Register: {
+    redirectTo?: "Checkout";
+    pendingCartItem?: { productId: string; quantity: number };
+  } | undefined;
   Checkout: undefined;
   PaymentWebView: { checkoutUrl: string; orderId: string };
   OrderDetail: { orderId: string };

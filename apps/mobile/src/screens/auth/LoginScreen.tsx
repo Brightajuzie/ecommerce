@@ -5,7 +5,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQueryClient } from "@tanstack/react-query";
 import { FormInput } from "../../components/FormInput";
 import { PrimaryButton } from "../../components/PrimaryButton";
-import { AuthApi } from "../../api/endpoints";
+import { AuthApi, CartApi } from "../../api/endpoints";
 import { useAuthStore } from "../../store/authStore";
 import { syncGuestCartToServer } from "../../store/guestCartStore";
 import type { BuyerStackParamList } from "../../navigation/types";
@@ -31,6 +31,12 @@ export function LoginScreen() {
       const result = await AuthApi.login({ email: email.trim(), password });
       await setSession(result.accessToken, result.refreshToken, result.user);
       await syncGuestCartToServer();
+      if (route.params?.pendingCartItem) {
+        // Best-effort: the item they tried to add before being sent here to
+        // sign in. Don't block a successful login over it (e.g. stock ran out
+        // in the meantime) — they can always re-add it from the product page.
+        await CartApi.addItem(route.params.pendingCartItem).catch(() => {});
+      }
       queryClient.invalidateQueries({ queryKey: ["cart"] });
 
       if (route.params?.redirectTo === "Checkout") {
