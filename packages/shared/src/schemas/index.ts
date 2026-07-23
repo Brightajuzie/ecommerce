@@ -6,3 +6,4 @@ export * from "./address";
 export * from "./settings";
 export * from "./slide";
 export * from "./kyc";
+export * from "./wallet";

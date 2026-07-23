@@ -30,7 +30,7 @@ export class SlidesController {
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @Get("all")
   listAll() {
     return this.slidesService.listAll();
@@ -38,7 +38,7 @@ export class SlidesController {
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @Post()
   create(@Body() dto: CreateSlideDto) {
     return this.slidesService.create(dto);
@@ -46,7 +46,7 @@ export class SlidesController {
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @Patch("reorder")
   reorder(@Body() dto: ReorderSlidesDto) {
     return this.slidesService.reorder(dto);
@@ -54,7 +54,7 @@ export class SlidesController {
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @Patch(":id")
   update(@Param("id") id: string, @Body() dto: UpdateSlideDto) {
     return this.slidesService.update(id, dto);
@@ -62,7 +62,7 @@ export class SlidesController {
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @Delete(":id")
   remove(@Param("id") id: string) {
     return this.slidesService.remove(id);

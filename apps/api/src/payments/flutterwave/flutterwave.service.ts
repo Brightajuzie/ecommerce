@@ -35,6 +35,31 @@ interface FlutterwaveVerifyResponse {
   };
 }
 
+export interface TransferResult {
+  transferId: string;
+}
+
+export interface ResolvedAccount {
+  accountName: string;
+}
+
+export interface Bank {
+  code: string;
+  name: string;
+}
+
+interface FlutterwaveTransferResponse {
+  data?: { id?: number };
+}
+
+interface FlutterwaveResolveResponse {
+  data?: { account_name?: string };
+}
+
+interface FlutterwaveBanksResponse {
+  data?: { code: string; name: string }[];
+}
+
 @Injectable()
 export class FlutterwaveService {
   private readonly logger = new Logger(FlutterwaveService.name);
@@ -117,6 +142,108 @@ export class FlutterwaveService {
     } catch (error) {
       this.logger.error("Flutterwave verify transaction failed", error);
       throw new BadGatewayException("Unable to verify Flutterwave transaction");
+    }
+  }
+
+  /**
+   * Initiates a payout to a Nigerian bank account via Flutterwave's Transfers
+   * API. Result is asynchronous — the transfer's final status arrives via the
+   * `transfer.completed` webhook event, not this call's response.
+   */
+  async initiateTransfer(
+    reference: string,
+    amount: number,
+    currency: string,
+    bankCode: string,
+    accountNumber: string,
+    narration: string,
+  ): Promise<TransferResult> {
+    if (!this.secretKey) {
+      throw new BadGatewayException(
+        "Flutterwave is not configured on this server",
+      );
+    }
+
+    try {
+      const response = await axios.post<FlutterwaveTransferResponse>(
+        `${FLW_BASE_URL}/transfers`,
+        {
+          account_bank: bankCode,
+          account_number: accountNumber,
+          amount,
+          currency,
+          narration,
+          reference,
+        },
+        { headers: { Authorization: `Bearer ${this.secretKey}` } },
+      );
+
+      const transferId = response.data?.data?.id;
+      if (transferId === undefined) {
+        throw new Error("Flutterwave response did not include a transfer id");
+      }
+      return { transferId: String(transferId) };
+    } catch (error) {
+      this.logger.error("Flutterwave initiate transfer failed", error);
+      throw new BadGatewayException("Unable to initiate Flutterwave transfer");
+    }
+  }
+
+  /**
+   * Verifies a bank account name before saving it as a payout destination —
+   * catches typo'd account numbers before money is sent to the wrong person.
+   */
+  async resolveAccountName(
+    bankCode: string,
+    accountNumber: string,
+  ): Promise<ResolvedAccount> {
+    if (!this.secretKey) {
+      throw new BadGatewayException(
+        "Flutterwave is not configured on this server",
+      );
+    }
+
+    try {
+      const response = await axios.post<FlutterwaveResolveResponse>(
+        `${FLW_BASE_URL}/accounts/resolve`,
+        { account_bank: bankCode, account_number: accountNumber },
+        { headers: { Authorization: `Bearer ${this.secretKey}` } },
+      );
+
+      const accountName = response.data?.data?.account_name;
+      if (!accountName) {
+        throw new Error("Flutterwave response did not include an account name");
+      }
+      return { accountName };
+    } catch (error) {
+      this.logger.error("Flutterwave resolve account failed", error);
+      throw new BadGatewayException(
+        "Unable to verify the bank account with Flutterwave",
+      );
+    }
+  }
+
+  /** Powers the mobile bank picker instead of free-text bank codes. */
+  async listBanks(country = "NG"): Promise<Bank[]> {
+    if (!this.secretKey) {
+      throw new BadGatewayException(
+        "Flutterwave is not configured on this server",
+      );
+    }
+
+    try {
+      const response = await axios.get<FlutterwaveBanksResponse>(
+        `${FLW_BASE_URL}/banks/${country}`,
+        { headers: { Authorization: `Bearer ${this.secretKey}` } },
+      );
+
+      return (response.data?.data ?? []).map((bank) => ({
+        code: bank.code,
+        name: bank.name,
+      }));
+    } catch (error) {
+      this.logger.error("Flutterwave list banks failed", error);
+      throw new BadGatewayException("Unable to fetch the bank list from Flutterwave");
     }
   }
 

@@ -16,6 +16,7 @@ import { CurrentUser } from "../common/decorators/current-user.decorator";
 import type { AuthenticatedUser } from "../auth/types/authenticated-user.type";
 import { VendorsService } from "./vendors.service";
 import { ApplyVendorDto } from "./dto/apply-vendor.dto";
+import { SetPayoutAccountDto } from "./dto/set-payout-account.dto";
 
 @ApiTags("vendors")
 @Controller("vendors")
@@ -42,8 +43,25 @@ export class VendorsController {
   }
 
   @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Patch("me/payout-account")
+  setPayoutAccount(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: SetPayoutAccountDto,
+  ) {
+    return this.vendorsService.setPayoutAccount(user.userId, dto);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get("banks")
+  listBanks() {
+    return this.vendorsService.listBanks();
+  }
+
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @Get("pending")
   listPending() {
     return this.vendorsService.listPending();
@@ -51,7 +69,7 @@ export class VendorsController {
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @Patch(":id/approve")
   approve(@Param("id") id: string) {
     return this.vendorsService.setStatus(id, VendorStatus.APPROVED);
@@ -59,7 +77,7 @@ export class VendorsController {
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @Patch(":id/suspend")
   suspend(@Param("id") id: string) {
     return this.vendorsService.setStatus(id, VendorStatus.SUSPENDED);

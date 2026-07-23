@@ -6,7 +6,22 @@ import {
   VendorOrderStatus,
   VendorStatus,
   VendorVerificationStatus,
+  WalletTransactionType,
+  WithdrawalStatus,
 } from "./enums";
+
+export interface PayoutAccountDto {
+  bankCode: string;
+  bankName: string;
+  accountNumber: string;
+  accountName: string;
+  verifiedAt: string;
+}
+
+export interface BankDto {
+  code: string;
+  name: string;
+}
 
 export interface UserDto {
   id: string;
@@ -40,6 +55,7 @@ export interface VendorProfileDto {
   logoUrl: string | null;
   status: VendorStatus;
   commissionRate: number;
+  payoutAccount: PayoutAccountDto | null;
   verificationStatus: VendorVerificationStatus;
   verifiedAt: string | null;
 }
@@ -92,6 +108,9 @@ export interface VendorOrderDto {
   subtotal: number;
   commissionAmount: number;
   vendorPayoutAmount: number;
+  companyAmount: number;
+  developerAmount: number;
+  superAdminAmount: number;
   status: VendorOrderStatus;
   items: OrderItemDto[];
 }
@@ -142,4 +161,49 @@ export interface SlideDto {
 
 export interface UploadResultDto {
   url: string;
+}
+
+export interface WalletTransactionDto {
+  id: string;
+  walletId: string;
+  type: WalletTransactionType;
+  amount: number;
+  balanceAfter: number;
+  description: string;
+  vendorOrderId: string | null;
+  withdrawalRequestId: string | null;
+  createdAt: string;
+}
+
+export interface WalletDto {
+  id: string;
+  vendorId: string | null;
+  balance: number;
+  currency: string;
+  updatedAt: string;
+  transactions: WalletTransactionDto[];
+}
+
+export interface WithdrawalRequestDto {
+  id: string;
+  walletId: string;
+  vendorId: string | null;
+  amount: number;
+  status: WithdrawalStatus;
+  providerReference: string | null;
+  failureReason: string | null;
+  requestedAt: string;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+  paidAt: string | null;
+  vendor?: { businessName: string };
+}
+
+export interface PlatformPaymentSettingsDto {
+  id: string;
+  companySharePercent: number;
+  developerSharePercent: number;
+  superAdminFeePercent: number;
+  payoutAccount: PayoutAccountDto | null;
+  updatedAt: string;
 }

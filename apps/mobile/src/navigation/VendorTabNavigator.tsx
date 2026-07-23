@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import { MyProductsScreen } from "../screens/vendor/MyProductsScreen";
 import { VendorOrdersScreen } from "../screens/vendor/VendorOrdersScreen";
+import { WalletScreen } from "../screens/vendor/WalletScreen";
 import { ProfileScreen } from "../screens/buyer/ProfileScreen";
 import { useTheme } from "../theme/ThemeContext";
 import { ResponsiveTabBar } from "./ResponsiveTabBar";
@@ -13,6 +14,7 @@ const Tab = createBottomTabNavigator<VendorTabParamList>();
 const TAB_ICONS: Record<keyof VendorTabParamList, keyof typeof Ionicons.glyphMap> = {
   MyProducts: "cube",
   VendorOrders: "receipt",
+  Wallet: "wallet",
   Profile: "person",
 };
 
@@ -32,6 +34,7 @@ export function VendorTabNavigator() {
     >
       <Tab.Screen name="MyProducts" component={MyProductsScreen} options={{ title: "My Products" }} />
       <Tab.Screen name="VendorOrders" component={VendorOrdersScreen} options={{ title: "Orders" }} />
+      <Tab.Screen name="Wallet" component={WalletScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );

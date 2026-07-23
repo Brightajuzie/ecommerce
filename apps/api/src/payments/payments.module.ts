@@ -7,5 +7,6 @@ import { OpayService } from "./opay/opay.service";
 @Module({
   controllers: [PaymentsController],
   providers: [PaymentsService, FlutterwaveService, OpayService],
+  exports: [FlutterwaveService],
 })
 export class PaymentsModule {}

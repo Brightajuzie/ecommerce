@@ -2,6 +2,7 @@ import type {
   AddressDto,
   AuthTokensDto,
   AddCartItemInput,
+  BankDto,
   CartDto,
   CategoryDto,
   CheckoutInput,
@@ -11,13 +12,18 @@ import type {
   LoginInput,
   OrderDto,
   PaginatedResult,
+  PlatformPaymentSettingsDto,
   ProductDto,
   ProductQueryInput,
   RegisterInput,
+  RejectWithdrawalInput,
   ReorderSlidesInput,
+  RequestWithdrawalInput,
+  SetPayoutAccountInput,
   SettingsDto,
   SlideDto,
   UpdateCartItemInput,
+  UpdatePaymentSettingsInput,
   UpdateProductInput,
   UpdateSettingsInput,
   UpdateSlideInput,
@@ -26,6 +32,8 @@ import type {
   VendorOrderDto,
   VendorProfileDto,
   VendorVerificationStatus,
+  WalletDto,
+  WithdrawalRequestDto,
 } from "@ikaystores/shared";
 import { apiClient } from "./client";
 
@@ -93,6 +101,9 @@ export const VendorsApi = {
   pending: () => apiClient.get<VendorProfileDto[]>("/vendors/pending").then((r) => r.data),
   approve: (id: string) => apiClient.patch<VendorProfileDto>(`/vendors/${id}/approve`).then((r) => r.data),
   suspend: (id: string) => apiClient.patch<VendorProfileDto>(`/vendors/${id}/suspend`).then((r) => r.data),
+  setPayoutAccount: (input: SetPayoutAccountInput) =>
+    apiClient.patch<VendorProfileDto>("/vendors/me/payout-account", input).then((r) => r.data),
+  listBanks: () => apiClient.get<BankDto[]>("/vendors/banks").then((r) => r.data),
 };
 
 export const SettingsApi = {
@@ -118,5 +129,31 @@ export const KycApi = {
       .get<{ verificationStatus: VendorVerificationStatus; verifiedAt: string | null }>(
         "/kyc/status",
       )
+      .then((r) => r.data),
+};
+
+export const WalletApi = {
+  me: () => apiClient.get<WalletDto>("/wallets/me").then((r) => r.data),
+  requestWithdrawal: (input: RequestWithdrawalInput) =>
+    apiClient.post<WithdrawalRequestDto>("/wallets/withdraw", input).then((r) => r.data),
+  myWithdrawals: () => apiClient.get<WithdrawalRequestDto[]>("/wallets/withdrawals").then((r) => r.data),
+  pendingWithdrawals: () =>
+    apiClient.get<WithdrawalRequestDto[]>("/wallets/withdrawals/pending").then((r) => r.data),
+  approveWithdrawal: (id: string) =>
+    apiClient.patch<WithdrawalRequestDto>(`/wallets/withdrawals/${id}/approve`).then((r) => r.data),
+  rejectWithdrawal: (id: string, input: RejectWithdrawalInput) =>
+    apiClient.patch<WithdrawalRequestDto>(`/wallets/withdrawals/${id}/reject`, input).then((r) => r.data),
+  platform: () => apiClient.get<WalletDto>("/wallets/platform").then((r) => r.data),
+  withdrawFromPlatform: (input: RequestWithdrawalInput) =>
+    apiClient.post<WithdrawalRequestDto>("/wallets/platform/withdraw", input).then((r) => r.data),
+};
+
+export const PaymentSettingsApi = {
+  get: () => apiClient.get<PlatformPaymentSettingsDto>("/payment-settings").then((r) => r.data),
+  update: (input: UpdatePaymentSettingsInput) =>
+    apiClient.patch<PlatformPaymentSettingsDto>("/payment-settings", input).then((r) => r.data),
+  setPayoutAccount: (input: SetPayoutAccountInput) =>
+    apiClient
+      .patch<PlatformPaymentSettingsDto>("/payment-settings/payout-account", input)
       .then((r) => r.data),
 };
