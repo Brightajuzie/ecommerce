@@ -19,7 +19,7 @@ export class CategoriesController {
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @Post()
   create(@Body() dto: CreateCategoryDto) {
     return this.categoriesService.create(dto);

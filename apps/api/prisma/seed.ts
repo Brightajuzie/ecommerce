@@ -29,12 +29,26 @@ async function main() {
 
   await prisma.user.upsert({
     where: { email: "admin@test.com" },
-    update: { passwordHash: seedPasswordHash },
+    update: { passwordHash: seedPasswordHash, role: UserRole.SUPER_ADMIN },
     create: {
       email: "admin@test.com",
       passwordHash: seedPasswordHash,
       firstName: "Super",
       lastName: "Admin",
+      role: UserRole.SUPER_ADMIN,
+    },
+  });
+
+  // Regular admin — everything a SUPER_ADMIN can do except the platform
+  // wallet and revenue-split settings, which are hidden from this role.
+  await prisma.user.upsert({
+    where: { email: "manager@ikaystores.dev" },
+    update: { passwordHash: seedPasswordHash },
+    create: {
+      email: "manager@ikaystores.dev",
+      passwordHash: seedPasswordHash,
+      firstName: "Store",
+      lastName: "Manager",
       role: UserRole.ADMIN,
     },
   });
@@ -428,8 +442,24 @@ async function main() {
     });
   }
 
+  // Singleton, same lazy-create convention as AppSettings above — matches
+  // the defaults declared on the Prisma model itself.
+  const existingPaymentSettings = await prisma.platformPaymentSettings.findFirst();
+  if (!existingPaymentSettings) {
+    await prisma.platformPaymentSettings.create({ data: {} });
+  }
+
+  // The platform/super-admin wallet is the one Wallet row with vendorId null.
+  const existingPlatformWallet = await prisma.wallet.findFirst({
+    where: { vendorId: null },
+  });
+  if (!existingPlatformWallet) {
+    await prisma.wallet.create({ data: { vendorId: null } });
+  }
+
   console.log("Seed complete.");
-  console.log(`  admin@test.com / ${SEED_PASSWORD}`);
+  console.log(`  admin@test.com / ${SEED_PASSWORD} (super admin)`);
+  console.log(`  manager@ikaystores.dev / ${SEED_PASSWORD} (admin)`);
   console.log(`  vendor@ikaystores.dev / ${SEED_PASSWORD}`);
   console.log(`  freshmart@ikaystores.dev / ${SEED_PASSWORD}`);
   console.log(`  buyer@ikaystores.dev / ${SEED_PASSWORD}`);

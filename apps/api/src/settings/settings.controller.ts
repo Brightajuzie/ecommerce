@@ -19,7 +19,7 @@ export class SettingsController {
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @Patch()
   update(@Body() dto: UpdateSettingsDto) {
     return this.settingsService.update(dto);

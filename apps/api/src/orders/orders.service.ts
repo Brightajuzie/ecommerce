@@ -6,6 +6,8 @@ import {
 } from "@nestjs/common";
 import { Prisma, VendorOrderStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
+import { PaymentSettingsService } from "../payment-settings/payment-settings.service";
+import { WalletsService } from "../wallets/wallets.service";
 import { CheckoutDto } from "./dto/checkout.dto";
 import { UpdateVendorOrderStatusDto } from "./dto/update-vendor-order-status.dto";
 
@@ -15,7 +17,11 @@ const ORDER_INCLUDE = {
 
 @Injectable()
 export class OrdersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly paymentSettingsService: PaymentSettingsService,
+    private readonly walletsService: WalletsService,
+  ) {}
 
   async checkout(userId: string, dto: CheckoutDto) {
     const address = await this.prisma.address.findUnique({
@@ -57,6 +63,11 @@ export class OrdersService {
     );
     const currency = cart.items[0].product.currency;
 
+    const paymentSettings = await this.paymentSettingsService.get();
+    const companySharePercent = Number(paymentSettings.companySharePercent);
+    const developerSharePercent = Number(paymentSettings.developerSharePercent);
+    const superAdminFeePercent = Number(paymentSettings.superAdminFeePercent);
+
     const order = await this.prisma.$transaction(async (tx) => {
       const createdOrder = await tx.order.create({
         data: {
@@ -77,6 +88,16 @@ export class OrdersService {
           Math.round(subtotal * (commissionRate / 100) * 100) / 100;
         const vendorPayoutAmount =
           Math.round((subtotal - commissionAmount) * 100) / 100;
+        // companyAmount/developerAmount subdivide commissionAmount itself
+        // (not the vendor's cut) — developerAmount takes the rounding
+        // remainder so the two always sum exactly back to commissionAmount.
+        const companyAmount =
+          Math.round(commissionAmount * (companySharePercent / 100) * 100) / 100;
+        const developerAmount =
+          Math.round((commissionAmount - companyAmount) * 100) / 100;
+        // Flat extra cut of the sale itself, independent of the commission split.
+        const superAdminAmount =
+          Math.round(subtotal * (superAdminFeePercent / 100) * 100) / 100;
 
         await tx.vendorOrder.create({
           data: {
@@ -85,6 +106,9 @@ export class OrdersService {
             subtotal,
             commissionAmount,
             vendorPayoutAmount,
+            companyAmount,
+            developerAmount,
+            superAdminAmount,
             items: {
               create: items.map((item) => ({
                 productId: item.productId,
@@ -180,9 +204,42 @@ export class OrdersService {
       );
     }
 
-    return this.prisma.vendorOrder.update({
-      where: { id: vendorOrderId },
-      data: { status: dto.status },
+    // Wallets are credited on delivery, not on payment — there's no
+    // refund/dispute system yet, so this is the safest point to treat the
+    // money as actually owed. Guarded by the status check above (PENDING
+    // rejected) and the transition check below (no double-crediting).
+    const isNewlyDelivered =
+      dto.status === VendorOrderStatus.DELIVERED &&
+      vendorOrder.status !== VendorOrderStatus.DELIVERED;
+
+    if (!isNewlyDelivered) {
+      return this.prisma.vendorOrder.update({
+        where: { id: vendorOrderId },
+        data: { status: dto.status },
+      });
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.vendorOrder.update({
+        where: { id: vendorOrderId },
+        data: { status: dto.status },
+      });
+
+      await this.walletsService.creditVendorWallet(
+        tx,
+        vendorOrder.vendorId,
+        Number(vendorOrder.vendorPayoutAmount),
+        `Order delivered (${vendorOrderId})`,
+        vendorOrderId,
+      );
+      await this.walletsService.creditPlatformWallet(
+        tx,
+        Number(vendorOrder.superAdminAmount),
+        `Super-admin fee (${vendorOrderId})`,
+        vendorOrderId,
+      );
+
+      return updated;
     });
   }
 }

@@ -16,6 +16,14 @@ enum UserRole {
   BUYER
   VENDOR
   ADMIN
+  // Separate from ADMIN: the only role that can see/manage the platform
+  // wallet and the company/developer/super-admin revenue-split settings.
+  // Regular ADMIN retains every other admin capability (vendor approval,
+  // store settings, slides, vendor withdrawal approve/reject) but has no
+  // visibility into those two — enforced both by RolesGuard on the API
+  // (@Roles(UserRole.SUPER_ADMIN) only, vs. the shared ADMIN+SUPER_ADMIN
+  // list everywhere else) and by hiding the mobile screens client-side.
+  SUPER_ADMIN
 }
 
 enum VendorStatus {
@@ -65,6 +73,20 @@ enum PaymentStatus {
   FAILED
 }
 
+enum WalletTransactionType {
+  CREDIT
+  DEBIT
+}
+
+enum WithdrawalStatus {
+  PENDING
+  APPROVED
+  PROCESSING
+  PAID
+  REJECTED
+  FAILED
+}
+
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
@@ -100,9 +122,11 @@ model VendorProfile {
   createdAt          DateTime                  @default(now())
   updatedAt          DateTime                  @updatedAt
 
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  products     Product[]
-  vendorOrders VendorOrder[]
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products           Product[]
+  vendorOrders       VendorOrder[]
+  wallet             Wallet?
+  withdrawalRequests WithdrawalRequest[]
 
   @@map("vendor_profiles")
 }
@@ -215,13 +239,20 @@ model VendorOrder {
   subtotal            Decimal           @db.Decimal(12, 2)
   commissionAmount    Decimal           @db.Decimal(12, 2)
   vendorPayoutAmount  Decimal           @db.Decimal(12, 2)
+  // Subdivide commissionAmount (company + developer = commissionAmount) and a
+  // flat extra cut of subtotal for the super-admin wallet — all frozen at
+  // checkout time from PlatformPaymentSettings, same as the two fields above.
+  companyAmount       Decimal           @default(0) @db.Decimal(12, 2)
+  developerAmount     Decimal           @default(0) @db.Decimal(12, 2)
+  superAdminAmount    Decimal           @default(0) @db.Decimal(12, 2)
   status              VendorOrderStatus @default(PENDING)
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 
-  order  Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  vendor VendorProfile @relation(fields: [vendorId], references: [id])
-  items  OrderItem[]
+  order              Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  vendor             VendorProfile       @relation(fields: [vendorId], references: [id])
+  items              OrderItem[]
+  walletTransactions WalletTransaction[]
 
   @@index([orderId])
   @@index([vendorId])
@@ -283,4 +314,78 @@ model Slide {
 
   @@index([isActive, sortOrder])
   @@map("slides")
+}
+
+// Singleton (application-enforced, same convention as AppSettings): governs
+// how each sale's commission is subdivided (company/developer, must sum to
+// 100) and the flat extra cut of subtotal routed to the super-admin wallet.
+// Only ever readable/writable by SUPER_ADMIN — see UserRole.SUPER_ADMIN.
+model PlatformPaymentSettings {
+  id                    String   @id @default(uuid())
+  companySharePercent   Decimal  @default(70.0) @db.Decimal(5, 2)
+  developerSharePercent Decimal  @default(30.0) @db.Decimal(5, 2)
+  superAdminFeePercent  Decimal  @default(0.10) @db.Decimal(5, 2)
+  payoutAccount         Json?
+  updatedAt             DateTime @updatedAt
+
+  @@map("platform_payment_settings")
+}
+
+// One row per vendor (vendorId set) plus exactly one platform/super-admin
+// row (vendorId null, application-enforced singleton) — see Wallet.vendorId.
+model Wallet {
+  id        String   @id @default(uuid())
+  vendorId  String?  @unique
+  balance   Decimal  @default(0) @db.Decimal(12, 2)
+  currency  String   @default("NGN")
+  updatedAt DateTime @updatedAt
+
+  vendor       VendorProfile?      @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  transactions WalletTransaction[]
+  withdrawals  WithdrawalRequest[]
+
+  @@map("wallets")
+}
+
+model WalletTransaction {
+  id                  String                @id @default(uuid())
+  walletId            String
+  type                WalletTransactionType
+  amount              Decimal               @db.Decimal(12, 2)
+  balanceAfter        Decimal               @db.Decimal(12, 2)
+  description         String
+  vendorOrderId       String?
+  withdrawalRequestId String?
+  createdAt           DateTime              @default(now())
+
+  wallet            Wallet             @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  vendorOrder       VendorOrder?       @relation(fields: [vendorOrderId], references: [id])
+  withdrawalRequest WithdrawalRequest? @relation(fields: [withdrawalRequestId], references: [id])
+
+  @@index([walletId])
+  @@map("wallet_transactions")
+}
+
+model WithdrawalRequest {
+  id                String           @id @default(uuid())
+  walletId          String
+  // null for the platform wallet's self-initiated withdrawals (no separate
+  // vendor to attribute it to — the requesting super admin is reviewedBy).
+  vendorId          String?
+  amount            Decimal          @db.Decimal(12, 2)
+  status            WithdrawalStatus @default(PENDING)
+  providerReference String?
+  failureReason     String?
+  requestedAt       DateTime         @default(now())
+  reviewedAt        DateTime?
+  reviewedBy        String?
+  paidAt            DateTime?
+
+  wallet       Wallet              @relation(fields: [walletId], references: [id])
+  vendor       VendorProfile?      @relation(fields: [vendorId], references: [id])
+  transactions WalletTransaction[]
+
+  @@index([walletId])
+  @@index([vendorId])
+  @@map("withdrawal_requests")
 }

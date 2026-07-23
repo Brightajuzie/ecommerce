@@ -1,12 +1,17 @@
 import { BadRequestException } from "@nestjs/common";
 import { OrdersService } from "./orders.service";
 import type { PrismaService } from "../prisma/prisma.service";
+import type { PaymentSettingsService } from "../payment-settings/payment-settings.service";
+import type { WalletsService } from "../wallets/wallets.service";
 
 interface VendorOrderCreateData {
   vendorId: string;
   subtotal: number;
   commissionAmount: number;
   vendorPayoutAmount: number;
+  companyAmount: number;
+  developerAmount: number;
+  superAdminAmount: number;
 }
 
 interface MockPrisma {
@@ -19,9 +24,19 @@ interface MockPrisma {
   $transaction: jest.Mock;
 }
 
+// Matches PlatformPaymentSettings' schema defaults so the math below lines
+// up with production behavior without needing to special-case the test.
+const DEFAULT_PAYMENT_SETTINGS = {
+  companySharePercent: 70,
+  developerSharePercent: 30,
+  superAdminFeePercent: 0.1,
+};
+
 describe("OrdersService.checkout", () => {
   let service: OrdersService;
   let prisma: MockPrisma;
+  let paymentSettingsService: { get: jest.Mock };
+  let walletsService: WalletsService;
 
   beforeEach(() => {
     prisma = {
@@ -33,7 +48,15 @@ describe("OrdersService.checkout", () => {
       cartItem: { deleteMany: jest.fn() },
       $transaction: jest.fn(),
     };
-    service = new OrdersService(prisma as unknown as PrismaService);
+    paymentSettingsService = {
+      get: jest.fn().mockResolvedValue(DEFAULT_PAYMENT_SETTINGS),
+    };
+    walletsService = {} as WalletsService;
+    service = new OrdersService(
+      prisma as unknown as PrismaService,
+      paymentSettingsService as unknown as PaymentSettingsService,
+      walletsService,
+    );
   });
 
   it("throws when the address does not belong to the buyer", async () => {
@@ -152,6 +175,11 @@ describe("OrdersService.checkout", () => {
     expect(vendorAOrder?.subtotal).toBe(2000);
     expect(vendorAOrder?.commissionAmount).toBe(200);
     expect(vendorAOrder?.vendorPayoutAmount).toBe(1800);
+    // companyAmount + developerAmount subdivide commissionAmount (200 @ 70/30).
+    expect(vendorAOrder?.companyAmount).toBe(140);
+    expect(vendorAOrder?.developerAmount).toBe(60);
+    // Flat 0.10% of subtotal, independent of the commission split.
+    expect(vendorAOrder?.superAdminAmount).toBe(2);
 
     const vendorBOrder = createdVendorOrders.find(
       (o) => o.vendorId === "vendor-B",
@@ -159,6 +187,9 @@ describe("OrdersService.checkout", () => {
     expect(vendorBOrder?.subtotal).toBe(5000);
     expect(vendorBOrder?.commissionAmount).toBe(1000);
     expect(vendorBOrder?.vendorPayoutAmount).toBe(4000);
+    expect(vendorBOrder?.companyAmount).toBe(700);
+    expect(vendorBOrder?.developerAmount).toBe(300);
+    expect(vendorBOrder?.superAdminAmount).toBe(5);
 
     expect(prisma.cartItem.deleteMany).toHaveBeenCalledWith({
       where: { cartId: "cart-1" },

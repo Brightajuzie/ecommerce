@@ -23,6 +23,7 @@ export type VendorStackParamList = {
 export type VendorTabParamList = {
   MyProducts: undefined;
   VendorOrders: undefined;
+  Wallet: undefined;
   Profile: undefined;
 };
 
@@ -35,5 +36,9 @@ export type AdminTabParamList = {
   PendingVendors: undefined;
   StoreSettings: undefined;
   Slides: undefined;
+  Withdrawals: undefined;
+  // SUPER_ADMIN only — AdminTabNavigator omits this screen entirely for
+  // regular ADMIN users. See UserRole.SUPER_ADMIN.
+  Payments: undefined;
   Profile: undefined;
 };
