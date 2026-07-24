@@ -393,7 +393,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
-  rowCard: { flex: 0, width: 150, maxWidth: 150 },
+  // `flex: 0` (not flexGrow/flexShrink individually) sets flex-basis: 0% on
+  // web, which wins over `width` on the main axis of a horizontal FlatList
+  // and collapses the card — explicit flexBasis avoids that entirely.
+  rowCard: { flexGrow: 0, flexShrink: 0, flexBasis: 150, width: 150, maxWidth: 150 },
   cardImageWrap: { position: "relative", marginBottom: 8 },
   cardImage: { width: "100%", aspectRatio: 1, borderRadius: 12, backgroundColor: "#F0FDF4" },
   badge: {
