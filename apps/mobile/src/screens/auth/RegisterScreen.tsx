@@ -16,6 +16,7 @@ import { UserRole } from "@ikaystores/shared";
 import { FormInput } from "../../components/FormInput";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { AuthApi, CartApi } from "../../api/endpoints";
+import { getErrorMessage } from "../../api/errorMessage";
 import { useAuthStore } from "../../store/authStore";
 import { syncGuestCartToServer } from "../../store/guestCartStore";
 import type { BuyerStackParamList } from "../../navigation/types";
@@ -70,16 +71,22 @@ export function RegisterScreen() {
       }
       queryClient.invalidateQueries({ queryKey: ["cart"] });
 
-      if (route.params?.redirectTo === "Checkout") {
-        navigation.replace("Checkout");
-      } else {
-        navigation.replace("BuyerTabs");
-      }
-    } catch (error: any) {
+      const proceed = () => {
+        if (route.params?.redirectTo === "Checkout") {
+          navigation.replace("Checkout");
+        } else {
+          navigation.replace("BuyerTabs");
+        }
+      };
       Alert.alert(
-        "Registration failed",
-        error?.response?.data?.message ?? "Something went wrong. Please try again.",
+        "Account created",
+        asVendor
+          ? "Welcome to Ikaystores! Next, verify your identity to start selling."
+          : "Welcome to Ikaystores!",
+        [{ text: "Continue", onPress: proceed }],
       );
+    } catch (error) {
+      Alert.alert("Registration failed", getErrorMessage(error, "Something went wrong. Please try again."));
     } finally {
       setLoading(false);
     }

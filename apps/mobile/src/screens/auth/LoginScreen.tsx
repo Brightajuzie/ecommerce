@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { FormInput } from "../../components/FormInput";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { AuthApi, CartApi } from "../../api/endpoints";
+import { getErrorMessage } from "../../api/errorMessage";
 import { useAuthStore } from "../../store/authStore";
 import { syncGuestCartToServer } from "../../store/guestCartStore";
 import type { BuyerStackParamList } from "../../navigation/types";
@@ -44,11 +45,8 @@ export function LoginScreen() {
       } else {
         navigation.replace("BuyerTabs");
       }
-    } catch (error: any) {
-      Alert.alert(
-        "Login failed",
-        error?.response?.data?.message ?? "Please check your credentials and try again.",
-      );
+    } catch (error) {
+      Alert.alert("Login failed", getErrorMessage(error, "Please check your credentials and try again."));
     } finally {
       setLoading(false);
     }
