@@ -224,6 +224,7 @@ export function HomeScreen() {
       ) : isFiltering ? (
         <FlatList
           key={numColumns}
+          style={styles.productList}
           data={products}
           keyExtractor={(item: ProductDto) => item.id}
           numColumns={numColumns}
@@ -261,6 +262,7 @@ export function HomeScreen() {
         />
       ) : (
         <FlatList
+          style={styles.productList}
           data={productsByCategory}
           keyExtractor={(section) => section.category.id}
           contentContainerStyle={styles.groupedList}
@@ -351,7 +353,15 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   searchInput: { flex: 1, fontSize: 14, color: "#111827", padding: 0 },
-  categoryList: { flexGrow: 0, marginTop: 14, marginBottom: 4 },
+  // flexShrink: 0 + a hard height floor: without them, this row's sibling
+  // FlatList (unbounded natural content height) forces the whole column's
+  // default flex-shrink:1 to kick in on web, squeezing this chip row down to
+  // a few px — the chips render but are almost entirely clipped.
+  categoryList: { flexGrow: 0, flexShrink: 0, height: 40, marginTop: 14, marginBottom: 4 },
+  // Gives the product FlatList itself (not just its contentContainer) a
+  // bounded flex-basis, so it consumes remaining column space instead of
+  // sizing to its full natural (huge) content height and shrinking siblings.
+  productList: { flex: 1 },
   categoryListContent: { paddingHorizontal: 16, gap: 8 },
   categoryChip: {
     flexDirection: "row",
