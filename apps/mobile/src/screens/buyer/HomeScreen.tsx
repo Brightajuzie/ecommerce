@@ -184,17 +184,12 @@ export function HomeScreen() {
         </View>
       </LinearGradient>
 
-      <FlatList
-        horizontal
-        data={categories}
-        keyExtractor={(item: CategoryDto) => item.id}
-        showsHorizontalScrollIndicator={false}
-        style={styles.categoryList}
-        contentContainerStyle={styles.categoryListContent}
-        renderItem={({ item }) => {
+      <View style={styles.categoryWrap}>
+        {categories.map((item: CategoryDto) => {
           const active = categoryId === item.id;
           return (
             <Pressable
+              key={item.id}
               onPress={() => setCategoryId(active ? undefined : item.id)}
               style={[
                 styles.categoryChip,
@@ -216,8 +211,8 @@ export function HomeScreen() {
               </Text>
             </Pressable>
           );
-        }}
-      />
+        })}
+      </View>
 
       {productsQuery.isLoading ? (
         <ActivityIndicator style={styles.loading} color={theme.primaryColor} />
@@ -353,16 +348,23 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   searchInput: { flex: 1, fontSize: 14, color: "#111827", padding: 0 },
-  // flexShrink: 0 + a hard height floor: without them, this row's sibling
-  // FlatList (unbounded natural content height) forces the whole column's
-  // default flex-shrink:1 to kick in on web, squeezing this chip row down to
-  // a few px — the chips render but are almost entirely clipped.
-  categoryList: { flexGrow: 0, flexShrink: 0, height: 40, marginTop: 14, marginBottom: 4 },
+  // Wraps to as many rows as needed instead of scrolling horizontally, so
+  // every category is visible up front with no swipe required. flexShrink: 0
+  // keeps it from being squeezed by the sibling product FlatList's flex — see
+  // productList below for the other half of that fix.
+  categoryWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    flexShrink: 0,
+    paddingHorizontal: 16,
+    marginTop: 14,
+    marginBottom: 4,
+    gap: 8,
+  },
   // Gives the product FlatList itself (not just its contentContainer) a
   // bounded flex-basis, so it consumes remaining column space instead of
   // sizing to its full natural (huge) content height and shrinking siblings.
   productList: { flex: 1 },
-  categoryListContent: { paddingHorizontal: 16, gap: 8 },
   categoryChip: {
     flexDirection: "row",
     alignItems: "center",
@@ -370,7 +372,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: 20,
-    marginRight: 8,
   },
   categoryChipText: { fontWeight: "700", fontSize: 13 },
   loading: { marginTop: 40 },

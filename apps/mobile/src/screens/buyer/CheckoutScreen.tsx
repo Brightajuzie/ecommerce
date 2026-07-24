@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -8,6 +8,7 @@ import { PaymentProvider } from "@ikaystores/shared";
 import { UsersApi, OrdersApi, PaymentsApi } from "../../api/endpoints";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { FormInput } from "../../components/FormInput";
+import { useAuthStore } from "../../store/authStore";
 import { useTheme } from "../../theme/ThemeContext";
 import type { BuyerStackParamList } from "../../navigation/types";
 
@@ -15,15 +16,26 @@ export function CheckoutScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<BuyerStackParamList>>();
   const queryClient = useQueryClient();
   const theme = useTheme();
+  const user = useAuthStore((s) => s.user);
 
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [showNewAddress, setShowNewAddress] = useState(false);
   const [newAddress, setNewAddress] = useState({ label: "Home", line1: "", city: "", state: "", phone: "" });
   const [provider, setProvider] = useState<PaymentProvider>(PaymentProvider.FLUTTERWAVE);
 
+  // Defends this screen directly rather than relying solely on CartScreen's
+  // button routing guests to Login first — e.g. a stale deep link or a
+  // future caller that navigates here without going through the cart.
+  useEffect(() => {
+    if (!user) {
+      navigation.replace("Login", { redirectTo: "Checkout" });
+    }
+  }, [user, navigation]);
+
   const addressesQuery = useQuery({
     queryKey: ["addresses"],
     queryFn: UsersApi.listAddresses,
+    enabled: !!user,
   });
 
   const createAddress = useMutation({
@@ -55,6 +67,14 @@ export function CheckoutScreen() {
   });
 
   const addresses = addressesQuery.data ?? [];
+
+  if (!user) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator color={theme.primaryColor} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -176,6 +196,7 @@ export function CheckoutScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff", paddingTop: 60, paddingHorizontal: 16 },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#fff" },
   title: { fontSize: 28, fontWeight: "800", color: "#111827", marginBottom: 16 },
   sectionLabel: { fontSize: 16, fontWeight: "700", color: "#111827", marginTop: 16, marginBottom: 8 },
   addressList: { maxHeight: 180 },
