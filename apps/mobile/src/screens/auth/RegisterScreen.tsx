@@ -9,6 +9,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQueryClient } from "@tanstack/react-query";
@@ -36,14 +37,21 @@ export function RegisterScreen() {
   const [asVendor, setAsVendor] = useState(false);
   const [businessName, setBusinessName] = useState("");
   const [loading, setLoading] = useState(false);
+  // Rendered inline rather than via Alert.alert: on web, Alert.alert is a
+  // browser-native dialog that some mobile browsers silently suppress when
+  // triggered after an awaited call, which left failed registrations
+  // looking like nothing happened at all (see the navigation fix above for
+  // the same root cause on the success path).
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleRegister = async () => {
+    setErrorMessage(null);
     if (!firstName || !lastName || !email || !password) {
-      Alert.alert("Missing details", "Please fill in all required fields.");
+      setErrorMessage("Please fill in all required fields.");
       return;
     }
     if (asVendor && !businessName) {
-      Alert.alert("Missing details", "Enter your business name to register as a vendor.");
+      setErrorMessage("Enter your business name to register as a vendor.");
       return;
     }
 
@@ -90,7 +98,7 @@ export function RegisterScreen() {
           : "Welcome to Ikaystores!",
       );
     } catch (error) {
-      Alert.alert("Registration failed", getErrorMessage(error, "Something went wrong. Please try again."));
+      setErrorMessage(getErrorMessage(error, "Something went wrong. Please try again."));
     } finally {
       setLoading(false);
     }
@@ -104,6 +112,13 @@ export function RegisterScreen() {
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.centeredColumn}>
           <Text style={styles.title}>Create account</Text>
+
+          {errorMessage && (
+            <View style={styles.errorBanner}>
+              <Ionicons name="alert-circle" size={18} color="#DC2626" />
+              <Text style={styles.errorBannerText}>{errorMessage}</Text>
+            </View>
+          )}
 
           <FormInput label="First name" value={firstName} onChangeText={setFirstName} />
           <FormInput label="Last name" value={lastName} onChangeText={setLastName} />
@@ -145,6 +160,18 @@ const styles = StyleSheet.create({
   container: { padding: 24, backgroundColor: "#fff", flexGrow: 1, justifyContent: "center" },
   centeredColumn: { width: "100%", maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" },
   title: { fontSize: 28, fontWeight: "800", color: "#111827", marginBottom: 24 },
+  errorBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#FEF2F2",
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+  },
+  errorBannerText: { flex: 1, color: "#B91C1C", fontSize: 13, fontWeight: "600" },
   toggleRow: {
     flexDirection: "row",
     justifyContent: "space-between",
