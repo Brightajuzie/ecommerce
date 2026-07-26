@@ -14,15 +14,47 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, type CompositeNavigationProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import type { CategoryDto, ProductDto } from "@ikaystores/shared";
 import { ProductsApi, CategoriesApi } from "../../api/endpoints";
 import { AppDownloadBanner } from "../../components/AppDownloadBanner";
 import { SlideCarousel } from "../../components/SlideCarousel";
 import { useTheme } from "../../theme/ThemeContext";
-import type { BuyerStackParamList } from "../../navigation/types";
+import type { BuyerStackParamList, BuyerTabParamList } from "../../navigation/types";
+
+// Home is a tab screen but also navigates to stack-level screens (ProductDetail,
+// Register) and sibling tabs (Orders) — a composite type is needed so both
+// `navigate("Orders")` and `navigate("ProductDetail", {...})` type-check.
+type HomeNavigationProp = CompositeNavigationProp<
+  BottomTabNavigationProp<BuyerTabParamList>,
+  NativeStackNavigationProp<BuyerStackParamList>
+>;
+
+const QUICK_ACTIONS: {
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  bg: string;
+  color: string;
+  onPress: (navigation: HomeNavigationProp) => void;
+}[] = [
+  {
+    label: "Become a Vendor",
+    icon: "storefront",
+    bg: "#EDE9FE",
+    color: "#6D28D9",
+    onPress: (navigation) => navigation.navigate("Register", undefined),
+  },
+  {
+    label: "Track my orders",
+    icon: "receipt",
+    bg: "#FFEDD5",
+    color: "#C2410C",
+    onPress: (navigation) => navigation.navigate("Orders"),
+  },
+];
 
 const NEW_PRODUCT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 const LOW_STOCK_THRESHOLD = 5;
@@ -53,7 +85,7 @@ function iconForCategory(name: string): keyof typeof Ionicons.glyphMap {
 }
 
 export function HomeScreen() {
-  const navigation = useNavigation<NativeStackNavigationProp<BuyerStackParamList>>();
+  const navigation = useNavigation<HomeNavigationProp>();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
@@ -184,29 +216,41 @@ export function HomeScreen() {
         </View>
       </LinearGradient>
 
-      <View style={styles.categoryWrap}>
+      <View style={styles.quickActions}>
+        {QUICK_ACTIONS.map((action) => (
+          <Pressable
+            key={action.label}
+            style={[styles.quickActionCard, { backgroundColor: action.bg }]}
+            onPress={() => action.onPress(navigation)}
+          >
+            <Ionicons name={action.icon} size={18} color={action.color} />
+            <Text style={[styles.quickActionText, { color: action.color }]}>{action.label}</Text>
+          </Pressable>
+        ))}
+      </View>
+
+      <View style={styles.categoryGrid}>
         {categories.map((item: CategoryDto) => {
           const active = categoryId === item.id;
           return (
             <Pressable
               key={item.id}
               onPress={() => setCategoryId(active ? undefined : item.id)}
-              style={[
-                styles.categoryChip,
-                { backgroundColor: active ? theme.primaryColor : theme.accentColor ?? "#F0FDF4" },
-              ]}
+              style={styles.categoryTile}
             >
-              <Ionicons
-                name={iconForCategory(item.name)}
-                size={14}
-                color={active ? "#fff" : theme.primaryColor}
-              />
-              <Text
+              <View
                 style={[
-                  styles.categoryChipText,
-                  { color: active ? "#fff" : theme.primaryColor },
+                  styles.categoryIconBox,
+                  { backgroundColor: active ? theme.primaryColor : theme.accentColor ?? "#F0FDF4" },
                 ]}
               >
+                <Ionicons
+                  name={iconForCategory(item.name)}
+                  size={24}
+                  color={active ? "#fff" : theme.primaryColor}
+                />
+              </View>
+              <Text numberOfLines={2} style={styles.categoryTileText}>
                 {item.name}
               </Text>
             </Pressable>
@@ -348,32 +392,53 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   searchInput: { flex: 1, fontSize: 14, color: "#111827", padding: 0 },
+  quickActions: {
+    flexDirection: "row",
+    flexShrink: 0,
+    paddingHorizontal: 16,
+    marginTop: 14,
+    gap: 10,
+  },
+  quickActionCard: {
+    flexGrow: 1,
+    flexBasis: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 14,
+    borderRadius: 14,
+  },
+  quickActionText: { fontWeight: "700", fontSize: 12, flexShrink: 1 },
   // Wraps to as many rows as needed instead of scrolling horizontally, so
   // every category is visible up front with no swipe required. flexShrink: 0
   // keeps it from being squeezed by the sibling product FlatList's flex — see
   // productList below for the other half of that fix.
-  categoryWrap: {
+  categoryGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     flexShrink: 0,
+    justifyContent: "flex-start",
     paddingHorizontal: 16,
-    marginTop: 14,
-    marginBottom: 4,
-    gap: 8,
+    marginTop: 18,
+    marginBottom: 6,
+    gap: 14,
   },
   // Gives the product FlatList itself (not just its contentContainer) a
   // bounded flex-basis, so it consumes remaining column space instead of
   // sizing to its full natural (huge) content height and shrinking siblings.
   productList: { flex: 1 },
-  categoryChip: {
-    flexDirection: "row",
+  categoryTile: { width: 76, alignItems: "center" },
+  categoryIconBox: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 20,
+    justifyContent: "center",
+    marginBottom: 6,
   },
-  categoryChipText: { fontWeight: "700", fontSize: 13 },
+  categoryTileText: { fontWeight: "600", fontSize: 11, color: "#374151", textAlign: "center" },
   loading: { marginTop: 40 },
   loadingMore: { marginVertical: 20 },
   sectionHeader: {
