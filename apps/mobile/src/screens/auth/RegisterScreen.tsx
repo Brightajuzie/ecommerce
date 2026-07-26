@@ -71,19 +71,23 @@ export function RegisterScreen() {
       }
       queryClient.invalidateQueries({ queryKey: ["cart"] });
 
-      const proceed = () => {
-        if (route.params?.redirectTo === "Checkout") {
-          navigation.replace("Checkout");
-        } else {
-          navigation.replace("BuyerTabs");
-        }
-      };
+      // Navigate first, independent of the confirmation alert below: on web,
+      // Alert.alert renders as a browser-native dialog that some mobile
+      // browsers silently suppress when triggered after an awaited call
+      // (outside the direct click-gesture stack) — gating navigation behind
+      // its "Continue" button meant a suppressed alert left the user stuck
+      // on the register screen with no visible error, even though the
+      // account was created successfully.
+      if (route.params?.redirectTo === "Checkout") {
+        navigation.replace("Checkout");
+      } else {
+        navigation.replace("BuyerTabs");
+      }
       Alert.alert(
         "Account created",
         asVendor
           ? "Welcome to Ikaystores! Next, verify your identity to start selling."
           : "Welcome to Ikaystores!",
-        [{ text: "Continue", onPress: proceed }],
       );
     } catch (error) {
       Alert.alert("Registration failed", getErrorMessage(error, "Something went wrong. Please try again."));
