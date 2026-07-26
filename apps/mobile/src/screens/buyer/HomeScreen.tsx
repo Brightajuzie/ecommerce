@@ -145,6 +145,40 @@ export function HomeScreen() {
       .filter((section) => section.items.length > 0);
   }, [products, categories]);
 
+  // Rendered inside both FlatLists' ListHeaderComponent (not as a static
+  // sibling of the hero) so it scrolls away with the rest of the content —
+  // only the search header stays pinned above the list.
+  const categoryGridElement = (
+    <View style={styles.categoryGrid}>
+      {categories.map((item: CategoryDto) => {
+        const active = categoryId === item.id;
+        return (
+          <Pressable
+            key={item.id}
+            onPress={() => setCategoryId(active ? undefined : item.id)}
+            style={styles.categoryTile}
+          >
+            <View
+              style={[
+                styles.categoryIconBox,
+                { backgroundColor: active ? theme.primaryColor : theme.accentColor ?? "#F0FDF4" },
+              ]}
+            >
+              <Ionicons
+                name={iconForCategory(item.name)}
+                size={24}
+                color={active ? "#fff" : theme.primaryColor}
+              />
+            </View>
+            <Text numberOfLines={2} style={styles.categoryTileText}>
+              {item.name}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+
   const renderProductCard = (item: ProductDto, cardStyle: object) => {
     const isNew = Date.now() - new Date(item.createdAt).getTime() < NEW_PRODUCT_WINDOW_MS;
     const isLowStock = item.stock > 0 && item.stock <= LOW_STOCK_THRESHOLD;
@@ -229,35 +263,6 @@ export function HomeScreen() {
         ))}
       </View>
 
-      <View style={styles.categoryGrid}>
-        {categories.map((item: CategoryDto) => {
-          const active = categoryId === item.id;
-          return (
-            <Pressable
-              key={item.id}
-              onPress={() => setCategoryId(active ? undefined : item.id)}
-              style={styles.categoryTile}
-            >
-              <View
-                style={[
-                  styles.categoryIconBox,
-                  { backgroundColor: active ? theme.primaryColor : theme.accentColor ?? "#F0FDF4" },
-                ]}
-              >
-                <Ionicons
-                  name={iconForCategory(item.name)}
-                  size={24}
-                  color={active ? "#fff" : theme.primaryColor}
-                />
-              </View>
-              <Text numberOfLines={2} style={styles.categoryTileText}>
-                {item.name}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-
       {productsQuery.isLoading ? (
         <ActivityIndicator style={styles.loading} color={theme.primaryColor} />
       ) : isFiltering ? (
@@ -269,12 +274,15 @@ export function HomeScreen() {
           numColumns={numColumns}
           contentContainerStyle={styles.grid}
           ListHeaderComponent={
-            <View style={styles.sectionHeader}>
-              <Ionicons name="leaf" size={16} color={theme.primaryColor} />
-              <Text style={[styles.sectionHeaderText, { color: theme.primaryColor }]}>
-                {search ? `Results for "${search}"` : categories.find((c) => c.id === categoryId)?.name ?? "Products"}
-              </Text>
-            </View>
+            <>
+              {categoryGridElement}
+              <View style={styles.sectionHeader}>
+                <Ionicons name="leaf" size={16} color={theme.primaryColor} />
+                <Text style={[styles.sectionHeaderText, { color: theme.primaryColor }]}>
+                  {search ? `Results for "${search}"` : categories.find((c) => c.id === categoryId)?.name ?? "Products"}
+                </Text>
+              </View>
+            </>
           }
           refreshControl={
             <RefreshControl
@@ -307,6 +315,7 @@ export function HomeScreen() {
           contentContainerStyle={styles.groupedList}
           ListHeaderComponent={
             <>
+              {categoryGridElement}
               <SlideCarousel />
               <AppDownloadBanner />
             </>
