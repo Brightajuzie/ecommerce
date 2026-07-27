@@ -326,6 +326,21 @@ model PlatformPaymentSettings {
   developerSharePercent Decimal  @default(30.0) @db.Decimal(5, 2)
   superAdminFeePercent  Decimal  @default(0.10) @db.Decimal(5, 2)
   payoutAccount         Json?
+  // Gateway credentials + support email — SUPER_ADMIN-only (see
+  // PaymentSettingsController's separate /gateway routes), unlike the
+  // revenue-split fields above which regular ADMIN can also see/edit.
+  // FlutterwaveService/OpayService read these first and fall back to their
+  // env vars when null, so a fresh environment still works from .env alone.
+  // Stored in plaintext, not encrypted at rest — access is already gated to
+  // SUPER_ADMIN at the API layer; add field-level encryption later if the
+  // threat model needs to cover direct DB access too.
+  flutterwavePublicKey     String?
+  flutterwaveSecretKey     String?
+  flutterwaveEncryptionKey String?
+  opayMerchantId           String?
+  opayPublicKey            String?
+  opaySecretKey            String?
+  supportEmail             String?
   updatedAt             DateTime @updatedAt
 
   @@map("platform_payment_settings")

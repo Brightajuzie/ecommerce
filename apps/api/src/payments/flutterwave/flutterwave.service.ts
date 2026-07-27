@@ -2,6 +2,7 @@ import { BadGatewayException, Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import axios from "axios";
 import * as crypto from "crypto";
+import { PrismaService } from "../../prisma/prisma.service";
 
 const FLW_BASE_URL = "https://api.flutterwave.com/v3";
 
@@ -64,10 +65,20 @@ interface FlutterwaveBanksResponse {
 export class FlutterwaveService {
   private readonly logger = new Logger(FlutterwaveService.name);
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly prisma: PrismaService,
+  ) {}
 
-  private get secretKey(): string {
-    return this.configService.get<string>("FLW_SECRET_KEY", "");
+  // DB value (set via the SUPER_ADMIN-only gateway settings screen) takes
+  // priority over the env var, so a fresh environment still works from
+  // .env alone until someone configures it through the admin UI.
+  private async getSecretKey(): Promise<string> {
+    const settings = await this.prisma.platformPaymentSettings.findFirst();
+    return (
+      settings?.flutterwaveSecretKey ||
+      this.configService.get<string>("FLW_SECRET_KEY", "")
+    );
   }
 
   private get webhookSecret(): string {
@@ -81,7 +92,8 @@ export class FlutterwaveService {
     redirectUrl: string,
     customer: FlutterwaveCustomer,
   ): Promise<InitializeResult> {
-    if (!this.secretKey) {
+    const secretKey = await this.getSecretKey();
+    if (!secretKey) {
       throw new BadGatewayException(
         "Flutterwave is not configured on this server",
       );
@@ -102,7 +114,7 @@ export class FlutterwaveService {
           },
           customizations: { title: "Ikaystores" },
         },
-        { headers: { Authorization: `Bearer ${this.secretKey}` } },
+        { headers: { Authorization: `Bearer ${secretKey}` } },
       );
 
       const checkoutUrl = response.data?.data?.link;
@@ -117,7 +129,8 @@ export class FlutterwaveService {
   }
 
   async verifyByReference(txRef: string): Promise<VerifyResult> {
-    if (!this.secretKey) {
+    const secretKey = await this.getSecretKey();
+    if (!secretKey) {
       throw new BadGatewayException(
         "Flutterwave is not configured on this server",
       );
@@ -128,7 +141,7 @@ export class FlutterwaveService {
         `${FLW_BASE_URL}/transactions/verify_by_reference`,
         {
           params: { tx_ref: txRef },
-          headers: { Authorization: `Bearer ${this.secretKey}` },
+          headers: { Authorization: `Bearer ${secretKey}` },
         },
       );
 
@@ -158,7 +171,8 @@ export class FlutterwaveService {
     accountNumber: string,
     narration: string,
   ): Promise<TransferResult> {
-    if (!this.secretKey) {
+    const secretKey = await this.getSecretKey();
+    if (!secretKey) {
       throw new BadGatewayException(
         "Flutterwave is not configured on this server",
       );
@@ -175,7 +189,7 @@ export class FlutterwaveService {
           narration,
           reference,
         },
-        { headers: { Authorization: `Bearer ${this.secretKey}` } },
+        { headers: { Authorization: `Bearer ${secretKey}` } },
       );
 
       const transferId = response.data?.data?.id;
@@ -197,7 +211,8 @@ export class FlutterwaveService {
     bankCode: string,
     accountNumber: string,
   ): Promise<ResolvedAccount> {
-    if (!this.secretKey) {
+    const secretKey = await this.getSecretKey();
+    if (!secretKey) {
       throw new BadGatewayException(
         "Flutterwave is not configured on this server",
       );
@@ -207,7 +222,7 @@ export class FlutterwaveService {
       const response = await axios.post<FlutterwaveResolveResponse>(
         `${FLW_BASE_URL}/accounts/resolve`,
         { account_bank: bankCode, account_number: accountNumber },
-        { headers: { Authorization: `Bearer ${this.secretKey}` } },
+        { headers: { Authorization: `Bearer ${secretKey}` } },
       );
 
       const accountName = response.data?.data?.account_name;
@@ -225,7 +240,8 @@ export class FlutterwaveService {
 
   /** Powers the mobile bank picker instead of free-text bank codes. */
   async listBanks(country = "NG"): Promise<Bank[]> {
-    if (!this.secretKey) {
+    const secretKey = await this.getSecretKey();
+    if (!secretKey) {
       throw new BadGatewayException(
         "Flutterwave is not configured on this server",
       );
@@ -234,7 +250,7 @@ export class FlutterwaveService {
     try {
       const response = await axios.get<FlutterwaveBanksResponse>(
         `${FLW_BASE_URL}/banks/${country}`,
-        { headers: { Authorization: `Bearer ${this.secretKey}` } },
+        { headers: { Authorization: `Bearer ${secretKey}` } },
       );
 
       return (response.data?.data ?? []).map((bank) => ({

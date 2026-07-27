@@ -26,3 +26,16 @@ export const updatePaymentSettingsSchema = z.object({
   superAdminFeePercent: z.number().min(0).max(100).optional(),
 });
 export type UpdatePaymentSettingsInput = z.infer<typeof updatePaymentSettingsSchema>;
+
+// SUPER_ADMIN-only — see PaymentSettingsController's /payment-settings/gateway
+// routes. Blank/omitted fields leave the currently-stored value unchanged.
+export const updateGatewaySettingsSchema = z.object({
+  flutterwavePublicKey: z.string().max(500).optional(),
+  flutterwaveSecretKey: z.string().max(500).optional(),
+  flutterwaveEncryptionKey: z.string().max(500).optional(),
+  opayMerchantId: z.string().max(200).optional(),
+  opayPublicKey: z.string().max(500).optional(),
+  opaySecretKey: z.string().max(500).optional(),
+  supportEmail: z.string().email().optional(),
+});
+export type UpdateGatewaySettingsInput = z.infer<typeof updateGatewaySettingsSchema>;

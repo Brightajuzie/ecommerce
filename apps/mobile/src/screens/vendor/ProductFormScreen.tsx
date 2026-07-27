@@ -9,11 +9,17 @@ import { pickAndUploadImage, ImagePickerCancelledError } from "../../api/upload"
 import { FormInput } from "../../components/FormInput";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { useTheme } from "../../theme/ThemeContext";
-import type { VendorStackParamList } from "../../navigation/types";
+
+// Reused from both VendorStackParamList and AdminStackParamList (identical
+// "ProductForm" route shape in both) — admin can fully edit any vendor's
+// product via the same backend endpoint, which now also accepts ADMIN/
+// SUPER_ADMIN callers. Typed against a minimal shared shape instead of
+// either specific param list so it isn't coupled to one navigator.
+type ProductFormParamList = { ProductForm: { productId?: string } | undefined };
 
 export function ProductFormScreen() {
-  const route = useRoute<RouteProp<VendorStackParamList, "ProductForm">>();
-  const navigation = useNavigation<NativeStackNavigationProp<VendorStackParamList>>();
+  const route = useRoute<RouteProp<ProductFormParamList, "ProductForm">>();
+  const navigation = useNavigation<NativeStackNavigationProp<ProductFormParamList>>();
   const queryClient = useQueryClient();
   const theme = useTheme();
   const productId = route.params?.productId;
@@ -76,7 +82,11 @@ export function ProductFormScreen() {
       return productId ? ProductsApi.update(productId, payload) : ProductsApi.create(payload);
     },
     onSuccess: () => {
+      // Invalidates both possible list caches — a no-op for whichever one
+      // isn't populated, since this screen is reached from either the
+      // vendor's "My products" list or the admin products list.
       queryClient.invalidateQueries({ queryKey: ["myProducts"] });
+      queryClient.invalidateQueries({ queryKey: ["adminProducts"] });
       navigation.goBack();
     },
     onError: (error: any) => {
@@ -88,6 +98,7 @@ export function ProductFormScreen() {
     mutationFn: () => ProductsApi.remove(productId as string),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["myProducts"] });
+      queryClient.invalidateQueries({ queryKey: ["adminProducts"] });
       navigation.goBack();
     },
   });

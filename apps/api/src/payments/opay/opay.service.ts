@@ -2,6 +2,7 @@ import { BadGatewayException, Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import axios from "axios";
 import * as crypto from "crypto";
+import { PrismaService } from "../../prisma/prisma.service";
 
 export interface OpayCustomer {
   email?: string;
@@ -38,7 +39,10 @@ interface OpayCreateResponse {
 export class OpayService {
   private readonly logger = new Logger(OpayService.name);
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   private get baseUrl(): string {
     return this.configService.get<string>("NODE_ENV") === "production"
@@ -46,16 +50,26 @@ export class OpayService {
       : "https://testapi.opaycheckout.com";
   }
 
-  private get merchantId(): string {
-    return this.configService.get<string>("OPAY_MERCHANT_ID", "");
-  }
-
-  private get publicKey(): string {
-    return this.configService.get<string>("OPAY_PUBLIC_KEY", "");
-  }
-
-  private get secretKey(): string {
-    return this.configService.get<string>("OPAY_SECRET_KEY", "");
+  // DB values (set via the SUPER_ADMIN-only gateway settings screen) take
+  // priority over env vars, so a fresh environment still works from .env
+  // alone until someone configures it through the admin UI.
+  private async getCredentials(): Promise<{
+    merchantId: string;
+    publicKey: string;
+    secretKey: string;
+  }> {
+    const settings = await this.prisma.platformPaymentSettings.findFirst();
+    return {
+      merchantId:
+        settings?.opayMerchantId ||
+        this.configService.get<string>("OPAY_MERCHANT_ID", ""),
+      publicKey:
+        settings?.opayPublicKey ||
+        this.configService.get<string>("OPAY_PUBLIC_KEY", ""),
+      secretKey:
+        settings?.opaySecretKey ||
+        this.configService.get<string>("OPAY_SECRET_KEY", ""),
+    };
   }
 
   async initialize(
@@ -66,7 +80,8 @@ export class OpayService {
     callbackUrl: string,
     customer: OpayCustomer,
   ): Promise<InitializeResult> {
-    if (!this.publicKey || !this.merchantId) {
+    const { merchantId, publicKey } = await this.getCredentials();
+    if (!publicKey || !merchantId) {
       throw new BadGatewayException("Opay is not configured on this server");
     }
 
@@ -91,8 +106,8 @@ export class OpayService {
         },
         {
           headers: {
-            Authorization: `Bearer ${this.publicKey}`,
-            MerchantId: this.merchantId,
+            Authorization: `Bearer ${publicKey}`,
+            MerchantId: merchantId,
             "Content-Type": "application/json",
           },
         },
@@ -113,11 +128,12 @@ export class OpayService {
    * Verifies OPay's callback signature: HMAC-SHA3-512 over a fixed template
    * built from eight payload fields, keyed with the merchant's secret key.
    */
-  verifyCallbackSignature(
+  async verifyCallbackSignature(
     payload: OpayCallbackPayload,
     sha512: string | undefined,
-  ): boolean {
-    if (!sha512 || !this.secretKey) {
+  ): Promise<boolean> {
+    const { secretKey } = await this.getCredentials();
+    if (!sha512 || !secretKey) {
       return false;
     }
 
@@ -129,7 +145,7 @@ export class OpayService {
       `Token:"${payload.token}",TransactionID:"${payload.transactionId}"}`;
 
     const expected = crypto
-      .createHmac("sha3-512", this.secretKey)
+      .createHmac("sha3-512", secretKey)
       .update(template)
       .digest("hex");
 

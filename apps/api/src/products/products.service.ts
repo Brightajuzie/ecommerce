@@ -3,11 +3,14 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { Prisma, ProductStatus, VendorStatus } from "@prisma/client";
+import { Prisma, ProductStatus, UserRole, VendorStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateProductDto } from "./dto/create-product.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
 import { ProductQueryDto } from "./dto/product-query.dto";
+import { AdminProductQueryDto } from "./dto/admin-product-query.dto";
+
+const ADMIN_ROLES = [UserRole.ADMIN, UserRole.SUPER_ADMIN] as const;
 
 @Injectable()
 export class ProductsService {
@@ -83,6 +86,40 @@ export class ProductsService {
     });
   }
 
+  // Unlike browse(), this isn't filtered to ACTIVE/a single vendor — admin
+  // moderation needs to see everything, including inactive/out-of-stock
+  // listings from any vendor.
+  async browseForAdmin(query: AdminProductQueryDto) {
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 20;
+
+    const where: Prisma.ProductWhereInput = {
+      ...(query.status ? { status: query.status } : {}),
+      ...(query.vendorId ? { vendorId: query.vendorId } : {}),
+      ...(query.search
+        ? {
+            OR: [
+              { title: { contains: query.search, mode: "insensitive" } },
+              { description: { contains: query.search, mode: "insensitive" } },
+            ],
+          }
+        : {}),
+    };
+
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.product.findMany({
+        where,
+        include: { vendor: { select: { businessName: true } } },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        orderBy: { createdAt: "desc" },
+      }),
+      this.prisma.product.count({ where }),
+    ]);
+
+    return { data, page, pageSize, total };
+  }
+
   async create(userId: string, dto: CreateProductDto) {
     const vendorProfile = await this.getVendorProfileOrThrow(userId);
     return this.prisma.product.create({
@@ -90,24 +127,43 @@ export class ProductsService {
     });
   }
 
-  async update(userId: string, productId: string, dto: UpdateProductDto) {
-    const vendorProfile = await this.getVendorProfileOrThrow(userId);
+  async update(
+    userId: string,
+    productId: string,
+    dto: UpdateProductDto,
+    callerRole: UserRole = UserRole.VENDOR,
+  ) {
     const product = await this.prisma.product.findUnique({
       where: { id: productId },
     });
-    if (!product || product.vendorId !== vendorProfile.id) {
+    if (!product) {
       throw new NotFoundException("Product not found");
+    }
+    if (!ADMIN_ROLES.includes(callerRole as (typeof ADMIN_ROLES)[number])) {
+      const vendorProfile = await this.getVendorProfileOrThrow(userId);
+      if (product.vendorId !== vendorProfile.id) {
+        throw new NotFoundException("Product not found");
+      }
     }
     return this.prisma.product.update({ where: { id: productId }, data: dto });
   }
 
-  async remove(userId: string, productId: string) {
-    const vendorProfile = await this.getVendorProfileOrThrow(userId);
+  async remove(
+    userId: string,
+    productId: string,
+    callerRole: UserRole = UserRole.VENDOR,
+  ) {
     const product = await this.prisma.product.findUnique({
       where: { id: productId },
     });
-    if (!product || product.vendorId !== vendorProfile.id) {
+    if (!product) {
       throw new NotFoundException("Product not found");
+    }
+    if (!ADMIN_ROLES.includes(callerRole as (typeof ADMIN_ROLES)[number])) {
+      const vendorProfile = await this.getVendorProfileOrThrow(userId);
+      if (product.vendorId !== vendorProfile.id) {
+        throw new NotFoundException("Product not found");
+      }
     }
     await this.prisma.product.delete({ where: { id: productId } });
     return { success: true };

@@ -1,5 +1,9 @@
 import type {
   AddressDto,
+  AdminCreateUserInput,
+  AdminProductDto,
+  AdminUpdateUserInput,
+  AdminUserDto,
   AuthTokensDto,
   AddCartItemInput,
   BankDto,
@@ -8,6 +12,7 @@ import type {
   CheckoutInput,
   CreateProductInput,
   CreateSlideInput,
+  GatewaySettingsDto,
   InitiatePaymentInput,
   LoginInput,
   OrderDto,
@@ -23,6 +28,7 @@ import type {
   SettingsDto,
   SlideDto,
   UpdateCartItemInput,
+  UpdateGatewaySettingsInput,
   UpdatePaymentSettingsInput,
   UpdateProductInput,
   UpdateSettingsInput,
@@ -51,6 +57,16 @@ export const UsersApi = {
     apiClient.post<AddressDto>("/users/me/addresses", input).then((r) => r.data),
 };
 
+export const AdminUsersApi = {
+  list: (params: { search?: string; role?: "BUYER" | "VENDOR"; page?: number; pageSize?: number }) =>
+    apiClient.get<PaginatedResult<AdminUserDto>>("/users", { params }).then((r) => r.data),
+  findOne: (id: string) => apiClient.get<AdminUserDto>(`/users/${id}`).then((r) => r.data),
+  create: (input: AdminCreateUserInput) =>
+    apiClient.post<AdminUserDto>("/users", input).then((r) => r.data),
+  update: (id: string, input: AdminUpdateUserInput) =>
+    apiClient.patch<AdminUserDto>(`/users/${id}`, input).then((r) => r.data),
+};
+
 export const CategoriesApi = {
   list: () => apiClient.get<CategoryDto[]>("/categories").then((r) => r.data),
 };
@@ -62,6 +78,14 @@ export const ProductsApi = {
   listMine: () => apiClient.get<ProductDto[]>("/products/mine").then((r) => r.data),
   create: (input: CreateProductInput) =>
     apiClient.post<ProductDto>("/products", input).then((r) => r.data),
+  update: (id: string, input: UpdateProductInput) =>
+    apiClient.patch<ProductDto>(`/products/${id}`, input).then((r) => r.data),
+  remove: (id: string) => apiClient.delete(`/products/${id}`).then((r) => r.data),
+};
+
+export const AdminProductsApi = {
+  browse: (params: { search?: string; status?: string; vendorId?: string; page?: number; pageSize?: number }) =>
+    apiClient.get<PaginatedResult<AdminProductDto>>("/products/admin", { params }).then((r) => r.data),
   update: (id: string, input: UpdateProductInput) =>
     apiClient.patch<ProductDto>(`/products/${id}`, input).then((r) => r.data),
   remove: (id: string) => apiClient.delete(`/products/${id}`).then((r) => r.data),
@@ -156,4 +180,7 @@ export const PaymentSettingsApi = {
     apiClient
       .patch<PlatformPaymentSettingsDto>("/payment-settings/payout-account", input)
       .then((r) => r.data),
+  getGateway: () => apiClient.get<GatewaySettingsDto>("/payment-settings/gateway").then((r) => r.data),
+  updateGateway: (input: UpdateGatewaySettingsInput) =>
+    apiClient.patch<GatewaySettingsDto>("/payment-settings/gateway", input).then((r) => r.data),
 };
