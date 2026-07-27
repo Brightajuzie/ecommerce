@@ -31,6 +31,11 @@ export function PaymentSettingsScreen() {
     queryFn: WalletApi.platform,
     enabled: isSuperAdmin,
   });
+  const gatewaySettingsQuery = useQuery({
+    queryKey: ["gatewaySettings"],
+    queryFn: PaymentSettingsApi.getGateway,
+    enabled: isSuperAdmin,
+  });
   const banksQuery = useQuery({
     queryKey: ["banks"],
     queryFn: VendorsApi.listBanks,
@@ -44,6 +49,18 @@ export function PaymentSettingsScreen() {
   const [accountNumber, setAccountNumber] = useState("");
   const [withdrawAmount, setWithdrawAmount] = useState("");
 
+  // Gateway credential fields start blank rather than prefilled with the
+  // masked value from the server (e.g. "••••1234") — submitting that mask
+  // back as-is would otherwise overwrite the real secret with garbage.
+  // Leaving a field blank on save means "keep the current value".
+  const [flwPublicKey, setFlwPublicKey] = useState("");
+  const [flwSecretKey, setFlwSecretKey] = useState("");
+  const [flwEncryptionKey, setFlwEncryptionKey] = useState("");
+  const [opayMerchantId, setOpayMerchantId] = useState("");
+  const [opayPublicKey, setOpayPublicKey] = useState("");
+  const [opaySecretKey, setOpaySecretKey] = useState("");
+  const [supportEmail, setSupportEmail] = useState("");
+
   useEffect(() => {
     if (settingsQuery.data) {
       setCompanyPercent(String(settingsQuery.data.companySharePercent));
@@ -51,6 +68,16 @@ export function PaymentSettingsScreen() {
       setSuperAdminPercent(String(settingsQuery.data.superAdminFeePercent));
     }
   }, [settingsQuery.data]);
+
+  useEffect(() => {
+    if (gatewaySettingsQuery.data) {
+      // Public-facing values (not secrets) are safe to prefill in full.
+      setFlwPublicKey(gatewaySettingsQuery.data.flutterwavePublicKey ?? "");
+      setOpayMerchantId(gatewaySettingsQuery.data.opayMerchantId ?? "");
+      setOpayPublicKey(gatewaySettingsQuery.data.opayPublicKey ?? "");
+      setSupportEmail(gatewaySettingsQuery.data.supportEmail ?? "");
+    }
+  }, [gatewaySettingsQuery.data]);
 
   const splitSum = Number(companyPercent || 0) + Number(developerPercent || 0);
   const splitValid = Math.round(splitSum * 100) / 100 === 100;
@@ -87,6 +114,29 @@ export function PaymentSettingsScreen() {
     },
   });
 
+  const updateGateway = useMutation({
+    mutationFn: () =>
+      PaymentSettingsApi.updateGateway({
+        flutterwavePublicKey: flwPublicKey || undefined,
+        flutterwaveSecretKey: flwSecretKey || undefined,
+        flutterwaveEncryptionKey: flwEncryptionKey || undefined,
+        opayMerchantId: opayMerchantId || undefined,
+        opayPublicKey: opayPublicKey || undefined,
+        opaySecretKey: opaySecretKey || undefined,
+        supportEmail: supportEmail || undefined,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["gatewaySettings"] });
+      setFlwSecretKey("");
+      setFlwEncryptionKey("");
+      setOpaySecretKey("");
+      Alert.alert("Saved", "Payment gateway settings updated.");
+    },
+    onError: (error: any) => {
+      Alert.alert("Could not save", error?.response?.data?.message ?? "Please try again.");
+    },
+  });
+
   const withdrawFromPlatform = useMutation({
     mutationFn: () => WalletApi.withdrawFromPlatform({ amount: Number(withdrawAmount) }),
     onSuccess: () => {
@@ -102,7 +152,7 @@ export function PaymentSettingsScreen() {
     },
   });
 
-  if (settingsQuery.isLoading || platformWalletQuery.isLoading) {
+  if (settingsQuery.isLoading || platformWalletQuery.isLoading || gatewaySettingsQuery.isLoading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator color={theme.primaryColor} />
@@ -153,6 +203,76 @@ export function PaymentSettingsScreen() {
 
       {isSuperAdmin && (
         <>
+          <View style={styles.divider} />
+
+          <Text style={styles.sectionTitle}>Payment gateway</Text>
+          <Text style={styles.sectionHint}>
+            These override the server's environment-variable defaults as soon as they're saved.
+            Secret fields show as blank here even when already set — leave a field blank to keep
+            its current value; only fill it in to change it.
+          </Text>
+
+          <Text style={styles.subsectionTitle}>Flutterwave</Text>
+          <FormInput
+            label="Public key"
+            value={flwPublicKey}
+            onChangeText={setFlwPublicKey}
+            autoCapitalize="none"
+          />
+          <FormInput
+            label={`Secret key${gatewaySettingsQuery.data?.flutterwaveSecretKey ? ` (currently ${gatewaySettingsQuery.data.flutterwaveSecretKey})` : ""}`}
+            value={flwSecretKey}
+            onChangeText={setFlwSecretKey}
+            autoCapitalize="none"
+            secureTextEntry
+            placeholder="Leave blank to keep unchanged"
+          />
+          <FormInput
+            label={`Encryption key${gatewaySettingsQuery.data?.flutterwaveEncryptionKey ? ` (currently ${gatewaySettingsQuery.data.flutterwaveEncryptionKey})` : ""}`}
+            value={flwEncryptionKey}
+            onChangeText={setFlwEncryptionKey}
+            autoCapitalize="none"
+            secureTextEntry
+            placeholder="Leave blank to keep unchanged"
+          />
+
+          <Text style={styles.subsectionTitle}>Opay</Text>
+          <FormInput
+            label="Merchant ID"
+            value={opayMerchantId}
+            onChangeText={setOpayMerchantId}
+            autoCapitalize="none"
+          />
+          <FormInput
+            label="Public key"
+            value={opayPublicKey}
+            onChangeText={setOpayPublicKey}
+            autoCapitalize="none"
+          />
+          <FormInput
+            label={`Secret key${gatewaySettingsQuery.data?.opaySecretKey ? ` (currently ${gatewaySettingsQuery.data.opaySecretKey})` : ""}`}
+            value={opaySecretKey}
+            onChangeText={setOpaySecretKey}
+            autoCapitalize="none"
+            secureTextEntry
+            placeholder="Leave blank to keep unchanged"
+          />
+
+          <Text style={styles.subsectionTitle}>Support</Text>
+          <FormInput
+            label="Support / contact email"
+            value={supportEmail}
+            onChangeText={setSupportEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+
+          <PrimaryButton
+            title="Save gateway settings"
+            onPress={() => updateGateway.mutate()}
+            loading={updateGateway.isPending}
+          />
+
           <View style={styles.divider} />
 
           <Text style={styles.sectionTitle}>Platform wallet</Text>
@@ -255,6 +375,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   title: { fontSize: 28, fontWeight: "800", color: "#111827", marginBottom: 16 },
   sectionTitle: { fontSize: 18, fontWeight: "700", color: "#111827", marginBottom: 8, marginTop: 8 },
+  subsectionTitle: { fontSize: 14, fontWeight: "700", color: "#374151", marginBottom: 8, marginTop: 4 },
   sectionHint: { color: "#6B7280", fontSize: 13, marginBottom: 12 },
   warning: { color: "#DC2626", fontSize: 12, marginTop: -8, marginBottom: 12 },
   divider: { height: 1, backgroundColor: "#F3F4F6", marginVertical: 24 },

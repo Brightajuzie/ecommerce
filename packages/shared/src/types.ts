@@ -207,3 +207,34 @@ export interface PlatformPaymentSettingsDto {
   payoutAccount: PayoutAccountDto | null;
   updatedAt: string;
 }
+
+// Secret fields (flutterwaveSecretKey, flutterwaveEncryptionKey,
+// opaySecretKey) come back masked (e.g. "••••1234") once set, never in
+// full — see payment-settings.service.ts's maskSecret().
+export interface GatewaySettingsDto {
+  flutterwavePublicKey: string | null;
+  flutterwaveSecretKey: string | null;
+  flutterwaveEncryptionKey: string | null;
+  opayMerchantId: string | null;
+  opayPublicKey: string | null;
+  opaySecretKey: string | null;
+  supportEmail: string | null;
+}
+
+// Admin-facing user record — scoped to BUYER/VENDOR accounts only, see
+// users.service.ts's listForAdmin/createForAdmin/updateForAdmin.
+export interface AdminUserDto {
+  id: string;
+  email: string;
+  phone: string | null;
+  firstName: string;
+  lastName: string;
+  role: UserRole;
+  isActive: boolean;
+  createdAt: string;
+  vendorProfile: { id: string; businessName: string; status: VendorStatus } | null;
+}
+
+export interface AdminProductDto extends ProductDto {
+  vendor: { businessName: string };
+}

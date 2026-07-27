@@ -3,6 +3,16 @@ import { PrismaService } from "../prisma/prisma.service";
 import { FlutterwaveService } from "../payments/flutterwave/flutterwave.service";
 import { UpdatePaymentSettingsDto } from "./dto/update-payment-settings.dto";
 import { SetPayoutAccountDto } from "./dto/set-payout-account.dto";
+import { UpdateGatewaySettingsDto } from "./dto/update-gateway-settings.dto";
+
+// Only the last 4 characters are shown after saving, so a previously-set
+// secret is never sent back to the client in full — the admin UI shows this
+// to confirm a key is configured, and blank inputs on save mean "leave
+// unchanged" (see updateGatewaySettings).
+function maskSecret(value: string | null): string | null {
+  if (!value) return null;
+  return value.length <= 4 ? "••••" : `••••${value.slice(-4)}`;
+}
 
 export interface PayoutAccount {
   bankCode: string;
@@ -50,6 +60,40 @@ export class PaymentSettingsService {
           dto.superAdminFeePercent ?? settings.superAdminFeePercent,
       },
     });
+  }
+
+  async getGatewaySettings() {
+    const settings = await this.get();
+    return {
+      flutterwavePublicKey: settings.flutterwavePublicKey,
+      flutterwaveSecretKey: maskSecret(settings.flutterwaveSecretKey),
+      flutterwaveEncryptionKey: maskSecret(settings.flutterwaveEncryptionKey),
+      opayMerchantId: settings.opayMerchantId,
+      opayPublicKey: settings.opayPublicKey,
+      opaySecretKey: maskSecret(settings.opaySecretKey),
+      supportEmail: settings.supportEmail,
+    };
+  }
+
+  // Blank/omitted fields leave the existing stored value unchanged, since
+  // the client only ever sees masked secrets and re-submitting a masked
+  // value (e.g. "••••1234") back as-is would otherwise overwrite the real
+  // secret with garbage.
+  async updateGatewaySettings(dto: UpdateGatewaySettingsDto) {
+    const settings = await this.get();
+    await this.prisma.platformPaymentSettings.update({
+      where: { id: settings.id },
+      data: {
+        flutterwavePublicKey: dto.flutterwavePublicKey || undefined,
+        flutterwaveSecretKey: dto.flutterwaveSecretKey || undefined,
+        flutterwaveEncryptionKey: dto.flutterwaveEncryptionKey || undefined,
+        opayMerchantId: dto.opayMerchantId || undefined,
+        opayPublicKey: dto.opayPublicKey || undefined,
+        opaySecretKey: dto.opaySecretKey || undefined,
+        supportEmail: dto.supportEmail || undefined,
+      },
+    });
+    return this.getGatewaySettings();
   }
 
   async setPayoutAccount(dto: SetPayoutAccountDto) {

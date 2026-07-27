@@ -36,15 +36,20 @@ export type VendorTabParamList = {
 export type AdminStackParamList = {
   AdminTabs: undefined;
   SlideForm: { slideId?: string } | undefined;
+  ProductForm: { productId?: string } | undefined;
+  UserForm: { userId?: string } | undefined;
 };
 
 export type AdminTabParamList = {
   PendingVendors: undefined;
+  Users: undefined;
+  Products: undefined;
   StoreSettings: undefined;
   Slides: undefined;
   Withdrawals: undefined;
-  // SUPER_ADMIN only — AdminTabNavigator omits this screen entirely for
-  // regular ADMIN users. See UserRole.SUPER_ADMIN.
+  // Visible to both ADMIN and SUPER_ADMIN — only specific sections *within*
+  // PaymentSettingsScreen (platform wallet, gateway credentials) are hidden
+  // from regular ADMIN. See UserRole.SUPER_ADMIN.
   Payments: undefined;
   Profile: undefined;
 };

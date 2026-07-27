@@ -2,6 +2,8 @@ import { Platform } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import { PendingVendorsScreen } from "../screens/admin/PendingVendorsScreen";
+import { AdminUsersScreen } from "../screens/admin/AdminUsersScreen";
+import { AdminProductsScreen } from "../screens/admin/AdminProductsScreen";
 import { StoreSettingsScreen } from "../screens/admin/StoreSettingsScreen";
 import { SlidesScreen } from "../screens/admin/SlidesScreen";
 import { WithdrawalsScreen } from "../screens/admin/WithdrawalsScreen";
@@ -15,6 +17,8 @@ const Tab = createBottomTabNavigator<AdminTabParamList>();
 
 const TAB_ICONS: Record<keyof AdminTabParamList, keyof typeof Ionicons.glyphMap> = {
   PendingVendors: "checkmark-done",
+  Users: "people",
+  Products: "cube",
   StoreSettings: "settings",
   Slides: "images",
   Withdrawals: "cash",
@@ -41,6 +45,8 @@ export function AdminTabNavigator() {
       })}
     >
       <Tab.Screen name="PendingVendors" component={PendingVendorsScreen} options={{ title: "Vendors" }} />
+      <Tab.Screen name="Users" component={AdminUsersScreen} />
+      <Tab.Screen name="Products" component={AdminProductsScreen} />
       <Tab.Screen name="StoreSettings" component={StoreSettingsScreen} options={{ title: "Settings" }} />
       <Tab.Screen name="Slides" component={SlidesScreen} />
       <Tab.Screen name="Withdrawals" component={WithdrawalsScreen} />

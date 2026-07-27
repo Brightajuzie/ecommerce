@@ -134,7 +134,7 @@ export class PaymentsService {
   }
 
   async handleOpayWebhook(body: OpayWebhookBody) {
-    if (!this.opay.verifyCallbackSignature(body.payload, body.sha512)) {
+    if (!(await this.opay.verifyCallbackSignature(body.payload, body.sha512))) {
       throw new UnauthorizedException("Invalid Opay webhook signature");
     }
 

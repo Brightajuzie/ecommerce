@@ -1,5 +1,6 @@
 import * as crypto from "crypto";
 import type { ConfigService } from "@nestjs/config";
+import type { PrismaService } from "../../prisma/prisma.service";
 import { OpayService, OpayCallbackPayload } from "./opay.service";
 
 describe("OpayService.verifyCallbackSignature", () => {
@@ -11,7 +12,12 @@ describe("OpayService.verifyCallbackSignature", () => {
         key === "OPAY_SECRET_KEY" ? secretKey : "",
       ) as ConfigService["get"],
     };
-    return new OpayService(configService as ConfigService);
+    const prisma: Pick<PrismaService, "platformPaymentSettings"> = {
+      platformPaymentSettings: {
+        findFirst: jest.fn().mockResolvedValue(null),
+      } as unknown as PrismaService["platformPaymentSettings"],
+    };
+    return new OpayService(configService as ConfigService, prisma as PrismaService);
   };
 
   const payload: OpayCallbackPayload = {
@@ -37,21 +43,21 @@ describe("OpayService.verifyCallbackSignature", () => {
       .digest("hex");
   }
 
-  it("accepts a correctly signed callback payload", () => {
+  it("accepts a correctly signed callback payload", async () => {
     const service = makeService();
     const sha512 = computeSignature(payload);
-    expect(service.verifyCallbackSignature(payload, sha512)).toBe(true);
+    expect(await service.verifyCallbackSignature(payload, sha512)).toBe(true);
   });
 
-  it("rejects a tampered amount", () => {
+  it("rejects a tampered amount", async () => {
     const service = makeService();
     const sha512 = computeSignature(payload);
     const tampered = { ...payload, amount: "1" };
-    expect(service.verifyCallbackSignature(tampered, sha512)).toBe(false);
+    expect(await service.verifyCallbackSignature(tampered, sha512)).toBe(false);
   });
 
-  it("rejects when no signature is present", () => {
+  it("rejects when no signature is present", async () => {
     const service = makeService();
-    expect(service.verifyCallbackSignature(payload, undefined)).toBe(false);
+    expect(await service.verifyCallbackSignature(payload, undefined)).toBe(false);
   });
 });
