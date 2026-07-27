@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { AddressDto } from "@ikaystores/shared";
 import { PaymentProvider } from "@ikaystores/shared";
 import { UsersApi, OrdersApi, PaymentsApi } from "../../api/endpoints";
+import { getErrorMessage } from "../../api/errorMessage";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { FormInput } from "../../components/FormInput";
 import { useAuthStore } from "../../store/authStore";
@@ -45,9 +47,6 @@ export function CheckoutScreen() {
       setSelectedAddressId(address.id);
       setShowNewAddress(false);
     },
-    onError: (error: any) => {
-      Alert.alert("Could not save address", error?.response?.data?.message ?? "Please try again.");
-    },
   });
 
   const placeOrder = useMutation({
@@ -61,10 +60,18 @@ export function CheckoutScreen() {
       queryClient.invalidateQueries({ queryKey: ["cart"] });
       navigation.navigate("PaymentWebView", { checkoutUrl: payment.checkoutUrl, orderId: order.id });
     },
-    onError: (error: any) => {
-      Alert.alert("Checkout failed", error?.response?.data?.message ?? "Please try again.");
-    },
   });
+
+  // Rendered inline rather than via Alert.alert (see RegisterScreen for the
+  // same fix and why): on web, Alert.alert can be silently suppressed by
+  // some mobile browsers, which would otherwise leave a checkout failure —
+  // including "the order was created but payment couldn't be initiated" —
+  // completely invisible to the user.
+  const checkoutErrorMessage = placeOrder.isError
+    ? getErrorMessage(placeOrder.error, "Checkout failed. Please try again.")
+    : createAddress.isError
+      ? getErrorMessage(createAddress.error, "Could not save address. Please try again.")
+      : null;
 
   const addresses = addressesQuery.data ?? [];
 
@@ -79,6 +86,13 @@ export function CheckoutScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Checkout</Text>
+
+      {checkoutErrorMessage && (
+        <View style={styles.errorBanner}>
+          <Ionicons name="alert-circle" size={18} color="#DC2626" />
+          <Text style={styles.errorBannerText}>{checkoutErrorMessage}</Text>
+        </View>
+      )}
 
       <Text style={styles.sectionLabel}>Delivery address</Text>
       <FlatList
@@ -198,6 +212,18 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff", paddingTop: 60, paddingHorizontal: 16 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#fff" },
   title: { fontSize: 28, fontWeight: "800", color: "#111827", marginBottom: 16 },
+  errorBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#FEF2F2",
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+  },
+  errorBannerText: { flex: 1, color: "#B91C1C", fontSize: 13, fontWeight: "600" },
   sectionLabel: { fontSize: 16, fontWeight: "700", color: "#111827", marginTop: 16, marginBottom: 8 },
   addressList: { maxHeight: 180 },
   addressCard: {

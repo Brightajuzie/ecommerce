@@ -1,8 +1,13 @@
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from "react-native";
-import { useRoute, type RouteProp } from "@react-navigation/native";
-import { useQuery } from "@tanstack/react-query";
+import { Ionicons } from "@expo/vector-icons";
+import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import QRCode from "react-native-qrcode-svg";
-import { OrdersApi } from "../../api/endpoints";
+import { PaymentProvider } from "@ikaystores/shared";
+import { OrdersApi, PaymentsApi } from "../../api/endpoints";
+import { getErrorMessage } from "../../api/errorMessage";
+import { PrimaryButton } from "../../components/PrimaryButton";
 import { useTheme } from "../../theme/ThemeContext";
 import type { BuyerStackParamList } from "../../navigation/types";
 
@@ -16,12 +21,26 @@ const STATUS_LABELS: Record<string, string> = {
 
 export function OrderDetailScreen() {
   const route = useRoute<RouteProp<BuyerStackParamList, "OrderDetail">>();
+  const navigation = useNavigation<NativeStackNavigationProp<BuyerStackParamList>>();
   const theme = useTheme();
   const orderQuery = useQuery({
     queryKey: ["order", route.params.orderId],
     queryFn: () => OrdersApi.findOne(route.params.orderId),
     refetchInterval: (query) =>
       query.state.data?.status === "PENDING_PAYMENT" ? 3000 : false,
+  });
+
+  // A payment that fails or is abandoned mid-flow (e.g. the gateway
+  // redirect never completes) leaves the order sitting in
+  // PENDING_PAYMENT with no other way to finish it — the backend already
+  // allows re-calling /payments/initiate for any order still in that
+  // status, this just exposes it in the UI.
+  const retryPayment = useMutation({
+    mutationFn: () =>
+      PaymentsApi.initiate({ orderId: route.params.orderId, provider: PaymentProvider.FLUTTERWAVE }),
+    onSuccess: (payment) => {
+      navigation.navigate("PaymentWebView", { checkoutUrl: payment.checkoutUrl, orderId: route.params.orderId });
+    },
   });
 
   if (orderQuery.isLoading || !orderQuery.data) {
@@ -62,6 +81,24 @@ export function OrderDetailScreen() {
                 {STATUS_LABELS[order.status] ?? order.status}
               </Text>
             </View>
+
+            {order.status === "PENDING_PAYMENT" && (
+              <View style={styles.retryBlock}>
+                {retryPayment.isError && (
+                  <View style={styles.errorBanner}>
+                    <Ionicons name="alert-circle" size={16} color="#DC2626" />
+                    <Text style={styles.errorBannerText}>
+                      {getErrorMessage(retryPayment.error, "Could not start payment. Please try again.")}
+                    </Text>
+                  </View>
+                )}
+                <PrimaryButton
+                  title="Complete payment"
+                  onPress={() => retryPayment.mutate()}
+                  loading={retryPayment.isPending}
+                />
+              </View>
+            )}
 
             <View style={styles.qrWrap}>
               <QRCode value={`IKAYSTORES:ORDER:${order.id}`} size={160} color="#111827" backgroundColor="#fff" />
@@ -116,6 +153,19 @@ const styles = StyleSheet.create({
   date: { fontSize: 13, color: "#6B7280", marginTop: 4 },
   statusPill: { marginTop: 14, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16 },
   statusPillText: { fontWeight: "800", fontSize: 13 },
+  retryBlock: { width: "100%", marginTop: 16 },
+  errorBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#FEF2F2",
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 10,
+  },
+  errorBannerText: { flex: 1, color: "#B91C1C", fontSize: 12, fontWeight: "600" },
   qrWrap: { alignItems: "center", marginTop: 20 },
   qrHint: { fontSize: 12, color: "#9CA3AF", marginTop: 10, textAlign: "center" },
   divider: { height: 1, backgroundColor: "#E5E7EB", width: "100%", marginVertical: 20 },

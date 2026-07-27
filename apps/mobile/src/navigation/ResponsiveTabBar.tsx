@@ -27,7 +27,8 @@ export function ResponsiveTabBar({ state, descriptors, navigation }: BottomTabBa
     const isFocused = state.index === index;
     const color = isFocused ? theme.primaryColor : "#6B7280";
     const icon = options.tabBarIcon?.({ focused: isFocused, color, size: 18 });
-    return { route, index, label, isFocused, color, icon };
+    const badge = options.tabBarBadge;
+    return { route, index, label, isFocused, color, icon, badge };
   });
 
   const renderItem = (
@@ -45,7 +46,14 @@ export function ResponsiveTabBar({ state, descriptors, navigation }: BottomTabBa
         item.isFocused && layout === "block" && { backgroundColor: theme.accentColor ?? "#F0FDF4" },
       ]}
     >
-      {item.icon}
+      <View style={styles.iconWrap}>
+        {item.icon}
+        {item.badge !== undefined && (
+          <View style={[styles.badge, { backgroundColor: theme.secondaryColor }]}>
+            <Text style={styles.badgeText}>{item.badge}</Text>
+          </View>
+        )}
+      </View>
       <Text style={[styles.navItemText, { color: item.color }, item.isFocused && styles.navItemTextActive]}>
         {item.label}
       </Text>
@@ -135,6 +143,19 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
     marginVertical: 2,
   },
+  iconWrap: { position: "relative" },
+  badge: {
+    position: "absolute",
+    top: -6,
+    right: -10,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 3,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  badgeText: { color: "#fff", fontSize: 10, fontWeight: "800" },
   navItemText: { fontSize: 14, fontWeight: "600" },
   navItemTextActive: { fontWeight: "800" },
   backdrop: {
