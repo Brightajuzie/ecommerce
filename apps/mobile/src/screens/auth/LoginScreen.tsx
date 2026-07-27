@@ -40,11 +40,15 @@ export function LoginScreen() {
       }
       queryClient.invalidateQueries({ queryKey: ["cart"] });
 
+      // Navigate first, same as RegisterScreen: don't gate it behind the
+      // welcome alert, since Alert.alert on web is a browser-native dialog
+      // some mobile browsers silently suppress after an awaited call.
       if (route.params?.redirectTo === "Checkout") {
         navigation.replace("Checkout");
       } else {
         navigation.replace("BuyerTabs");
       }
+      Alert.alert("Welcome back!", `Signed in as ${result.user.firstName}.`);
     } catch (error) {
       Alert.alert("Login failed", getErrorMessage(error, "Please check your credentials and try again."));
     } finally {

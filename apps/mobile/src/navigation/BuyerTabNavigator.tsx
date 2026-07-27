@@ -1,10 +1,13 @@
 import { Platform } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
+import { useQuery } from "@tanstack/react-query";
 import { HomeScreen } from "../screens/buyer/HomeScreen";
 import { CartScreen } from "../screens/buyer/CartScreen";
 import { OrderHistoryScreen } from "../screens/buyer/OrderHistoryScreen";
 import { ProfileScreen } from "../screens/buyer/ProfileScreen";
+import { CartApi } from "../api/endpoints";
+import { useAuthStore } from "../store/authStore";
 import { useTheme } from "../theme/ThemeContext";
 import { ResponsiveTabBar } from "./ResponsiveTabBar";
 import type { BuyerTabParamList } from "./types";
@@ -20,6 +23,13 @@ const TAB_ICONS: Record<keyof BuyerTabParamList, keyof typeof Ionicons.glyphMap>
 
 export function BuyerTabNavigator() {
   const theme = useTheme();
+  const user = useAuthStore((s) => s.user);
+  // Shares the same "cart" query key/cache as CartScreen and the add-to-cart
+  // mutations, so the badge updates immediately after adding/removing items
+  // without any extra network calls of its own.
+  const cartQuery = useQuery({ queryKey: ["cart"], queryFn: CartApi.get, enabled: !!user });
+  const cartCount = cartQuery.data?.items.reduce((sum, item) => sum + item.quantity, 0) ?? 0;
+
   return (
     <Tab.Navigator
       tabBar={Platform.OS === "web" ? (props) => <ResponsiveTabBar {...props} /> : undefined}
@@ -35,7 +45,11 @@ export function BuyerTabNavigator() {
       })}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Cart" component={CartScreen} />
+      <Tab.Screen
+        name="Cart"
+        component={CartScreen}
+        options={{ tabBarBadge: cartCount > 0 ? cartCount : undefined }}
+      />
       <Tab.Screen name="Orders" component={OrderHistoryScreen} options={{ title: "My Orders" }} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
