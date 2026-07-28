@@ -29,16 +29,20 @@ export function ProductDetailScreen() {
   const categoriesQuery = useQuery({ queryKey: ["categories"], queryFn: CategoriesApi.list });
   const vendorsQuery = useQuery({ queryKey: ["vendors"], queryFn: VendorsApi.listApproved });
 
+  const [showAddedBanner, setShowAddedBanner] = useState(false);
+
   const addToCart = useMutation({
     mutationFn: () => CartApi.addItem({ productId: route.params.productId, quantity }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cart"] });
-      Alert.alert("Added to cart", "Item added to your cart.", [
-        { text: "Keep shopping", style: "cancel" },
-        { text: "Go to cart", onPress: () => navigation.navigate("BuyerTabs") },
-      ]);
+      // Rendered inline rather than via Alert.alert (see RegisterScreen for
+      // the same fix and why): on web, Alert.alert can be silently
+      // suppressed by some mobile browsers, which would otherwise leave a
+      // successful add-to-cart with no visible confirmation at all.
+      setShowAddedBanner(true);
     },
     onError: (error: any) => {
+      setShowAddedBanner(false);
       Alert.alert("Could not add to cart", error?.response?.data?.message ?? "Please try again.");
     },
   });
@@ -50,6 +54,7 @@ export function ProductDetailScreen() {
       });
       return;
     }
+    setShowAddedBanner(false);
     addToCart.mutate();
   };
 
@@ -131,6 +136,32 @@ export function ProductDetailScreen() {
             loading={addToCart.isPending}
             disabled={product.stock === 0}
           />
+
+          {showAddedBanner && (
+            <View style={styles.addedBanner}>
+              <View style={styles.addedBannerHeader}>
+                <Ionicons name="checkmark-circle" size={18} color="#059669" />
+                <Text style={styles.addedBannerText}>Added to cart</Text>
+              </View>
+              <View style={styles.addedBannerActions}>
+                <PrimaryButton
+                  title="Continue shopping"
+                  variant="secondary"
+                  onPress={() => {
+                    setShowAddedBanner(false);
+                    navigation.navigate("BuyerTabs");
+                  }}
+                />
+                <PrimaryButton
+                  title="Checkout"
+                  onPress={() => {
+                    setShowAddedBanner(false);
+                    navigation.navigate("Checkout");
+                  }}
+                />
+              </View>
+            </View>
+          )}
         </View>
       </View>
     </ScrollView>
@@ -178,4 +209,13 @@ const styles = StyleSheet.create({
     marginVertical: 20,
   },
   quantity: { fontSize: 18, fontWeight: "700", minWidth: 30, textAlign: "center" },
+  addedBanner: {
+    backgroundColor: "#F0FDF4",
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 14,
+  },
+  addedBannerHeader: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 12 },
+  addedBannerText: { color: "#059669", fontWeight: "700", fontSize: 14 },
+  addedBannerActions: { flexDirection: "row", gap: 10 },
 });
