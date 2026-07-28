@@ -48,6 +48,7 @@ export class UsersService {
         createdAt: true,
         vendorProfile: true,
         referralCode: true,
+        identityVerified: true,
         _count: { select: { referrals: true } },
       },
     });

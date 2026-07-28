@@ -87,6 +87,17 @@ enum WithdrawalStatus {
   FAILED
 }
 
+enum IdentityVerificationType {
+  NIN
+  BVN
+}
+
+enum IdentityVerificationStatus {
+  VERIFIED
+  FAILED
+  ERROR
+}
+
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
@@ -104,18 +115,45 @@ model User {
   // Set only at self-registration when a valid referralCode was supplied —
   // see AuthService.register. Admin-created accounts never set this.
   referredById String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  // Real-time NIN/BVN lookup via Smile ID's synchronous ID-number API —
+  // distinct from the async selfie-based Biometric KYC flow used for vendor
+  // approval. Any user can verify; result isn't tied to vendor status.
+  identityVerified   Boolean   @default(false)
+  identityVerifiedAt DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
-  referredBy    User?           @relation("Referrals", fields: [referredById], references: [id], onDelete: SetNull)
-  referrals     User[]          @relation("Referrals")
-  vendorProfile VendorProfile?
-  cart          Cart?
-  wallet        Wallet?
-  addresses     Address[]
-  orders        Order[]
+  referredBy             User?                  @relation("Referrals", fields: [referredById], references: [id], onDelete: SetNull)
+  referrals              User[]                 @relation("Referrals")
+  vendorProfile          VendorProfile?
+  cart                   Cart?
+  wallet                 Wallet?
+  addresses              Address[]
+  orders                 Order[]
+  identityVerifications  IdentityVerification[]
 
   @@map("users")
+}
+
+// Audit trail for real-time NIN/BVN lookups. Only a masked identifier and
+// the name on record are kept — full ID numbers, DOB, phone, and address
+// from the provider response are never persisted, only returned to the
+// caller in the API response.
+model IdentityVerification {
+  id            String                     @id @default(uuid())
+  userId        String
+  idType        IdentityVerificationType
+  idNumberLast4 String
+  status        IdentityVerificationStatus
+  resultCode    String?
+  resultText    String?
+  fullName      String?
+  createdAt     DateTime                   @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("identity_verifications")
 }
 
 model VendorProfile {

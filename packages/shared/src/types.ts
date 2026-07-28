@@ -176,6 +176,15 @@ export interface WalletTransactionDto {
   createdAt: string;
 }
 
+export interface IdentityVerificationResultDto {
+  verified: boolean;
+  idType: "NIN" | "BVN";
+  fullName: string | null;
+  dateOfBirth: string | null;
+  gender: string | null;
+  message: string;
+}
+
 export interface WalletDto {
   id: string;
   vendorId: string | null;

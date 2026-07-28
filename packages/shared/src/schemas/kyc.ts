@@ -8,3 +8,13 @@ export const submitKycSchema = z.object({
   country: z.string().length(2).default("NG"),
 });
 export type SubmitKycInput = z.infer<typeof submitKycSchema>;
+
+// Real-time NIN/BVN lookup (synchronous, no selfie) — distinct from the
+// async Biometric KYC flow above, which SubmitKycDto/submitKycSchema serve.
+export const identityVerificationTypes = ["NIN", "BVN"] as const;
+
+export const verifyIdNumberSchema = z.object({
+  idType: z.enum(identityVerificationTypes),
+  idNumber: z.string().regex(/^\d{11}$/, "Must be exactly 11 digits"),
+});
+export type VerifyIdNumberInput = z.infer<typeof verifyIdNumberSchema>;

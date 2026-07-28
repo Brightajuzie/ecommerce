@@ -12,6 +12,7 @@ export type BuyerStackParamList = {
   Checkout: undefined;
   PaymentWebView: { checkoutUrl: string; orderId: string };
   OrderDetail: { orderId: string };
+  IdentityVerification: undefined;
 };
 
 export type BuyerTabParamList = {

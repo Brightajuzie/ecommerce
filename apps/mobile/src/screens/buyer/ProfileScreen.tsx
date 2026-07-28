@@ -86,6 +86,23 @@ export function ProfileScreen() {
         </View>
       )}
 
+      {meQuery.data && (
+        <View style={styles.identityRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.identityTitle}>Identity verification</Text>
+            <Text style={styles.identityHint}>
+              {meQuery.data.identityVerified ? "Verified" : "Verify your NIN or BVN in real time"}
+            </Text>
+          </View>
+          <Text
+            style={styles.identityAction}
+            onPress={() => navigation.navigate("IdentityVerification")}
+          >
+            {meQuery.data.identityVerified ? "View" : "Verify"}
+          </Text>
+        </View>
+      )}
+
       {isBuyer && meQuery.data?.referralCode && (
         <View style={styles.referralCard}>
           <Text style={styles.referralTitle}>Refer friends, earn rewards</Text>
@@ -144,6 +161,17 @@ const styles = StyleSheet.create({
   name: { fontSize: 18, fontWeight: "700", color: "#111827" },
   email: { color: "#6B7280", marginTop: 4 },
   role: { color: "#6B7280", marginTop: 4, fontSize: 12, textTransform: "uppercase" },
+  identityRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F9FAFB",
+    borderRadius: 10,
+    padding: 16,
+    marginBottom: 24,
+  },
+  identityTitle: { fontSize: 15, fontWeight: "700", color: "#111827" },
+  identityHint: { color: "#6B7280", fontSize: 13, marginTop: 2 },
+  identityAction: { color: "#15803D", fontWeight: "700", fontSize: 14 },
   referralCard: {
     backgroundColor: "#F0FDF4",
     borderRadius: 12,
