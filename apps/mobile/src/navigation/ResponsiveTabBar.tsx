@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Image, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { useTheme } from "../theme/ThemeContext";
@@ -62,8 +62,15 @@ export function ResponsiveTabBar({ state, descriptors, navigation }: BottomTabBa
 
   const Brand = (
     <View style={styles.brandRow}>
-      {theme.logoUrl ? null : <Ionicons name="leaf" size={20} color={theme.primaryColor} />}
-      <Text style={[styles.brandText, { color: theme.primaryColor }]}>Ikaystores</Text>
+      {theme.logoUrl ? (
+        <Image source={{ uri: theme.logoUrl }} style={styles.brandLogo} resizeMode="contain" />
+      ) : (
+        <Image
+          source={require("../../assets/logo-green.png")}
+          style={styles.brandLogo}
+          resizeMode="contain"
+        />
+      )}
     </View>
   );
 
@@ -121,7 +128,7 @@ const styles = StyleSheet.create({
   },
   hamburgerButton: { padding: 4 },
   brandRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  brandText: { fontSize: 18, fontWeight: "800" },
+  brandLogo: { height: 36, width: 82 },
   navItemsRow: { flexDirection: "row", alignItems: "center", gap: 4 },
   navItemRow: {
     flexDirection: "row",
