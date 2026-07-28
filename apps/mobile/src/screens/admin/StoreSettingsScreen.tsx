@@ -27,12 +27,14 @@ export function StoreSettingsScreen() {
   const [secondaryColor, setSecondaryColor] = useState("#4B5563");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [referralBonusAmount, setReferralBonusAmount] = useState("500");
 
   useEffect(() => {
     if (settingsQuery.data) {
       setPrimaryColor(settingsQuery.data.primaryColor);
       setSecondaryColor(settingsQuery.data.secondaryColor);
       setLogoUrl(settingsQuery.data.logoUrl);
+      setReferralBonusAmount(String(settingsQuery.data.referralBonusAmount));
     }
   }, [settingsQuery.data]);
 
@@ -56,6 +58,7 @@ export function StoreSettingsScreen() {
         primaryColor,
         secondaryColor,
         logoUrl: logoUrl ?? undefined,
+        referralBonusAmount: Number(referralBonusAmount),
       }),
     onSuccess: (data) => {
       queryClient.setQueryData(["settings"], data);
@@ -76,6 +79,7 @@ export function StoreSettingsScreen() {
 
   const primaryValid = HEX_PATTERN.test(primaryColor);
   const secondaryValid = HEX_PATTERN.test(secondaryColor);
+  const referralBonusValid = Number(referralBonusAmount) >= 0 && referralBonusAmount !== "";
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -145,6 +149,15 @@ export function StoreSettingsScreen() {
         placeholder="#4B5563"
       />
 
+      <Text style={styles.sectionLabel}>Referral bonus</Text>
+      <FormInput
+        label="Bonus per successful referral (NGN)"
+        value={referralBonusAmount}
+        onChangeText={setReferralBonusAmount}
+        keyboardType="decimal-pad"
+        placeholder="500"
+      />
+
       <Text style={styles.sectionLabel}>Preview</Text>
       <View style={styles.previewRow}>
         <View style={[styles.previewButton, { backgroundColor: primaryColor }]}>
@@ -159,7 +172,7 @@ export function StoreSettingsScreen() {
         title="Save settings"
         onPress={() => saveMutation.mutate()}
         loading={saveMutation.isPending}
-        disabled={!primaryValid || !secondaryValid}
+        disabled={!primaryValid || !secondaryValid || !referralBonusValid}
       />
     </ScrollView>
   );

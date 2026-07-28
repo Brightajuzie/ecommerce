@@ -36,6 +36,7 @@ export function RegisterScreen() {
   const [password, setPassword] = useState("");
   const [asVendor, setAsVendor] = useState(false);
   const [businessName, setBusinessName] = useState("");
+  const [referralCode, setReferralCode] = useState("");
   const [loading, setLoading] = useState(false);
   // Rendered inline rather than via Alert.alert: on web, Alert.alert is a
   // browser-native dialog that some mobile browsers silently suppress when
@@ -64,6 +65,7 @@ export function RegisterScreen() {
         password,
         role: asVendor ? UserRole.VENDOR : UserRole.BUYER,
         businessName: asVendor ? businessName : undefined,
+        referralCode: referralCode.trim() || undefined,
       });
       // Setting a VENDOR session flips RootNavigator to VendorNavigator on the next
       // render (unmounting this screen), which is what carries a new vendor straight
@@ -143,6 +145,14 @@ export function RegisterScreen() {
               placeholder="e.g. Ada's Fashion House"
             />
           )}
+
+          <FormInput
+            label="Referral code (optional)"
+            value={referralCode}
+            onChangeText={setReferralCode}
+            autoCapitalize="characters"
+            placeholder="Got a code from a friend?"
+          />
 
           <PrimaryButton title="Sign up" onPress={handleRegister} loading={loading} />
 

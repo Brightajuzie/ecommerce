@@ -44,4 +44,9 @@ export class RegisterDto {
   @IsString()
   @MinLength(2)
   businessName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  referralCode?: string;
 }

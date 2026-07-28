@@ -13,6 +13,9 @@ import { AddressDto } from "./dto/address.dto";
 import { AdminListUsersQueryDto } from "./dto/admin-list-users-query.dto";
 import { AdminCreateUserDto } from "./dto/admin-create-user.dto";
 import { AdminUpdateUserDto } from "./dto/admin-update-user.dto";
+import { generateReferralCode } from "./referral-code.util";
+
+const REFERRAL_CODE_MAX_ATTEMPTS = 5;
 
 const SALT_ROUNDS = 10;
 const ADMIN_MANAGED_ROLES = [UserRole.BUYER, UserRole.VENDOR] as const;
@@ -33,7 +36,7 @@ export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getProfile(userId: string) {
-    return this.prisma.user.findUniqueOrThrow({
+    const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
       select: {
         id: true,
@@ -44,8 +47,12 @@ export class UsersService {
         role: true,
         createdAt: true,
         vendorProfile: true,
+        referralCode: true,
+        _count: { select: { referrals: true } },
       },
     });
+    const { _count, ...rest } = user;
+    return { ...rest, referralCount: _count.referrals };
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto) {
@@ -148,6 +155,19 @@ export class UsersService {
     return { data, page, pageSize, total };
   }
 
+  private async generateUniqueReferralCode(): Promise<string> {
+    for (let attempt = 0; attempt < REFERRAL_CODE_MAX_ATTEMPTS; attempt++) {
+      const code = generateReferralCode();
+      const existing = await this.prisma.user.findUnique({
+        where: { referralCode: code },
+      });
+      if (!existing) {
+        return code;
+      }
+    }
+    return `${generateReferralCode()}${Date.now().toString(36).toUpperCase()}`;
+  }
+
   async findOneForAdmin(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -169,6 +189,7 @@ export class UsersService {
 
     const passwordHash = await bcrypt.hash(dto.password, SALT_ROUNDS);
     const role = dto.role ?? UserRole.BUYER;
+    const referralCode = await this.generateUniqueReferralCode();
 
     const user = await this.prisma.user.create({
       data: {
@@ -178,6 +199,7 @@ export class UsersService {
         lastName: dto.lastName,
         phone: dto.phone,
         role,
+        referralCode,
         cart: { create: {} },
         ...(role === UserRole.VENDOR
           ? {

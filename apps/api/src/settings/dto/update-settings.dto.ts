@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
-import { IsOptional, IsUrl, Matches } from "class-validator";
+import { IsNumber, IsOptional, IsUrl, Matches, Min } from "class-validator";
 
 const HEX_COLOR = /^#[0-9A-Fa-f]{6}$/;
 
@@ -29,4 +29,10 @@ export class UpdateSettingsDto {
   @IsOptional()
   @IsUrl()
   logoUrl?: string;
+
+  @ApiPropertyOptional({ example: 500 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  referralBonusAmount?: number;
 }

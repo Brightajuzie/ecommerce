@@ -8,9 +8,12 @@ import { JwtService, JwtSignOptions } from "@nestjs/jwt";
 import { UserRole, VendorStatus } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import { PrismaService } from "../prisma/prisma.service";
+import { generateReferralCode } from "../users/referral-code.util";
 import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
 import { JwtPayload } from "./types/authenticated-user.type";
+
+const REFERRAL_CODE_MAX_ATTEMPTS = 5;
 
 const SALT_ROUNDS = 10;
 
@@ -32,6 +35,15 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(dto.password, SALT_ROUNDS);
     const role = dto.role ?? UserRole.BUYER;
+    const referralCode = await this.generateUniqueReferralCode();
+
+    // A bad/unknown code is ignored rather than rejected — don't block a
+    // signup over a typo'd or copy-pasted-wrong referral code.
+    const referrer = dto.referralCode
+      ? await this.prisma.user.findUnique({
+          where: { referralCode: dto.referralCode.toUpperCase() },
+        })
+      : null;
 
     const user = await this.prisma.user.create({
       data: {
@@ -41,6 +53,8 @@ export class AuthService {
         lastName: dto.lastName,
         phone: dto.phone,
         role,
+        referralCode,
+        referredById: referrer?.id,
         cart: { create: {} },
         ...(role === UserRole.VENDOR
           ? {
@@ -95,6 +109,21 @@ export class AuthService {
     }
 
     return this.issueTokens(user.id, user.email, user.role);
+  }
+
+  private async generateUniqueReferralCode(): Promise<string> {
+    for (let attempt = 0; attempt < REFERRAL_CODE_MAX_ATTEMPTS; attempt++) {
+      const code = generateReferralCode();
+      const existing = await this.prisma.user.findUnique({
+        where: { referralCode: code },
+      });
+      if (!existing) {
+        return code;
+      }
+    }
+    // Astronomically unlikely with a 32^7 code space — fall back to a
+    // guaranteed-unique value rather than fail registration outright.
+    return `${generateReferralCode()}${Date.now().toString(36).toUpperCase()}`;
   }
 
   private async issueTokens(userId: string, email: string, role: UserRole) {
