@@ -44,7 +44,16 @@
           "photosPermission": "Ikaystores uses your photo library to upload product photos, logos, and banner images."
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#ffffff",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 220,
+          "resizeMode": "contain"
+        }
+      ]
     ],
     "extra": {
       "eas": {

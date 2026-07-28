@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from "react-native";
+import { Alert, Image, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from "react-native";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQueryClient } from "@tanstack/react-query";
@@ -63,7 +63,11 @@ export function LoginScreen() {
     >
       <View style={styles.container}>
         <View style={styles.centeredColumn}>
-          <Text style={styles.title}>Ikaystores</Text>
+          <Image
+            source={require("../../../assets/logo-green.png")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
           <Text style={styles.subtitle}>Sign in to continue</Text>
 
           <FormInput
@@ -99,7 +103,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: { flex: 1, justifyContent: "center", padding: 24, backgroundColor: "#fff" },
   centeredColumn: { width: "100%", maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" },
-  title: { fontSize: 32, fontWeight: "800", color: "#111827", marginBottom: 4 },
+  logo: { height: 56, width: 128, marginBottom: 12, alignSelf: "flex-start" },
   subtitle: { fontSize: 16, color: "#6B7280", marginBottom: 32 },
   link: { marginTop: 20, textAlign: "center", color: "#111827", fontWeight: "600" },
 });

@@ -224,10 +224,11 @@ export function HomeScreen() {
             {theme.logoUrl ? (
               <Image source={{ uri: theme.logoUrl }} style={styles.logo} resizeMode="contain" />
             ) : (
-              <View style={styles.brandRow}>
-                <Ionicons name="leaf" size={22} color="#fff" />
-                <Text style={styles.title}>Ikaystores</Text>
-              </View>
+              <Image
+                source={require("../../../assets/logo-white.png")}
+                style={styles.bundledLogo}
+                resizeMode="contain"
+              />
             )}
             <Text style={styles.tagline}>Fresh finds, everyday prices 🌿</Text>
           </View>
@@ -382,10 +383,9 @@ const styles = StyleSheet.create({
   },
   heroInner: { width: "100%", maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" },
   heroTop: { marginBottom: 14 },
-  brandRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  title: { fontSize: 24, fontWeight: "800", color: "#fff" },
   tagline: { color: "rgba(255,255,255,0.85)", fontSize: 13, marginTop: 4, fontWeight: "500" },
   logo: { height: 32, width: 150, marginBottom: 4, alignSelf: "flex-start" },
+  bundledLogo: { height: 34, width: 78, marginBottom: 4, alignSelf: "flex-start" },
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
