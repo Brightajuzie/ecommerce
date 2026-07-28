@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRoute, useNavigation, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
@@ -29,20 +29,20 @@ export function ProductDetailScreen() {
   const categoriesQuery = useQuery({ queryKey: ["categories"], queryFn: CategoriesApi.list });
   const vendorsQuery = useQuery({ queryKey: ["vendors"], queryFn: VendorsApi.listApproved });
 
-  const [showAddedBanner, setShowAddedBanner] = useState(false);
+  const [showAddedAlert, setShowAddedAlert] = useState(false);
 
   const addToCart = useMutation({
     mutationFn: () => CartApi.addItem({ productId: route.params.productId, quantity }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cart"] });
-      // Rendered inline rather than via Alert.alert (see RegisterScreen for
-      // the same fix and why): on web, Alert.alert can be silently
-      // suppressed by some mobile browsers, which would otherwise leave a
-      // successful add-to-cart with no visible confirmation at all.
-      setShowAddedBanner(true);
+      // Rendered as our own Modal rather than via Alert.alert (see
+      // RegisterScreen for the same fix and why): on web, Alert.alert can be
+      // silently suppressed by some mobile browsers, which would otherwise
+      // leave a successful add-to-cart with no visible confirmation at all.
+      setShowAddedAlert(true);
     },
     onError: (error: any) => {
-      setShowAddedBanner(false);
+      setShowAddedAlert(false);
       Alert.alert("Could not add to cart", error?.response?.data?.message ?? "Please try again.");
     },
   });
@@ -54,7 +54,7 @@ export function ProductDetailScreen() {
       });
       return;
     }
-    setShowAddedBanner(false);
+    setShowAddedAlert(false);
     addToCart.mutate();
   };
 
@@ -76,17 +76,19 @@ export function ProductDetailScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       <View style={styles.centeredColumn}>
         <View style={styles.imageWrap}>
-          <Image source={{ uri: product.images[0] }} style={styles.image} />
-          {isNew && (
-            <View style={[styles.badge, styles.badgeNew, { backgroundColor: theme.secondaryColor }]}>
-              <Text style={styles.badgeText}>NEW</Text>
-            </View>
-          )}
-          {isLowStock && (
-            <View style={[styles.badge, styles.badgeStock]}>
-              <Text style={styles.badgeText}>Only {product.stock} left</Text>
-            </View>
-          )}
+          <View style={styles.imageBox}>
+            <Image source={{ uri: product.images[0] }} style={styles.image} resizeMode="cover" />
+            {isNew && (
+              <View style={[styles.badge, styles.badgeNew, { backgroundColor: theme.secondaryColor }]}>
+                <Text style={styles.badgeText}>NEW</Text>
+              </View>
+            )}
+            {isLowStock && (
+              <View style={[styles.badge, styles.badgeStock]}>
+                <Text style={styles.badgeText}>Only {product.stock} left</Text>
+              </View>
+            )}
+          </View>
         </View>
 
         <View style={styles.body}>
@@ -137,33 +139,44 @@ export function ProductDetailScreen() {
             disabled={product.stock === 0}
           />
 
-          {showAddedBanner && (
-            <View style={styles.addedBanner}>
-              <View style={styles.addedBannerHeader}>
-                <Ionicons name="checkmark-circle" size={18} color="#059669" />
-                <Text style={styles.addedBannerText}>Added to cart</Text>
-              </View>
-              <View style={styles.addedBannerActions}>
-                <PrimaryButton
-                  title="Continue shopping"
-                  variant="secondary"
-                  onPress={() => {
-                    setShowAddedBanner(false);
-                    navigation.navigate("BuyerTabs");
-                  }}
-                />
-                <PrimaryButton
-                  title="Checkout"
-                  onPress={() => {
-                    setShowAddedBanner(false);
-                    navigation.navigate("Checkout");
-                  }}
-                />
-              </View>
-            </View>
-          )}
         </View>
       </View>
+
+      <Modal
+        visible={showAddedAlert}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowAddedAlert(false)}
+      >
+        <Pressable style={styles.alertBackdrop} onPress={() => setShowAddedAlert(false)}>
+          <Pressable style={styles.alertCard} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.alertHeader}>
+              <Ionicons name="checkmark-circle" size={22} color="#059669" />
+              <Text style={styles.alertTitle}>Added to cart</Text>
+            </View>
+            <Text style={styles.alertBody}>
+              {product.title} {quantity > 1 ? `x${quantity} ` : ""}is in your cart.
+            </Text>
+            <View style={styles.alertActions}>
+              <PrimaryButton
+                title="Continue shopping"
+                variant="secondary"
+                onPress={() => {
+                  setShowAddedAlert(false);
+                  navigation.navigate("BuyerTabs");
+                }}
+              />
+              <PrimaryButton
+                title="Checkout"
+                onPress={() => {
+                  setShowAddedAlert(false);
+                  navigation.navigate("Checkout");
+                }}
+              />
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </ScrollView>
   );
 }
@@ -173,8 +186,9 @@ const styles = StyleSheet.create({
   scrollContent: {},
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   centeredColumn: { width: "100%", maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" },
-  imageWrap: { position: "relative" },
-  image: { width: "100%", aspectRatio: 1, backgroundColor: "#F0FDF4" },
+  imageWrap: { alignItems: "center", paddingTop: 16, backgroundColor: "#fff" },
+  imageBox: { position: "relative", width: "55%", maxWidth: 220 },
+  image: { width: "100%", aspectRatio: 1, borderRadius: 16, backgroundColor: "#F0FDF4" },
   badge: {
     position: "absolute",
     paddingHorizontal: 8,
@@ -209,13 +223,22 @@ const styles = StyleSheet.create({
     marginVertical: 20,
   },
   quantity: { fontSize: 18, fontWeight: "700", minWidth: 30, textAlign: "center" },
-  addedBanner: {
-    backgroundColor: "#F0FDF4",
-    borderRadius: 12,
-    padding: 14,
-    marginTop: 14,
+  alertBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(17, 24, 39, 0.5)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
   },
-  addedBannerHeader: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 12 },
-  addedBannerText: { color: "#059669", fontWeight: "700", fontSize: 14 },
-  addedBannerActions: { flexDirection: "row", gap: 10 },
+  alertCard: {
+    width: "100%",
+    maxWidth: 380,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+  },
+  alertHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
+  alertTitle: { color: "#059669", fontWeight: "800", fontSize: 17 },
+  alertBody: { color: "#374151", fontSize: 14, marginBottom: 18, lineHeight: 20 },
+  alertActions: { flexDirection: "row", gap: 10 },
 });

@@ -6,6 +6,7 @@ import { VendorsApi } from "../api/endpoints";
 import { VendorTabNavigator } from "./VendorTabNavigator";
 import { ProductFormScreen } from "../screens/vendor/ProductFormScreen";
 import { VendorPendingScreen } from "../screens/vendor/VendorPendingScreen";
+import { IdentityVerificationScreen } from "../screens/buyer/IdentityVerificationScreen";
 import type { VendorStackParamList } from "./types";
 
 const Stack = createNativeStackNavigator<VendorStackParamList>();
@@ -31,6 +32,11 @@ export function VendorNavigator() {
       <Stack.Screen
         name="ProductForm"
         component={ProductFormScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="IdentityVerification"
+        component={IdentityVerificationScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>
