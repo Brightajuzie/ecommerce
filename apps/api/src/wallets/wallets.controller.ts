@@ -34,6 +34,16 @@ export class WalletsController {
     return this.walletsService.getMyWallet(user.userId);
   }
 
+  // Buyer wallet — referral bonuses only for now (see
+  // PaymentsService.markPaymentResult); no withdrawal flow yet.
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.BUYER)
+  @Get("buyer")
+  getMyBuyerWallet(@CurrentUser() user: AuthenticatedUser) {
+    return this.walletsService.getMyBuyerWallet(user.userId);
+  }
+
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Post("withdraw")

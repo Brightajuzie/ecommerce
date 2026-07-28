@@ -96,11 +96,22 @@ model User {
   lastName     String
   role         UserRole @default(BUYER)
   isActive     Boolean  @default(true)
+  // Every user gets one, generated at creation regardless of how the
+  // account was made — shareable so others can redeem it at registration.
+  // Nullable only so the migration doesn't need to backfill every existing
+  // row at once; genuinely new users always get one at creation time.
+  referralCode String?  @unique
+  // Set only at self-registration when a valid referralCode was supplied —
+  // see AuthService.register. Admin-created accounts never set this.
+  referredById String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  referredBy    User?           @relation("Referrals", fields: [referredById], references: [id], onDelete: SetNull)
+  referrals     User[]          @relation("Referrals")
   vendorProfile VendorProfile?
   cart          Cart?
+  wallet        Wallet?
   addresses     Address[]
   orders        Order[]
 
@@ -297,6 +308,10 @@ model AppSettings {
   secondaryColor String   @default("#4B5563")
   accentColor    String?
   logoUrl        String?
+  // Flat NGN credit paid to a referrer's wallet when the person they
+  // referred completes their first paid order — see WalletsService
+  // .creditBuyerWallet and PaymentsService.markPaymentResult.
+  referralBonusAmount Decimal @default(500) @db.Decimal(12, 2)
   updatedAt      DateTime @updatedAt
 
   @@map("app_settings")
@@ -346,16 +361,21 @@ model PlatformPaymentSettings {
   @@map("platform_payment_settings")
 }
 
-// One row per vendor (vendorId set) plus exactly one platform/super-admin
-// row (vendorId null, application-enforced singleton) — see Wallet.vendorId.
+// One row per vendor (vendorId set), one row per buyer with a referral
+// bonus balance (buyerId set), plus exactly one platform/super-admin row
+// (both null, application-enforced singleton — see WalletsService's
+// getOrCreatePlatformWallet, which filters on both fields to avoid
+// matching a buyer wallet).
 model Wallet {
   id        String   @id @default(uuid())
   vendorId  String?  @unique
+  buyerId   String?  @unique
   balance   Decimal  @default(0) @db.Decimal(12, 2)
   currency  String   @default("NGN")
   updatedAt DateTime @updatedAt
 
   vendor       VendorProfile?      @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  buyer        User?               @relation(fields: [buyerId], references: [id], onDelete: Cascade)
   transactions WalletTransaction[]
   withdrawals  WithdrawalRequest[]
 

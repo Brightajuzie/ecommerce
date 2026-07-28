@@ -10,6 +10,7 @@ export const registerSchema = z
     phone: z.string().min(7).optional(),
     role: z.enum([UserRole.BUYER, UserRole.VENDOR]).default(UserRole.BUYER),
     businessName: z.string().min(2).optional(),
+    referralCode: z.string().min(1).optional(),
   })
   .refine((data) => data.role !== UserRole.VENDOR || !!data.businessName, {
     message: "businessName is required when registering as a vendor",

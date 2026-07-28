@@ -146,6 +146,7 @@ export interface SettingsDto {
   secondaryColor: string;
   accentColor: string | null;
   logoUrl: string | null;
+  referralBonusAmount: number;
   updatedAt: string;
 }
 
@@ -178,6 +179,7 @@ export interface WalletTransactionDto {
 export interface WalletDto {
   id: string;
   vendorId: string | null;
+  buyerId?: string | null;
   balance: number;
   currency: string;
   updatedAt: string;

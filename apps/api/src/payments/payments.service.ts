@@ -12,6 +12,7 @@ import {
   PaymentStatus,
   Prisma,
   VendorOrderStatus,
+  WalletTransactionType,
 } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { FlutterwaveService } from "./flutterwave/flutterwave.service";
@@ -204,6 +205,68 @@ export class PaymentsService {
       this.prisma.vendorOrder.updateMany({
         where: { orderId: payment.orderId },
         data: { status: VendorOrderStatus.ACCEPTED },
+      }),
+    ]);
+
+    // Best-effort, outside the transaction above: a failure here shouldn't
+    // fail the payment webhook response the provider is waiting on.
+    await this.creditReferralBonusIfFirstOrder(payment.orderId).catch((error) =>
+      this.logger.error("Referral bonus crediting failed", error),
+    );
+  }
+
+  /**
+   * Credits the referrer's buyer wallet the first (and only the first) time
+   * a referred buyer's order is successfully paid — counting PAID-or-later
+   * orders rather than gating on delivery, since delivery depends on vendor
+   * action across potentially multiple vendor orders and a referral reward
+   * should land close to the purchase, not be held hostage to fulfillment.
+   */
+  private async creditReferralBonusIfFirstOrder(orderId: string) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: { buyer: true },
+    });
+    if (!order?.buyer.referredById) {
+      return;
+    }
+
+    const paidOrderCount = await this.prisma.order.count({
+      where: {
+        buyerId: order.buyerId,
+        status: { in: [OrderStatus.PAID, OrderStatus.FULFILLING, OrderStatus.COMPLETED] },
+      },
+    });
+    if (paidOrderCount !== 1) {
+      return; // not their first successful order
+    }
+
+    const settings = await this.prisma.appSettings.findFirst();
+    const bonusAmount = Number(settings?.referralBonusAmount ?? 500);
+    if (bonusAmount <= 0) {
+      return;
+    }
+
+    const referrerId = order.buyer.referredById;
+    const wallet = await this.prisma.wallet.upsert({
+      where: { buyerId: referrerId },
+      create: { buyerId: referrerId },
+      update: {},
+    });
+    const balanceAfter = Number(wallet.balance) + bonusAmount;
+    await this.prisma.$transaction([
+      this.prisma.wallet.update({
+        where: { id: wallet.id },
+        data: { balance: balanceAfter },
+      }),
+      this.prisma.walletTransaction.create({
+        data: {
+          walletId: wallet.id,
+          type: WalletTransactionType.CREDIT,
+          amount: bonusAmount,
+          balanceAfter,
+          description: `Referral bonus — ${order.buyer.firstName} ${order.buyer.lastName}'s first order`,
+        },
       }),
     ]);
   }

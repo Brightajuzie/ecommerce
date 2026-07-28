@@ -51,7 +51,16 @@ export const AuthApi = {
 };
 
 export const UsersApi = {
-  me: () => apiClient.get<UserDto & { vendorProfile: VendorProfileDto | null }>("/users/me").then((r) => r.data),
+  me: () =>
+    apiClient
+      .get<
+        UserDto & {
+          vendorProfile: VendorProfileDto | null;
+          referralCode: string | null;
+          referralCount: number;
+        }
+      >("/users/me")
+      .then((r) => r.data),
   listAddresses: () => apiClient.get<AddressDto[]>("/users/me/addresses").then((r) => r.data),
   createAddress: (input: Partial<AddressDto>) =>
     apiClient.post<AddressDto>("/users/me/addresses", input).then((r) => r.data),
@@ -158,6 +167,7 @@ export const KycApi = {
 
 export const WalletApi = {
   me: () => apiClient.get<WalletDto>("/wallets/me").then((r) => r.data),
+  buyer: () => apiClient.get<WalletDto>("/wallets/buyer").then((r) => r.data),
   requestWithdrawal: (input: RequestWithdrawalInput) =>
     apiClient.post<WithdrawalRequestDto>("/wallets/withdraw", input).then((r) => r.data),
   myWithdrawals: () => apiClient.get<WithdrawalRequestDto[]>("/wallets/withdrawals").then((r) => r.data),

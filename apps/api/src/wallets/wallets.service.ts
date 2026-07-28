@@ -55,13 +55,26 @@ export class WalletsService {
   }
 
   private async getOrCreatePlatformWallet() {
+    // Both vendorId and buyerId must be null — a buyer wallet also has a
+    // null vendorId, so filtering on vendorId alone would incorrectly match
+    // the first buyer wallet created.
     const existing = await this.prisma.wallet.findFirst({
-      where: { vendorId: null },
+      where: { vendorId: null, buyerId: null },
     });
     if (existing) {
       return existing;
     }
-    return this.prisma.wallet.create({ data: { vendorId: null } });
+    return this.prisma.wallet.create({ data: { vendorId: null, buyerId: null } });
+  }
+
+  private async getOrCreateBuyerWallet(buyerId: string) {
+    const existing = await this.prisma.wallet.findUnique({
+      where: { buyerId },
+    });
+    if (existing) {
+      return existing;
+    }
+    return this.prisma.wallet.create({ data: { buyerId } });
   }
 
   /**
@@ -104,9 +117,9 @@ export class WalletsService {
     description: string,
     vendorOrderId: string,
   ) {
-    let wallet = await tx.wallet.findFirst({ where: { vendorId: null } });
+    let wallet = await tx.wallet.findFirst({ where: { vendorId: null, buyerId: null } });
     if (!wallet) {
-      wallet = await tx.wallet.create({ data: { vendorId: null } });
+      wallet = await tx.wallet.create({ data: { vendorId: null, buyerId: null } });
     }
     const balanceAfter = Number(wallet.balance) + amount;
     await tx.wallet.update({
@@ -123,6 +136,41 @@ export class WalletsService {
         vendorOrderId,
       },
     });
+  }
+
+  /**
+   * Credits a referral bonus to the referrer's buyer wallet — called from
+   * PaymentsService.markPaymentResult after the payment/order transaction
+   * has already committed, in its own try/catch (a failure here shouldn't
+   * fail the payment webhook response). Not passed a `tx` client since it
+   * runs outside that transaction.
+   */
+  async creditBuyerWallet(buyerId: string, amount: number, description: string) {
+    const wallet = await this.getOrCreateBuyerWallet(buyerId);
+    const balanceAfter = Number(wallet.balance) + amount;
+    await this.prisma.wallet.update({
+      where: { id: wallet.id },
+      data: { balance: balanceAfter },
+    });
+    await this.prisma.walletTransaction.create({
+      data: {
+        walletId: wallet.id,
+        type: WalletTransactionType.CREDIT,
+        amount,
+        balanceAfter,
+        description,
+      },
+    });
+  }
+
+  async getMyBuyerWallet(userId: string) {
+    const wallet = await this.getOrCreateBuyerWallet(userId);
+    const transactions = await this.prisma.walletTransaction.findMany({
+      where: { walletId: wallet.id },
+      orderBy: { createdAt: "desc" },
+      take: RECENT_TRANSACTIONS_LIMIT,
+    });
+    return { ...wallet, transactions };
   }
 
   async getMyWallet(userId: string) {
