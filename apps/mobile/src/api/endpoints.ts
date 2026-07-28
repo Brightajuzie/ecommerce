@@ -13,6 +13,7 @@ import type {
   CreateProductInput,
   CreateSlideInput,
   GatewaySettingsDto,
+  IdentityVerificationResultDto,
   InitiatePaymentInput,
   LoginInput,
   OrderDto,
@@ -38,6 +39,7 @@ import type {
   VendorOrderDto,
   VendorProfileDto,
   VendorVerificationStatus,
+  VerifyIdNumberInput,
   WalletDto,
   WithdrawalRequestDto,
 } from "@ikaystores/shared";
@@ -58,6 +60,7 @@ export const UsersApi = {
           vendorProfile: VendorProfileDto | null;
           referralCode: string | null;
           referralCount: number;
+          identityVerified: boolean;
         }
       >("/users/me")
       .then((r) => r.data),
@@ -162,6 +165,10 @@ export const KycApi = {
       .get<{ verificationStatus: VendorVerificationStatus; verifiedAt: string | null }>(
         "/kyc/status",
       )
+      .then((r) => r.data),
+  verifyIdNumber: (input: VerifyIdNumberInput) =>
+    apiClient
+      .post<IdentityVerificationResultDto>("/kyc/verify-id-number", input)
       .then((r) => r.data),
 };
 

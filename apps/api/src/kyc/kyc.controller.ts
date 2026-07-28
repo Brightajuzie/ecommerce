@@ -20,6 +20,7 @@ import type { AuthenticatedUser } from "../auth/types/authenticated-user.type";
 import { KycService } from "./kyc.service";
 import type { SmileIdWebhookBody } from "./kyc.service";
 import { SubmitKycDto } from "./dto/submit-kyc.dto";
+import { VerifyIdNumberDto } from "./dto/verify-id-number.dto";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -59,6 +60,16 @@ export class KycController {
   @Get("status")
   status(@CurrentUser() user: AuthenticatedUser) {
     return this.kycService.getStatus(user.userId);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post("verify-id-number")
+  verifyIdNumber(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: VerifyIdNumberDto,
+  ) {
+    return this.kycService.verifyIdNumber(user.userId, dto);
   }
 
   @Post("webhook")
