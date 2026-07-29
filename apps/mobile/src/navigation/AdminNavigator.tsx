@@ -3,6 +3,7 @@ import { AdminTabNavigator } from "./AdminTabNavigator";
 import { SlideFormScreen } from "../screens/admin/SlideFormScreen";
 import { AdminUserFormScreen } from "../screens/admin/AdminUserFormScreen";
 import { ProductFormScreen } from "../screens/vendor/ProductFormScreen";
+import { IdentityVerificationScreen } from "../screens/buyer/IdentityVerificationScreen";
 import type { AdminStackParamList } from "./types";
 
 const Stack = createNativeStackNavigator<AdminStackParamList>();
@@ -14,6 +15,11 @@ export function AdminNavigator() {
       <Stack.Screen name="SlideForm" component={SlideFormScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ProductForm" component={ProductFormScreen} options={{ headerShown: false }} />
       <Stack.Screen name="UserForm" component={AdminUserFormScreen} options={{ headerShown: false }} />
+      <Stack.Screen
+        name="IdentityVerification"
+        component={IdentityVerificationScreen}
+        options={{ headerShown: false }}
+      />
     </Stack.Navigator>
   );
 }

@@ -61,7 +61,11 @@ export function ResponsiveTabBar({ state, descriptors, navigation }: BottomTabBa
   );
 
   const Brand = (
-    <View style={styles.brandRow}>
+    <Pressable
+      style={styles.brandRow}
+      onPress={() => goTo(state.routes[0].name, state.routes[0].key, state.index === 0)}
+      hitSlop={8}
+    >
       {theme.logoUrl ? (
         <Image source={{ uri: theme.logoUrl }} style={styles.brandLogo} resizeMode="contain" />
       ) : (
@@ -71,7 +75,7 @@ export function ResponsiveTabBar({ state, descriptors, navigation }: BottomTabBa
           resizeMode="contain"
         />
       )}
-    </View>
+    </Pressable>
   );
 
   if (isWide) {

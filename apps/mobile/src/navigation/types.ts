@@ -25,6 +25,7 @@ export type BuyerTabParamList = {
 export type VendorStackParamList = {
   VendorTabs: undefined;
   ProductForm: { productId?: string } | undefined;
+  IdentityVerification: undefined;
 };
 
 export type VendorTabParamList = {
@@ -39,6 +40,7 @@ export type AdminStackParamList = {
   SlideForm: { slideId?: string } | undefined;
   ProductForm: { productId?: string } | undefined;
   UserForm: { userId?: string } | undefined;
+  IdentityVerification: undefined;
 };
 
 export type AdminTabParamList = {
