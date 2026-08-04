@@ -3,12 +3,15 @@ import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from "rea
 import { useRoute, useNavigation, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Ionicons } from "@expo/vector-icons";
 import { ProductStatus } from "@ikaystores/shared";
 import { ProductsApi, CategoriesApi } from "../../api/endpoints";
 import { pickAndUploadImage, ImagePickerCancelledError } from "../../api/upload";
 import { FormInput } from "../../components/FormInput";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { useTheme } from "../../theme/ThemeContext";
+
+const MAX_CONTENT_WIDTH = 700;
 
 // Reused from both VendorStackParamList and AdminStackParamList (identical
 // "ProductForm" route shape in both) — admin can fully edit any vendor's
@@ -105,98 +108,144 @@ export function ProductFormScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>{productId ? "Edit product" : "New product"}</Text>
+      <View style={styles.centeredColumn}>
+        <View style={styles.headerRow}>
+          <Pressable onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={22} color="#111827" />
+          </Pressable>
+          <Text style={styles.title}>{productId ? "Edit product" : "New product"}</Text>
+        </View>
 
-      <FormInput label="Title" value={title} onChangeText={setTitle} />
-      <FormInput label="Description" value={description} onChangeText={setDescription} multiline />
-      <FormInput label="Price (NGN)" value={price} onChangeText={setPrice} keyboardType="numeric" />
-      <FormInput label="Stock" value={stock} onChangeText={setStock} keyboardType="numeric" />
+        <View style={styles.card}>
+          <FormInput label="Title" value={title} onChangeText={setTitle} />
+          <FormInput label="Description" value={description} onChangeText={setDescription} multiline />
+          <View style={styles.twoCol}>
+            <View style={styles.twoColItem}>
+              <FormInput label="Price (NGN)" value={price} onChangeText={setPrice} keyboardType="numeric" />
+            </View>
+            <View style={styles.twoColItem}>
+              <FormInput label="Stock" value={stock} onChangeText={setStock} keyboardType="numeric" />
+            </View>
+          </View>
+        </View>
 
-      <Text style={styles.sectionLabel}>Photos</Text>
-      <View style={styles.photoRow}>
-        {images.map((uri) => (
-          <View key={uri} style={styles.thumbnailWrap}>
-            <Image source={{ uri }} style={styles.thumbnail} />
+        <View style={styles.card}>
+          <Text style={styles.sectionLabel}>Photos</Text>
+          <View style={styles.photoRow}>
+            {images.map((uri) => (
+              <View key={uri} style={styles.thumbnailWrap}>
+                <Image source={{ uri }} style={styles.thumbnail} />
+                <Pressable
+                  style={styles.removeBadge}
+                  onPress={() => setImages((prev) => prev.filter((img) => img !== uri))}
+                >
+                  <Text style={styles.removeBadgeText}>×</Text>
+                </Pressable>
+              </View>
+            ))}
             <Pressable
-              style={styles.removeBadge}
-              onPress={() => setImages((prev) => prev.filter((img) => img !== uri))}
+              style={[styles.addPhotoButton, uploading && styles.disabled]}
+              onPress={handleAddPhoto}
+              disabled={uploading}
             >
-              <Text style={styles.removeBadgeText}>×</Text>
+              <Ionicons name="camera" size={20} color="#6B7280" />
+              <Text style={styles.addPhotoText}>{uploading ? "Uploading…" : "Add photo"}</Text>
             </Pressable>
           </View>
-        ))}
-        <Pressable
-          style={[styles.addPhotoButton, uploading && styles.disabled]}
-          onPress={handleAddPhoto}
-          disabled={uploading}
-        >
-          <Text style={styles.addPhotoText}>{uploading ? "Uploading…" : "+ Add photo"}</Text>
-        </Pressable>
-      </View>
+        </View>
 
-      <Text style={styles.sectionLabel}>Category</Text>
-      <View style={styles.chipRow}>
-        {(categoriesQuery.data ?? []).map((category) => (
-          <Pressable
-            key={category.id}
-            style={[
-              styles.chip,
-              categoryId === category.id && { backgroundColor: theme.primaryColor },
-            ]}
-            onPress={() => setCategoryId(category.id)}
-          >
-            <Text style={[styles.chipText, categoryId === category.id && styles.chipTextActive]}>
-              {category.name}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
+        <View style={styles.card}>
+          <Text style={styles.sectionLabel}>Category</Text>
+          <View style={styles.chipRow}>
+            {(categoriesQuery.data ?? []).map((category) => (
+              <Pressable
+                key={category.id}
+                style={[
+                  styles.chip,
+                  categoryId === category.id && { backgroundColor: theme.primaryColor },
+                ]}
+                onPress={() => setCategoryId(category.id)}
+              >
+                <Text style={[styles.chipText, categoryId === category.id && styles.chipTextActive]}>
+                  {category.name}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
 
-      <Text style={styles.sectionLabel}>Status</Text>
-      <View style={styles.chipRow}>
-        {[ProductStatus.DRAFT, ProductStatus.ACTIVE, ProductStatus.ARCHIVED].map((s) => (
-          <Pressable
-            key={s}
-            style={[styles.chip, status === s && { backgroundColor: theme.primaryColor }]}
-            onPress={() => setStatus(s)}
-          >
-            <Text style={[styles.chipText, status === s && styles.chipTextActive]}>{s}</Text>
-          </Pressable>
-        ))}
-      </View>
+          <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>Status</Text>
+          <View style={styles.chipRow}>
+            {[ProductStatus.DRAFT, ProductStatus.ACTIVE, ProductStatus.ARCHIVED].map((s) => (
+              <Pressable
+                key={s}
+                style={[styles.chip, status === s && { backgroundColor: theme.primaryColor }]}
+                onPress={() => setStatus(s)}
+              >
+                <Text style={[styles.chipText, status === s && styles.chipTextActive]}>{s}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
 
-      <PrimaryButton
-        title="Save product"
-        onPress={() => saveMutation.mutate()}
-        loading={saveMutation.isPending}
-        disabled={!title || !description || !price || !stock || !categoryId || images.length === 0}
-      />
-
-      {productId && (
         <PrimaryButton
-          title="Delete product"
-          variant="danger"
-          onPress={() =>
-            Alert.alert("Delete product", "This cannot be undone.", [
-              { text: "Cancel", style: "cancel" },
-              { text: "Delete", style: "destructive", onPress: () => deleteMutation.mutate() },
-            ])
-          }
-          loading={deleteMutation.isPending}
+          title="Save product"
+          onPress={() => saveMutation.mutate()}
+          loading={saveMutation.isPending}
+          disabled={!title || !description || !price || !stock || !categoryId || images.length === 0}
         />
-      )}
+
+        {productId && (
+          <View style={styles.deleteButtonWrap}>
+            <PrimaryButton
+              title="Delete product"
+              variant="danger"
+              onPress={() =>
+                Alert.alert("Delete product", "This cannot be undone.", [
+                  { text: "Cancel", style: "cancel" },
+                  { text: "Delete", style: "destructive", onPress: () => deleteMutation.mutate() },
+                ])
+              }
+              loading={deleteMutation.isPending}
+            />
+          </View>
+        )}
+      </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  content: { padding: 20, paddingTop: 60, gap: 4 },
-  title: { fontSize: 24, fontWeight: "800", color: "#111827", marginBottom: 16 },
-  sectionLabel: { fontSize: 14, fontWeight: "700", color: "#111827", marginBottom: 8 },
-  photoRow: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 20 },
+  container: { flex: 1, backgroundColor: "#F9FAFB" },
+  content: { paddingTop: 60, paddingBottom: 32 },
+  centeredColumn: { width: "100%", maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center", paddingHorizontal: 20 },
+  headerRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 16 },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  title: { fontSize: 22, fontWeight: "800", color: "#111827" },
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 14,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
+  },
+  twoCol: { flexDirection: "row", gap: 12 },
+  twoColItem: { flex: 1 },
+  sectionLabel: { fontSize: 14, fontWeight: "700", color: "#111827", marginBottom: 10 },
+  sectionLabelSpaced: { marginTop: 16 },
+  photoRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   thumbnailWrap: { position: "relative" },
-  thumbnail: { width: 72, height: 72, borderRadius: 8, backgroundColor: "#E5E7EB" },
+  thumbnail: { width: 76, height: 76, borderRadius: 10, backgroundColor: "#F0FDF4" },
   removeBadge: {
     position: "absolute",
     top: -6,
@@ -210,20 +259,22 @@ const styles = StyleSheet.create({
   },
   removeBadgeText: { color: "#fff", fontSize: 14, fontWeight: "700", lineHeight: 16 },
   addPhotoButton: {
-    width: 72,
-    height: 72,
-    borderRadius: 8,
-    borderWidth: 1,
+    width: 76,
+    height: 76,
+    borderRadius: 10,
+    borderWidth: 1.5,
     borderColor: "#D1D5DB",
     borderStyle: "dashed",
     alignItems: "center",
     justifyContent: "center",
+    gap: 4,
     padding: 4,
   },
-  addPhotoText: { fontSize: 11, color: "#6B7280", textAlign: "center", fontWeight: "600" },
+  addPhotoText: { fontSize: 10, color: "#6B7280", textAlign: "center", fontWeight: "600" },
   disabled: { opacity: 0.5 },
-  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 20 },
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: "#F3F4F6" },
   chipText: { color: "#374151", fontWeight: "600" },
   chipTextActive: { color: "#fff" },
+  deleteButtonWrap: { marginTop: 12 },
 });

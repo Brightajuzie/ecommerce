@@ -1,16 +1,21 @@
-import { ActivityIndicator, FlatList, Image, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Ionicons } from "@expo/vector-icons";
 import type { CartItemDto } from "@ikaystores/shared";
 import { CartApi } from "../../api/endpoints";
 import { PrimaryButton } from "../../components/PrimaryButton";
+import { useTheme } from "../../theme/ThemeContext";
 import { useAuthStore } from "../../store/authStore";
 import { useGuestCartStore } from "../../store/guestCartStore";
 import type { BuyerStackParamList } from "../../navigation/types";
 
+const MAX_CONTENT_WIDTH = 700;
+
 export function CartScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<BuyerStackParamList>>();
+  const theme = useTheme();
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const guestItems = useGuestCartStore((s) => s.items);
@@ -49,7 +54,7 @@ export function CartScreen() {
   if (user && (cartQuery.isLoading || !cartQuery.data)) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator />
+        <ActivityIndicator color={theme.primaryColor} />
       </View>
     );
   }
@@ -59,36 +64,50 @@ export function CartScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Your cart</Text>
+      <View style={styles.centeredColumn}>
+        <Text style={styles.title}>Your cart</Text>
+      </View>
       <FlatList
         data={items}
         keyExtractor={(item: CartItemDto) => item.id}
         contentContainerStyle={styles.list}
-        ListEmptyComponent={<Text style={styles.empty}>Your cart is empty.</Text>}
+        ListEmptyComponent={
+          <View style={styles.empty}>
+            <Ionicons name="cart-outline" size={36} color="#9CA3AF" />
+            <Text style={styles.emptyText}>Your cart is empty.</Text>
+          </View>
+        }
         renderItem={({ item }) => (
-          <View style={styles.row}>
-            <Image source={{ uri: item.product.images[0] }} style={styles.image} />
-            <View style={styles.rowBody}>
-              <Text numberOfLines={1} style={styles.itemTitle}>
-                {item.product.title}
-              </Text>
-              <Text style={styles.itemPrice}>
-                {item.product.currency} {Number(item.priceAtAdd).toLocaleString()} × {item.quantity}
-              </Text>
-              <View style={styles.actionsRow}>
-                <Text
-                  style={styles.actionText}
-                  onPress={() => handleUpdate(item, Math.max(1, item.quantity - 1))}
-                >
-                  −
+          <View style={styles.centeredColumn}>
+            <View style={styles.card}>
+              <Image source={{ uri: item.product.images[0] }} style={styles.image} />
+              <View style={styles.rowBody}>
+                <Text numberOfLines={1} style={styles.itemTitle}>
+                  {item.product.title}
                 </Text>
-                <Text style={styles.actionQuantity}>{item.quantity}</Text>
-                <Text style={styles.actionText} onPress={() => handleUpdate(item, item.quantity + 1)}>
-                  +
+                <Text style={[styles.itemPrice, { color: theme.primaryColor }]}>
+                  {item.product.currency} {Number(item.priceAtAdd).toLocaleString()}
                 </Text>
-                <Text style={styles.removeText} onPress={() => handleRemove(item)}>
-                  Remove
-                </Text>
+                <View style={styles.actionsRow}>
+                  <View style={styles.stepper}>
+                    <Pressable
+                      style={styles.stepperButton}
+                      onPress={() => handleUpdate(item, Math.max(1, item.quantity - 1))}
+                    >
+                      <Ionicons name="remove" size={16} color="#111827" />
+                    </Pressable>
+                    <Text style={styles.stepperValue}>{item.quantity}</Text>
+                    <Pressable
+                      style={styles.stepperButton}
+                      onPress={() => handleUpdate(item, item.quantity + 1)}
+                    >
+                      <Ionicons name="add" size={16} color="#111827" />
+                    </Pressable>
+                  </View>
+                  <Pressable onPress={() => handleRemove(item)} hitSlop={8}>
+                    <Ionicons name="trash-outline" size={18} color="#DC2626" />
+                  </Pressable>
+                </View>
               </View>
             </View>
           </View>
@@ -97,17 +116,22 @@ export function CartScreen() {
 
       {items.length > 0 && (
         <View style={styles.footer}>
-          <Text style={styles.totalText}>
-            Total: {items[0].product.currency} {total.toLocaleString()}
-          </Text>
-          <PrimaryButton
-            title="Checkout"
-            onPress={() =>
-              user
-                ? navigation.navigate("Checkout")
-                : navigation.navigate("Login", { redirectTo: "Checkout" })
-            }
-          />
+          <View style={styles.centeredColumn}>
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>Total</Text>
+              <Text style={styles.totalValue}>
+                {items[0].product.currency} {total.toLocaleString()}
+              </Text>
+            </View>
+            <PrimaryButton
+              title="Checkout"
+              onPress={() =>
+                user
+                  ? navigation.navigate("Checkout")
+                  : navigation.navigate("Login", { redirectTo: "Checkout" })
+              }
+            />
+          </View>
         </View>
       )}
     </View>
@@ -115,32 +139,48 @@ export function CartScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff", paddingTop: 60, paddingHorizontal: 16 },
+  container: { flex: 1, backgroundColor: "#F9FAFB", paddingTop: 60 },
+  centeredColumn: { width: "100%", maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center", paddingHorizontal: 16 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   title: { fontSize: 28, fontWeight: "800", color: "#111827", marginBottom: 16 },
   list: { paddingBottom: 20 },
-  empty: { textAlign: "center", marginTop: 40, color: "#6B7280" },
-  row: { flexDirection: "row", marginBottom: 16 },
-  image: { width: 70, height: 70, borderRadius: 8, backgroundColor: "#E5E7EB" },
-  rowBody: { flex: 1, marginLeft: 12, justifyContent: "center" },
-  itemTitle: { fontSize: 15, fontWeight: "600", color: "#111827" },
-  itemPrice: { fontSize: 13, color: "#6B7280", marginTop: 2 },
-  actionsRow: { flexDirection: "row", alignItems: "center", marginTop: 8, gap: 12 },
-  actionText: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#111827",
-    paddingHorizontal: 8,
-    backgroundColor: "#F3F4F6",
-    borderRadius: 6,
+  empty: { alignItems: "center", marginTop: 60, gap: 8 },
+  emptyText: { color: "#6B7280" },
+  card: {
+    flexDirection: "row",
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 10,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
   },
-  actionQuantity: { fontSize: 15, fontWeight: "600" },
-  removeText: { fontSize: 13, color: "#DC2626", marginLeft: "auto" },
+  image: { width: 72, height: 72, borderRadius: 10, backgroundColor: "#F0FDF4" },
+  rowBody: { flex: 1, marginLeft: 12, justifyContent: "center" },
+  itemTitle: { fontSize: 15, fontWeight: "700", color: "#111827" },
+  itemPrice: { fontSize: 14, fontWeight: "800", marginTop: 3 },
+  actionsRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 10 },
+  stepper: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    backgroundColor: "#F3F4F6",
+    borderRadius: 8,
+    padding: 3,
+  },
+  stepperButton: { width: 28, height: 28, alignItems: "center", justifyContent: "center", borderRadius: 6 },
+  stepperValue: { fontSize: 14, fontWeight: "700", color: "#111827", minWidth: 24, textAlign: "center" },
   footer: {
     borderTopWidth: 1,
     borderTopColor: "#E5E7EB",
+    backgroundColor: "#fff",
     paddingTop: 16,
     paddingBottom: 24,
   },
-  totalText: { fontSize: 18, fontWeight: "700", marginBottom: 12, color: "#111827" },
+  totalRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 },
+  totalLabel: { fontSize: 14, color: "#6B7280", fontWeight: "600" },
+  totalValue: { fontSize: 20, fontWeight: "800", color: "#111827" },
 });

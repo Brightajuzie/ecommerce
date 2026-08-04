@@ -27,7 +27,9 @@ export class UpdateSettingsDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUrl()
+  // require_tld: false so the local-disk upload fallback (http://localhost:PORT/...,
+  // used when Cloudinary isn't configured) validates.
+  @IsUrl({ require_tld: false })
   logoUrl?: string;
 
   @ApiPropertyOptional({ example: 500 })

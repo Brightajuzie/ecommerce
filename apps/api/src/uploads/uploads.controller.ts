@@ -1,15 +1,22 @@
+import { join, basename } from "node:path";
+import { existsSync } from "node:fs";
 import {
   BadRequestException,
   Controller,
+  Get,
+  NotFoundException,
+  Param,
   Post,
+  Res,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { ApiBearerAuth, ApiConsumes, ApiTags } from "@nestjs/swagger";
+import type { Response } from "express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
-import { UploadsService } from "./uploads.service";
+import { UploadsService, LOCAL_UPLOAD_DIR } from "./uploads.service";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set([
@@ -20,13 +27,13 @@ const ALLOWED_MIME_TYPES = new Set([
 ]);
 
 @ApiTags("uploads")
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
 @Controller("uploads")
 export class UploadsController {
   constructor(private readonly uploadsService: UploadsService) {}
 
+  @ApiBearerAuth()
   @ApiConsumes("multipart/form-data")
+  @UseGuards(JwtAuthGuard)
   @Post("image")
   @UseInterceptors(
     FileInterceptor("file", {
@@ -42,6 +49,23 @@ export class UploadsController {
         "Only JPEG, PNG, WEBP, and GIF images are allowed",
       );
     }
-    return this.uploadsService.uploadImage(file.buffer);
+    return this.uploadsService.uploadImage(file.buffer, file.mimetype);
+  }
+
+  // Public (no auth) — serves the local-disk fallback used when Cloudinary
+  // isn't configured. These are product/slide/logo photos, same visibility
+  // as a Cloudinary URL would have. `basename()` strips any path segments
+  // so the `filename` param can't be used to escape LOCAL_UPLOAD_DIR.
+  @Get("local/:filename")
+  serveLocal(@Param("filename") filename: string, @Res() res: Response) {
+    const safeName = basename(filename);
+    const filePath = join(LOCAL_UPLOAD_DIR, safeName);
+    if (!existsSync(filePath)) {
+      throw new NotFoundException("File not found");
+    }
+    // Overrides helmet's default same-origin CORP so the mobile web app
+    // (a different origin/port in dev) can actually render these images.
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    res.sendFile(filePath);
   }
 }

@@ -9,6 +9,7 @@ build/
 .expo/
 .expo-shared/
 coverage/
+apps/api/uploads/
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
 .idea/

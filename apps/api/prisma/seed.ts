@@ -432,13 +432,37 @@ async function main() {
       title: "New arrivals every week",
       sortOrder: 1,
     },
+    {
+      id: "9f4b6b7a-2f0a-4b9e-8f7b-4d3f1c2a9b03",
+      imageUrl: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=1200&h=500&fit=crop&auto=format",
+      title: "Farm-fresh produce, delivered daily",
+      sortOrder: 2,
+    },
+    {
+      id: "9f4b6b7a-2f0a-4b9e-8f7b-4d3f1c2a9b04",
+      imageUrl: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=1200&h=500&fit=crop&auto=format&flip=h",
+      title: "Free delivery on orders over NGN 20,000",
+      sortOrder: 3,
+    },
+    {
+      id: "9f4b6b7a-2f0a-4b9e-8f7b-4d3f1c2a9b05",
+      imageUrl: "https://images.unsplash.com/photo-1556740738-b6a63e27c4df?w=1200&h=500&fit=crop&auto=format",
+      title: "Become a vendor — start selling today",
+      sortOrder: 4,
+    },
+    {
+      id: "9f4b6b7a-2f0a-4b9e-8f7b-4d3f1c2a9b06",
+      imageUrl: "https://images.unsplash.com/photo-1601598851547-4137b04d1750?w=1200&h=500&fit=crop&auto=format",
+      title: "Stock up on pantry essentials",
+      sortOrder: 5,
+    },
   ];
 
   for (const slide of sampleSlides) {
     await prisma.slide.upsert({
       where: { id: slide.id },
-      update: { imageUrl: slide.imageUrl },
-      create: slide,
+      update: { imageUrl: slide.imageUrl, title: slide.title, sortOrder: slide.sortOrder, isActive: true },
+      create: { ...slide, isActive: true },
     });
   }
 
