@@ -50,7 +50,10 @@ export class CreateProductDto {
   @IsArray()
   @ArrayMinSize(1)
   @ArrayMaxSize(10)
-  @IsUrl({}, { each: true })
+  // require_tld: false so http://localhost:PORT/... (the local-disk upload
+  // fallback used when Cloudinary isn't configured, e.g. in dev) validates —
+  // a bare "localhost" host has no TLD and would otherwise be rejected.
+  @IsUrl({ require_tld: false }, { each: true })
   images: string[];
 
   @ApiPropertyOptional({ enum: ProductStatus })

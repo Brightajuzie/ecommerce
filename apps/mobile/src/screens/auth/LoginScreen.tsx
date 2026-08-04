@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Alert, Image, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from "react-native";
+import { Alert, Image, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQueryClient } from "@tanstack/react-query";
@@ -63,11 +63,13 @@ export function LoginScreen() {
     >
       <View style={styles.container}>
         <View style={styles.centeredColumn}>
-          <Image
-            source={require("../../../assets/logo-green.png")}
-            style={styles.logo}
-            resizeMode="contain"
-          />
+          <Pressable onPress={() => navigation.navigate("BuyerTabs")} hitSlop={8}>
+            <Image
+              source={require("../../../assets/logo-green.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </Pressable>
           <Text style={styles.subtitle}>Sign in to continue</Text>
 
           <FormInput

@@ -10,7 +10,9 @@ import {
 
 export class CreateSlideDto {
   @ApiProperty()
-  @IsUrl()
+  // require_tld: false so the local-disk upload fallback (http://localhost:PORT/...,
+  // used when Cloudinary isn't configured) validates.
+  @IsUrl({ require_tld: false })
   imageUrl: string;
 
   @ApiPropertyOptional()
@@ -20,7 +22,7 @@ export class CreateSlideDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUrl()
+  @IsUrl({ require_tld: false })
   linkUrl?: string;
 
   @ApiPropertyOptional({ default: 0 })

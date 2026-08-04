@@ -1,44 +1,54 @@
+import { randomUUID } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { BadGatewayException, Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { v2 as cloudinary } from "cloudinary";
 
+const MIME_EXTENSIONS: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+};
+
+export const LOCAL_UPLOAD_DIR = join(process.cwd(), "uploads");
+
 @Injectable()
 export class UploadsService {
   private readonly logger = new Logger(UploadsService.name);
-  private configured = false;
+  private cloudinaryConfigured = false;
 
   constructor(private readonly configService: ConfigService) {}
 
-  private ensureConfigured() {
-    if (this.configured) return;
+  private isCloudinaryConfigured(): boolean {
+    if (this.cloudinaryConfigured) return true;
 
-    const cloudName = this.configService.get<string>(
-      "CLOUDINARY_CLOUD_NAME",
-      "",
-    );
+    const cloudName = this.configService.get<string>("CLOUDINARY_CLOUD_NAME", "");
     const apiKey = this.configService.get<string>("CLOUDINARY_API_KEY", "");
-    const apiSecret = this.configService.get<string>(
-      "CLOUDINARY_API_SECRET",
-      "",
-    );
+    const apiSecret = this.configService.get<string>("CLOUDINARY_API_SECRET", "");
 
     if (!cloudName || !apiKey || !apiSecret) {
-      throw new BadGatewayException(
-        "Image uploads are not configured on this server",
-      );
+      return false;
     }
 
-    cloudinary.config({
-      cloud_name: cloudName,
-      api_key: apiKey,
-      api_secret: apiSecret,
-    });
-    this.configured = true;
+    cloudinary.config({ cloud_name: cloudName, api_key: apiKey, api_secret: apiSecret });
+    this.cloudinaryConfigured = true;
+    return true;
   }
 
-  async uploadImage(buffer: Buffer): Promise<{ url: string }> {
-    this.ensureConfigured();
+  async uploadImage(buffer: Buffer, mimetype: string): Promise<{ url: string }> {
+    if (this.isCloudinaryConfigured()) {
+      return this.uploadToCloudinary(buffer);
+    }
+    // No Cloudinary credentials configured (common in local/dev environments) —
+    // fall back to serving the file straight off this server's own disk
+    // rather than leaving uploads (and anything that depends on them, like
+    // vendor product creation) completely broken.
+    return this.saveLocally(buffer, mimetype);
+  }
 
+  private uploadToCloudinary(buffer: Buffer): Promise<{ url: string }> {
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
@@ -61,5 +71,16 @@ export class UploadsService {
       );
       uploadStream.end(buffer);
     });
+  }
+
+  private async saveLocally(buffer: Buffer, mimetype: string): Promise<{ url: string }> {
+    const ext = MIME_EXTENSIONS[mimetype] ?? "jpg";
+    const filename = `${randomUUID()}.${ext}`;
+
+    await mkdir(LOCAL_UPLOAD_DIR, { recursive: true });
+    await writeFile(join(LOCAL_UPLOAD_DIR, filename), buffer);
+
+    const appUrl = this.configService.get<string>("APP_URL", "http://localhost:3001");
+    return { url: `${appUrl}/api/v1/uploads/local/${filename}` };
   }
 }
