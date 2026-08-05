@@ -1,8 +1,10 @@
 import { useState } from "react";
 import {
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Switch,
@@ -113,6 +115,13 @@ export function RegisterScreen() {
     >
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.centeredColumn}>
+          <Pressable onPress={() => navigation.navigate("BuyerTabs")} hitSlop={8}>
+            <Image
+              source={require("../../../assets/logo-green.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </Pressable>
           <Text style={styles.title}>Create account</Text>
 
           {errorMessage && (
@@ -122,37 +131,44 @@ export function RegisterScreen() {
             </View>
           )}
 
-          <FormInput label="First name" value={firstName} onChangeText={setFirstName} />
-          <FormInput label="Last name" value={lastName} onChangeText={setLastName} />
-          <FormInput
-            label="Email"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-          />
-          <FormInput label="Password" value={password} onChangeText={setPassword} secureTextEntry />
-
-          <View style={styles.toggleRow}>
-            <Text style={styles.toggleLabel}>Register as a vendor</Text>
-            <Switch value={asVendor} onValueChange={setAsVendor} />
+          <View style={styles.card}>
+            <FormInput label="First name" value={firstName} onChangeText={setFirstName} />
+            <FormInput label="Last name" value={lastName} onChangeText={setLastName} />
+            <FormInput
+              label="Email"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+            />
+            <FormInput label="Password" value={password} onChangeText={setPassword} secureTextEntry />
           </View>
 
-          {asVendor && (
-            <FormInput
-              label="Business name"
-              value={businessName}
-              onChangeText={setBusinessName}
-              placeholder="e.g. Ada's Fashion House"
-            />
-          )}
+          <View style={styles.card}>
+            <View style={styles.toggleRow}>
+              <View style={styles.toggleTextWrap}>
+                <Text style={styles.toggleLabel}>Register as a vendor</Text>
+                <Text style={styles.toggleHint}>Sell your own products on Ikaystores</Text>
+              </View>
+              <Switch value={asVendor} onValueChange={setAsVendor} />
+            </View>
 
-          <FormInput
-            label="Referral code (optional)"
-            value={referralCode}
-            onChangeText={setReferralCode}
-            autoCapitalize="characters"
-            placeholder="Got a code from a friend?"
-          />
+            {asVendor && (
+              <FormInput
+                label="Business name"
+                value={businessName}
+                onChangeText={setBusinessName}
+                placeholder="e.g. Ada's Fashion House"
+              />
+            )}
+
+            <FormInput
+              label="Referral code (optional)"
+              value={referralCode}
+              onChangeText={setReferralCode}
+              autoCapitalize="characters"
+              placeholder="Got a code from a friend?"
+            />
+          </View>
 
           <PrimaryButton title="Sign up" onPress={handleRegister} loading={loading} />
 
@@ -167,9 +183,10 @@ export function RegisterScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  container: { padding: 24, backgroundColor: "#fff", flexGrow: 1, justifyContent: "center" },
+  container: { padding: 24, backgroundColor: "#F9FAFB", flexGrow: 1, justifyContent: "center" },
   centeredColumn: { width: "100%", maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" },
-  title: { fontSize: 28, fontWeight: "800", color: "#111827", marginBottom: 24 },
+  logo: { height: 48, width: 110, marginBottom: 8, alignSelf: "flex-start" },
+  title: { fontSize: 26, fontWeight: "800", color: "#111827", marginBottom: 20 },
   errorBanner: {
     flexDirection: "row",
     alignItems: "center",
@@ -182,12 +199,25 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   errorBannerText: { flex: 1, color: "#B91C1C", fontSize: 13, fontWeight: "600" },
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
+  },
   toggleRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 16,
   },
-  toggleLabel: { fontSize: 16, color: "#111827", fontWeight: "600" },
+  toggleTextWrap: { flex: 1, marginRight: 12 },
+  toggleLabel: { fontSize: 15, color: "#111827", fontWeight: "700" },
+  toggleHint: { fontSize: 12, color: "#6B7280", marginTop: 2 },
   link: { marginTop: 20, textAlign: "center", color: "#111827", fontWeight: "600" },
 });
