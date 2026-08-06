@@ -60,4 +60,21 @@ export class CreateProductDto {
   @IsOptional()
   @IsEnum(ProductStatus)
   status?: ProductStatus;
+
+  // Free-text so a vendor can enter whatever unit makes sense for the
+  // product (e.g. "5kg", "500g", "1 Litre", "Pack of 10").
+  @ApiPropertyOptional({ example: "5kg" })
+  @IsOptional()
+  @IsString()
+  weight?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  brand?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  sku?: string;
 }

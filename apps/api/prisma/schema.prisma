@@ -199,6 +199,12 @@ model Product {
   stock       Int           @default(0)
   images      String[]
   status      ProductStatus @default(DRAFT)
+  // Free-text so a vendor can enter whatever unit makes sense for the
+  // product (e.g. "5kg", "500g", "1 Litre", "Pack of 10") without a rigid
+  // unit dropdown.
+  weight      String?
+  brand       String?
+  sku         String?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 

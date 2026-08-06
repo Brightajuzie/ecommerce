@@ -92,7 +92,7 @@ export function ProductDetailScreen() {
         </View>
 
         <View style={styles.body}>
-          {(category || vendor) && (
+          {(category || vendor || product.weight || product.brand) && (
             <View style={styles.metaRow}>
               {category && (
                 <View style={[styles.metaChip, { backgroundColor: theme.accentColor ?? "#F0FDF4" }]}>
@@ -104,6 +104,18 @@ export function ProductDetailScreen() {
                 <View style={styles.metaChip}>
                   <Ionicons name="storefront" size={12} color="#6B7280" />
                   <Text style={styles.metaChipTextMuted}>{vendor.businessName}</Text>
+                </View>
+              )}
+              {product.weight && (
+                <View style={styles.metaChip}>
+                  <Ionicons name="scale" size={12} color="#6B7280" />
+                  <Text style={styles.metaChipTextMuted}>{product.weight}</Text>
+                </View>
+              )}
+              {product.brand && (
+                <View style={styles.metaChip}>
+                  <Ionicons name="ribbon" size={12} color="#6B7280" />
+                  <Text style={styles.metaChipTextMuted}>{product.brand}</Text>
                 </View>
               )}
             </View>

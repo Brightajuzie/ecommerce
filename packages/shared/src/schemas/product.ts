@@ -12,6 +12,9 @@ export const createProductSchema = z.object({
   status: z
     .enum([ProductStatus.DRAFT, ProductStatus.ACTIVE, ProductStatus.ARCHIVED])
     .default(ProductStatus.DRAFT),
+  weight: z.string().max(50).optional(),
+  brand: z.string().max(100).optional(),
+  sku: z.string().max(100).optional(),
 });
 export type CreateProductInput = z.infer<typeof createProductSchema>;
 

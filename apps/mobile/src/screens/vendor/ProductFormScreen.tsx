@@ -38,6 +38,9 @@ export function ProductFormScreen() {
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
+  const [weight, setWeight] = useState("");
+  const [brand, setBrand] = useState("");
+  const [sku, setSku] = useState("");
   const [images, setImages] = useState<string[]>([]);
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [status, setStatus] = useState<ProductStatus>(ProductStatus.ACTIVE);
@@ -50,6 +53,9 @@ export function ProductFormScreen() {
       setDescription(p.description);
       setPrice(String(p.price));
       setStock(String(p.stock));
+      setWeight(p.weight ?? "");
+      setBrand(p.brand ?? "");
+      setSku(p.sku ?? "");
       setImages(p.images);
       setCategoryId(p.categoryId);
       setStatus(p.status);
@@ -78,6 +84,9 @@ export function ProductFormScreen() {
         price: Number(price),
         currency: "NGN",
         stock: Number(stock),
+        weight: weight.trim() || undefined,
+        brand: brand.trim() || undefined,
+        sku: sku.trim() || undefined,
         images,
         categoryId: categoryId as string,
         status,
@@ -127,6 +136,24 @@ export function ProductFormScreen() {
               <FormInput label="Stock" value={stock} onChangeText={setStock} keyboardType="numeric" />
             </View>
           </View>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionLabel}>Product details</Text>
+          <View style={styles.twoCol}>
+            <View style={styles.twoColItem}>
+              <FormInput
+                label="Weight / size"
+                value={weight}
+                onChangeText={setWeight}
+                placeholder="e.g. 5kg, 1 Litre"
+              />
+            </View>
+            <View style={styles.twoColItem}>
+              <FormInput label="Brand" value={brand} onChangeText={setBrand} placeholder="Optional" />
+            </View>
+          </View>
+          <FormInput label="SKU" value={sku} onChangeText={setSku} placeholder="Optional — your own product code" />
         </View>
 
         <View style={styles.card}>
