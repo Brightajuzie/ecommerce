@@ -32,13 +32,6 @@ enum VendorStatus {
   SUSPENDED
 }
 
-enum VendorVerificationStatus {
-  NOT_STARTED
-  PENDING
-  VERIFIED
-  FAILED
-}
-
 enum ProductStatus {
   DRAFT
   ACTIVE
@@ -99,22 +92,22 @@ enum IdentityVerificationStatus {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  phone        String?
-  passwordHash String
-  firstName    String
-  lastName     String
-  role         UserRole @default(BUYER)
-  isActive     Boolean  @default(true)
+  id                 String    @id @default(uuid())
+  email              String    @unique
+  phone              String?
+  passwordHash       String
+  firstName          String
+  lastName           String
+  role               UserRole  @default(BUYER)
+  isActive           Boolean   @default(true)
   // Every user gets one, generated at creation regardless of how the
   // account was made — shareable so others can redeem it at registration.
   // Nullable only so the migration doesn't need to backfill every existing
   // row at once; genuinely new users always get one at creation time.
-  referralCode String?  @unique
+  referralCode       String?   @unique
   // Set only at self-registration when a valid referralCode was supplied —
   // see AuthService.register. Admin-created accounts never set this.
-  referredById String?
+  referredById       String?
   // Real-time NIN/BVN lookup via Smile ID's synchronous ID-number API —
   // distinct from the async selfie-based Biometric KYC flow used for vendor
   // approval. Any user can verify; result isn't tied to vendor status.
@@ -123,14 +116,14 @@ model User {
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
-  referredBy             User?                  @relation("Referrals", fields: [referredById], references: [id], onDelete: SetNull)
-  referrals              User[]                 @relation("Referrals")
-  vendorProfile          VendorProfile?
-  cart                   Cart?
-  wallet                 Wallet?
-  addresses              Address[]
-  orders                 Order[]
-  identityVerifications  IdentityVerification[]
+  referredBy            User?                  @relation("Referrals", fields: [referredById], references: [id], onDelete: SetNull)
+  referrals             User[]                 @relation("Referrals")
+  vendorProfile         VendorProfile?
+  cart                  Cart?
+  wallet                Wallet?
+  addresses             Address[]
+  orders                Order[]
+  identityVerifications IdentityVerification[]
 
   @@map("users")
 }
@@ -157,19 +150,22 @@ model IdentityVerification {
 }
 
 model VendorProfile {
-  id                 String                    @id @default(uuid())
-  userId             String                    @unique
-  businessName       String
-  description        String?
-  logoUrl            String?
-  status             VendorStatus              @default(PENDING)
-  commissionRate     Decimal                   @default(10.0) @db.Decimal(5, 2)
-  payoutAccount      Json?
-  verificationStatus VendorVerificationStatus  @default(NOT_STARTED)
-  verificationJobId  String?
-  verifiedAt         DateTime?
-  createdAt          DateTime                  @default(now())
-  updatedAt          DateTime                  @updatedAt
+  id                         String       @id @default(uuid())
+  userId                     String       @unique
+  businessName               String
+  description                String?
+  logoUrl                    String?
+  status                     VendorStatus @default(PENDING)
+  commissionRate             Decimal      @default(10.0) @db.Decimal(5, 2)
+  payoutAccount              Json?
+  // Application-review documents (photo uploads, see uploads module) —
+  // admin reviews these alongside the vendor's identity-verification status
+  // (User.identityVerified, set via the real-time NIN/BVN check) before
+  // approving. Replaces the old selfie-based async Biometric KYC flow.
+  businessRegistrationDocUrl String?
+  governmentIdDocUrl         String?
+  createdAt                  DateTime     @default(now())
+  updatedAt                  DateTime     @updatedAt
 
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   products           Product[]
@@ -261,16 +257,16 @@ model Address {
 }
 
 model Order {
-  id                String          @id @default(uuid())
-  buyerId           String
-  addressId         String
-  totalAmount       Decimal         @db.Decimal(12, 2)
-  currency          String          @default("NGN")
-  status            OrderStatus     @default(PENDING_PAYMENT)
-  paymentProvider   PaymentProvider?
-  paymentReference  String?
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  id               String           @id @default(uuid())
+  buyerId          String
+  addressId        String
+  totalAmount      Decimal          @db.Decimal(12, 2)
+  currency         String           @default("NGN")
+  status           OrderStatus      @default(PENDING_PAYMENT)
+  paymentProvider  PaymentProvider?
+  paymentReference String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
   buyer        User          @relation(fields: [buyerId], references: [id])
   address      Address       @relation(fields: [addressId], references: [id])
@@ -282,21 +278,21 @@ model Order {
 }
 
 model VendorOrder {
-  id                  String            @id @default(uuid())
-  orderId             String
-  vendorId            String
-  subtotal            Decimal           @db.Decimal(12, 2)
-  commissionAmount    Decimal           @db.Decimal(12, 2)
-  vendorPayoutAmount  Decimal           @db.Decimal(12, 2)
+  id                 String            @id @default(uuid())
+  orderId            String
+  vendorId           String
+  subtotal           Decimal           @db.Decimal(12, 2)
+  commissionAmount   Decimal           @db.Decimal(12, 2)
+  vendorPayoutAmount Decimal           @db.Decimal(12, 2)
   // Subdivide commissionAmount (company + developer = commissionAmount) and a
   // flat extra cut of subtotal for the super-admin wallet — all frozen at
   // checkout time from PlatformPaymentSettings, same as the two fields above.
-  companyAmount       Decimal           @default(0) @db.Decimal(12, 2)
-  developerAmount     Decimal           @default(0) @db.Decimal(12, 2)
-  superAdminAmount    Decimal           @default(0) @db.Decimal(12, 2)
-  status              VendorOrderStatus @default(PENDING)
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
+  companyAmount      Decimal           @default(0) @db.Decimal(12, 2)
+  developerAmount    Decimal           @default(0) @db.Decimal(12, 2)
+  superAdminAmount   Decimal           @default(0) @db.Decimal(12, 2)
+  status             VendorOrderStatus @default(PENDING)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
 
   order              Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
   vendor             VendorProfile       @relation(fields: [vendorId], references: [id])
@@ -323,16 +319,16 @@ model OrderItem {
 }
 
 model Payment {
-  id                 String          @id @default(uuid())
-  orderId            String
-  provider           PaymentProvider
-  providerReference  String          @unique
-  amount             Decimal         @db.Decimal(12, 2)
-  currency           String          @default("NGN")
-  status             PaymentStatus   @default(INITIATED)
-  rawWebhookPayload  Json?
-  createdAt          DateTime        @default(now())
-  updatedAt          DateTime        @updatedAt
+  id                String          @id @default(uuid())
+  orderId           String
+  provider          PaymentProvider
+  providerReference String          @unique
+  amount            Decimal         @db.Decimal(12, 2)
+  currency          String          @default("NGN")
+  status            PaymentStatus   @default(INITIATED)
+  rawWebhookPayload Json?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
@@ -341,16 +337,16 @@ model Payment {
 }
 
 model AppSettings {
-  id             String   @id @default(uuid())
-  primaryColor   String   @default("#111827")
-  secondaryColor String   @default("#4B5563")
-  accentColor    String?
-  logoUrl        String?
+  id                  String   @id @default(uuid())
+  primaryColor        String   @default("#111827")
+  secondaryColor      String   @default("#4B5563")
+  accentColor         String?
+  logoUrl             String?
   // Flat NGN credit paid to a referrer's wallet when the person they
   // referred completes their first paid order — see WalletsService
   // .creditBuyerWallet and PaymentsService.markPaymentResult.
-  referralBonusAmount Decimal @default(500) @db.Decimal(12, 2)
-  updatedAt      DateTime @updatedAt
+  referralBonusAmount Decimal  @default(500) @db.Decimal(12, 2)
+  updatedAt           DateTime @updatedAt
 
   @@map("app_settings")
 }
@@ -374,11 +370,11 @@ model Slide {
 // 100) and the flat extra cut of subtotal routed to the super-admin wallet.
 // Only ever readable/writable by SUPER_ADMIN — see UserRole.SUPER_ADMIN.
 model PlatformPaymentSettings {
-  id                    String   @id @default(uuid())
-  companySharePercent   Decimal  @default(70.0) @db.Decimal(5, 2)
-  developerSharePercent Decimal  @default(30.0) @db.Decimal(5, 2)
-  superAdminFeePercent  Decimal  @default(0.10) @db.Decimal(5, 2)
-  payoutAccount         Json?
+  id                       String   @id @default(uuid())
+  companySharePercent      Decimal  @default(70.0) @db.Decimal(5, 2)
+  developerSharePercent    Decimal  @default(30.0) @db.Decimal(5, 2)
+  superAdminFeePercent     Decimal  @default(0.10) @db.Decimal(5, 2)
+  payoutAccount            Json?
   // Gateway credentials + support email — SUPER_ADMIN-only (see
   // PaymentSettingsController's separate /gateway routes), unlike the
   // revenue-split fields above which regular ADMIN can also see/edit.
@@ -394,7 +390,7 @@ model PlatformPaymentSettings {
   opayPublicKey            String?
   opaySecretKey            String?
   supportEmail             String?
-  updatedAt             DateTime @updatedAt
+  updatedAt                DateTime @updatedAt
 
   @@map("platform_payment_settings")
 }

@@ -20,9 +20,9 @@ run through Flutterwave and Opay. Built as an MVP scaffold — solid foundations
   auto-format/quality and a 2000px size cap).
 - **Biometric login**: `expo-local-authentication` — after one password login, Face ID/Touch
   ID/fingerprint can unlock the app on return instead of retyping credentials.
-- **Vendor KYC**: Smile ID (`smile-identity-core`) — biometric identity verification (selfie
-  matched against a national ID) for vendor onboarding, reviewed by an admin alongside the
-  existing approval flow.
+- **Identity verification**: Smile ID (`smile-identity-core`) — real-time NIN/BVN lookup, no
+  selfie, available to any user. Vendor onboarding reuses it alongside document uploads,
+  reviewed by an admin alongside the existing approval flow.
 
 ## Repo layout
 
@@ -145,32 +145,33 @@ is). Sign-in/registration is only required at checkout: tapping "Checkout" on a 
 to Login/Register first, and on success the local cart is pushed to the now-authenticated user's
 server-side cart (`syncGuestCartToServer`) before continuing straight to Checkout.
 
-## Vendor identity verification (Smile ID)
+## Identity verification (real-time NIN/BVN)
 
-Vendors can submit a selfie + government ID number for biometric verification from the "pending
-approval" screen (`POST /kyc/verify`, multipart: selfie file + `idType`/`idNumber`/`country`).
-This uses Smile ID's Biometric KYC job type via their official `smile-identity-core` SDK — the
-real submission protocol (a signed, multi-image ZIP upload to a pre-signed URL) isn't something
-to hand-roll, so the SDK's `WebApi.submit_job` is used directly rather than reimplementing it.
-Set `SMILE_ID_PARTNER_ID`, `SMILE_ID_API_KEY`, `SMILE_ID_ENVIRONMENT` (`sandbox`/`production`) in
-`apps/api/.env` (from your Smile ID partner portal) to exercise it; without them `/kyc/verify`
-returns a clear `502`, same pattern as the other third-party integrations.
+Any authenticated user — buyer or vendor — can verify their NIN or BVN in real time via
+`POST /kyc/verify-id-number`, which queries Smile ID's synchronous ID-number lookup
+(`IDApi.submit_job`, Basic KYC job type) and gets the identity record back in the same response —
+no selfie, no async webhook. Set `SMILE_ID_PARTNER_ID`, `SMILE_ID_API_KEY`,
+`SMILE_ID_ENVIRONMENT` (`sandbox`/`production`) in `apps/api/.env` (from your Smile ID partner
+portal) to exercise it; without them the endpoint returns a clear `502`, same pattern as the
+other third-party integrations. Only a minimal audit row is persisted (masked last-4 of the ID
+number, name on record, result code) — full ID numbers, DOB, phone, and address from the
+provider response are never stored.
 
-The job result arrives asynchronously via `POST /kyc/webhook` (signature-verified using the SDK's
-`Signature.confirm_signature`, the same HMAC scheme Smile ID uses for outbound request signing).
-Verification is **informational, not a hard gate** — admins still approve/reject vendors manually
-via the existing `PATCH /vendors/:id/approve` flow, now with a color-coded verification badge
-(not started / pending / verified / failed) next to each pending application. This keeps a human
-in the loop, since automated KYC can false-negative.
+**Before going live**, confirm the response field casing against a real Smile ID sandbox call —
+this was built from Smile ID's documented ID-coverage contract
+(`docs.usesmileid.com/id-coverage/verify-with-id-number/nigeria`), not a live test. The code
+reads defensively (tries a couple of likely key casings), so an unexpected shape degrades to
+"not verified" rather than throwing, but that's not a substitute for testing against a real
+response. Plain NIN lookups (`NIN_V2`) additionally require an `enterprise_id` from NIMC,
+registered through the Smile ID Dashboard, before they work in production — BVN has no such
+requirement.
 
-**Before going live**, confirm the webhook payload shape (`job_id`/`job_success` field names and
-nesting) against a real Smile ID sandbox event — their docs site blocks automated fetching, so
-this was built from the SDK's public TypeScript source (`smile-identity-core-js` on GitHub) and a
-web search summary of the job-status response fields, not a live test. The code defensively
-checks a couple of likely field locations, but that's not a substitute for testing against a real
-callback. Selfie capture currently uses the photo library picker (`expo-image-picker`), not a
-live camera prompt — a live-camera capture would be a stronger anti-spoofing measure worth adding
-before production use.
+Vendor application review reuses this same real-time check (from the "pending approval" screen)
+alongside two document photo uploads (business registration document, government-issued ID —
+`PATCH /vendors/me/documents`, via the same `/uploads/image` endpoint products use). Verification
+is **informational, not a hard gate** — admins still approve/reject vendors manually via the
+existing `PATCH /vendors/:id/approve` flow, with the identity-verified status and both document
+thumbnails shown next to each pending application so a human stays in the loop.
 
 ## Biometric login
 
@@ -192,8 +193,8 @@ These are natural next phases, not oversights:
   roles (buyer/vendor/admin) with role-based views in one codebase.
 - **Custom color-wheel picker** — Store Settings uses preset swatches + a hex input rather than
   pulling in a third-party color-wheel component for marginal gain.
-- **Live-camera selfie capture for KYC** — currently a photo library pick; a real camera prompt
-  is a meaningful anti-spoofing improvement worth adding before production use.
+- **Live-camera capture for vendor documents** — currently a photo library pick
+  (`expo-image-picker`); a real camera prompt would reduce the chance of a stale/reused photo.
 
 ## Deploying to production
 
@@ -349,10 +350,11 @@ A root-level `vercel.json` is already set up for this pnpm workspace:
    (comma-separated if you also keep a preview domain) and redeploy the API — without this,
    the browser will block API requests from the Vercel-hosted site.
 
-**Known limitations of the web build** (pre-existing, not Vercel-specific): biometric login and
-the native selfie-capture KYC flow have no web equivalent — `expo-local-authentication` and the
-camera/selfie step simply aren't available in a browser. Guest cart and auth session storage both
-already fall back to `localStorage` on web (via the app's `secureStorage` wrapper), so those work
+**Known limitations of the web build** (pre-existing, not Vercel-specific): biometric login has
+no web equivalent — `expo-local-authentication` simply isn't available in a browser. Identity
+verification (NIN/BVN) and vendor document uploads work fine on web, since they're just a form
+submit and a file picker, no camera required. Guest cart and auth session storage both already
+fall back to `localStorage` on web (via the app's `secureStorage` wrapper), so those work
 identically to native.
 
 ## Architecture notes

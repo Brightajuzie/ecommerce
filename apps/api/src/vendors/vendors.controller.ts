@@ -17,6 +17,7 @@ import type { AuthenticatedUser } from "../auth/types/authenticated-user.type";
 import { VendorsService } from "./vendors.service";
 import { ApplyVendorDto } from "./dto/apply-vendor.dto";
 import { SetPayoutAccountDto } from "./dto/set-payout-account.dto";
+import { SetVendorDocumentsDto } from "./dto/set-vendor-documents.dto";
 
 @ApiTags("vendors")
 @Controller("vendors")
@@ -50,6 +51,16 @@ export class VendorsController {
     @Body() dto: SetPayoutAccountDto,
   ) {
     return this.vendorsService.setPayoutAccount(user.userId, dto);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Patch("me/documents")
+  setDocuments(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: SetVendorDocumentsDto,
+  ) {
+    return this.vendorsService.setDocuments(user.userId, dto);
   }
 
   @ApiBearerAuth()

@@ -5,7 +5,6 @@ import {
   UserRole,
   VendorOrderStatus,
   VendorStatus,
-  VendorVerificationStatus,
   WalletTransactionType,
   WithdrawalStatus,
 } from "./enums";
@@ -56,8 +55,12 @@ export interface VendorProfileDto {
   status: VendorStatus;
   commissionRate: number;
   payoutAccount: PayoutAccountDto | null;
-  verificationStatus: VendorVerificationStatus;
-  verifiedAt: string | null;
+  businessRegistrationDocUrl: string | null;
+  governmentIdDocUrl: string | null;
+  // Sourced from the associated User via a join — only present on endpoints
+  // that need it (getMyVendorProfile, admin's listPending); absent (not
+  // just false) on the public listApproved() and apply() responses.
+  identityVerified?: boolean;
 }
 
 export interface CategoryDto {

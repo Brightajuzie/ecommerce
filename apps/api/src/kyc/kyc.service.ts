@@ -1,13 +1,8 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
-import {
-  IdentityVerificationStatus,
-  IdentityVerificationType,
-  VendorVerificationStatus,
-} from "@prisma/client";
+import { BadRequestException, Injectable } from "@nestjs/common";
+import { IdentityVerificationStatus, IdentityVerificationType } from "@prisma/client";
 import type { IdentityVerificationResultDto } from "@ikaystores/shared";
 import { PrismaService } from "../prisma/prisma.service";
 import { SmileIdService } from "./smile-id/smile-id.service";
-import { SubmitKycDto } from "./dto/submit-kyc.dto";
 import { VerifyIdNumberDto } from "./dto/verify-id-number.dto";
 
 // Smile ID's synchronous ID-verification response isn't strongly typed by
@@ -27,56 +22,20 @@ function readField(response: Record<string, unknown>, ...keys: string[]): string
   return null;
 }
 
-export interface SmileIdWebhookBody {
-  job_id?: string;
-  partner_params?: { job_id?: string };
-  job_success?: boolean;
-  timestamp?: string | number;
-  signature?: string;
-}
-
 @Injectable()
 export class KycService {
-  private readonly logger = new Logger(KycService.name);
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly smileId: SmileIdService,
   ) {}
 
-  async submit(userId: string, dto: SubmitKycDto, selfieBuffer: Buffer) {
-    const vendorProfile = await this.getVendorProfileOrThrow(userId);
-
-    const { jobId } = await this.smileId.submitBiometricKyc({
-      vendorProfileId: vendorProfile.id,
-      idType: dto.idType,
-      idNumber: dto.idNumber,
-      country: dto.country ?? "NG",
-      selfieBuffer,
-    });
-
-    return this.prisma.vendorProfile.update({
-      where: { id: vendorProfile.id },
-      data: {
-        verificationStatus: VendorVerificationStatus.PENDING,
-        verificationJobId: jobId,
-      },
-    });
-  }
-
-  async getStatus(userId: string) {
-    const vendorProfile = await this.getVendorProfileOrThrow(userId);
-    return {
-      verificationStatus: vendorProfile.verificationStatus,
-      verifiedAt: vendorProfile.verifiedAt,
-    };
-  }
-
   /**
-   * Real-time NIN/BVN lookup available to any authenticated user — separate
-   * from vendor Biometric KYC above. Persists only a minimal audit row
-   * (masked ID number, name on record, result code) and never the full ID
-   * number or other PII (DOB, phone, address) returned by the provider.
+   * Real-time NIN/BVN lookup available to any authenticated user — this is
+   * the app's identity-verification mechanism for both buyers and vendors
+   * (vendor application review reuses it instead of a selfie-based check).
+   * Persists only a minimal audit row (masked ID number, name on record,
+   * result code) and never the full ID number or other PII (DOB, phone,
+   * address) returned by the provider.
    */
   async verifyIdNumber(
     userId: string,
@@ -148,61 +107,5 @@ export class KycService {
       gender,
       message: resultText ?? "ID number verified",
     };
-  }
-
-  /**
-   * Handles the async job-completion callback. `job_success` is the
-   * documented top-level boolean on Smile ID's job status payload; the job
-   * is correlated back to a vendor via the job_id we generated at submit
-   * time (echoed back under partner_params, with a top-level fallback since
-   * the exact callback nesting should be confirmed against a live sandbox
-   * event before production use).
-   */
-  async handleWebhook(
-    body: SmileIdWebhookBody,
-    timestamp: string | number,
-    signature: string,
-  ) {
-    if (!this.smileId.confirmWebhookSignature(timestamp, signature)) {
-      this.logger.warn("Rejected Smile ID webhook with invalid signature");
-      return { received: false };
-    }
-
-    const jobId = body.job_id ?? body.partner_params?.job_id;
-    if (!jobId) {
-      this.logger.warn("Smile ID webhook missing job_id");
-      return { received: true };
-    }
-
-    const vendorProfile = await this.prisma.vendorProfile.findFirst({
-      where: { verificationJobId: jobId },
-    });
-    if (!vendorProfile) {
-      this.logger.warn(`Smile ID webhook for unknown job ${jobId}`);
-      return { received: true };
-    }
-
-    const success = body.job_success === true;
-    await this.prisma.vendorProfile.update({
-      where: { id: vendorProfile.id },
-      data: {
-        verificationStatus: success
-          ? VendorVerificationStatus.VERIFIED
-          : VendorVerificationStatus.FAILED,
-        verifiedAt: success ? new Date() : null,
-      },
-    });
-
-    return { received: true };
-  }
-
-  private async getVendorProfileOrThrow(userId: string) {
-    const vendorProfile = await this.prisma.vendorProfile.findUnique({
-      where: { userId },
-    });
-    if (!vendorProfile) {
-      throw new NotFoundException("No vendor profile found for this account");
-    }
-    return vendorProfile;
   }
 }

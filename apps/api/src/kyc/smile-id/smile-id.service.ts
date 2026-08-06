@@ -1,14 +1,6 @@
 import { BadGatewayException, Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { WebApi, IDApi, Signature, JOB_TYPE, IMAGE_TYPE } from "smile-identity-core";
-
-export interface SubmitBiometricKycParams {
-  vendorProfileId: string;
-  idType: string;
-  idNumber: string;
-  country: string;
-  selfieBuffer: Buffer;
-}
+import { IDApi, JOB_TYPE } from "smile-identity-core";
 
 export interface VerifyIdNumberParams {
   userId: string;
@@ -47,11 +39,6 @@ export class SmileIdService {
       : 0;
   }
 
-  private get callbackUrl(): string {
-    const appUrl = this.configService.getOrThrow<string>("APP_URL");
-    return `${appUrl}/api/v1/kyc/webhook`;
-  }
-
   private ensureConfigured() {
     if (!this.partnerId || !this.apiKey) {
       throw new BadGatewayException(
@@ -61,55 +48,9 @@ export class SmileIdService {
   }
 
   /**
-   * Submits a Biometric KYC job (selfie matched against a national ID record).
-   * Fire-and-forget: the result arrives asynchronously via the /kyc/webhook
-   * callback, not in this response.
-   */
-  async submitBiometricKyc(
-    params: SubmitBiometricKycParams,
-  ): Promise<{ jobId: string }> {
-    this.ensureConfigured();
-
-    const webApi = new WebApi(
-      this.partnerId,
-      this.callbackUrl,
-      this.apiKey,
-      this.server,
-    );
-    const jobId = `${params.vendorProfileId}-${Date.now()}`;
-
-    try {
-      await webApi.submit_job(
-        {
-          user_id: params.vendorProfileId,
-          job_id: jobId,
-          job_type: JOB_TYPE.BIOMETRIC_KYC,
-        },
-        [
-          {
-            image_type_id: IMAGE_TYPE.SELFIE_IMAGE_BASE64,
-            image: params.selfieBuffer.toString("base64"),
-          },
-        ],
-        {
-          id_type: params.idType,
-          id_number: params.idNumber,
-          country: params.country,
-        },
-        { return_job_status: false },
-      );
-      return { jobId };
-    } catch (error) {
-      this.logger.error("Smile ID submit_job failed", error);
-      throw new BadGatewayException("Unable to submit identity verification");
-    }
-  }
-
-  /**
    * Real-time (synchronous) ID-number lookup — queries Smile ID's
    * `/id_verification` endpoint directly and gets the identity record back
-   * in the same response, no webhook involved. Distinct from
-   * submitBiometricKyc above, which is async and requires a selfie.
+   * in the same response, no webhook, no selfie/photo involved.
    */
   async verifyIdNumber(
     params: VerifyIdNumberParams,
@@ -137,20 +78,5 @@ export class SmileIdService {
       this.logger.error("Smile ID id_verification failed", error);
       throw new BadGatewayException("Unable to verify that ID number right now");
     }
-  }
-
-  /**
-   * Verifies the signature/timestamp pair Smile ID sends with webhook
-   * callbacks, using the same HMAC scheme as outbound request signing.
-   */
-  confirmWebhookSignature(
-    timestamp: string | number,
-    signature: string,
-  ): boolean {
-    if (!this.partnerId || !this.apiKey || !signature || !timestamp) {
-      return false;
-    }
-    const sig = new Signature(this.partnerId, this.apiKey);
-    return sig.confirm_signature(timestamp, signature);
   }
 }

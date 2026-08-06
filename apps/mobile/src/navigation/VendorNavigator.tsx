@@ -22,18 +22,30 @@ export function VendorNavigator() {
     );
   }
 
-  if (vendorProfileQuery.data?.status !== VendorStatus.APPROVED) {
-    return <VendorPendingScreen />;
-  }
+  const isApproved = vendorProfileQuery.data?.status === VendorStatus.APPROVED;
 
+  // VendorPendingScreen is a real Stack.Screen (not rendered as a bare
+  // component outside the navigator) so it can call navigation.navigate
+  // to reach IdentityVerification — same navigator either way, just a
+  // different set of screens depending on approval status.
   return (
     <Stack.Navigator>
-      <Stack.Screen name="VendorTabs" component={VendorTabNavigator} options={{ headerShown: false }} />
-      <Stack.Screen
-        name="ProductForm"
-        component={ProductFormScreen}
-        options={{ headerShown: false }}
-      />
+      {isApproved ? (
+        <>
+          <Stack.Screen name="VendorTabs" component={VendorTabNavigator} options={{ headerShown: false }} />
+          <Stack.Screen
+            name="ProductForm"
+            component={ProductFormScreen}
+            options={{ headerShown: false }}
+          />
+        </>
+      ) : (
+        <Stack.Screen
+          name="VendorPending"
+          component={VendorPendingScreen}
+          options={{ headerShown: false }}
+        />
+      )}
       <Stack.Screen
         name="IdentityVerification"
         component={IdentityVerificationScreen}

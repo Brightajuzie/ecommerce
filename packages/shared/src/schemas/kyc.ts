@@ -1,16 +1,8 @@
 import { z } from "zod";
 
-export const kycIdTypes = ["NIN", "BVN", "VOTER_ID", "DRIVERS_LICENSE", "PASSPORT"] as const;
-
-export const submitKycSchema = z.object({
-  idType: z.enum(kycIdTypes),
-  idNumber: z.string().min(4).max(30),
-  country: z.string().length(2).default("NG"),
-});
-export type SubmitKycInput = z.infer<typeof submitKycSchema>;
-
-// Real-time NIN/BVN lookup (synchronous, no selfie) — distinct from the
-// async Biometric KYC flow above, which SubmitKycDto/submitKycSchema serve.
+// Real-time NIN/BVN lookup (synchronous, no selfie) — the app's only
+// identity-verification mechanism (used by both buyers and, for vendor
+// application review, vendors).
 export const identityVerificationTypes = ["NIN", "BVN"] as const;
 
 export const verifyIdNumberSchema = z.object({

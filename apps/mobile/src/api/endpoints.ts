@@ -38,7 +38,6 @@ import type {
   UserDto,
   VendorOrderDto,
   VendorProfileDto,
-  VendorVerificationStatus,
   VerifyIdNumberInput,
   WalletDto,
   WithdrawalRequestDto,
@@ -139,6 +138,8 @@ export const VendorsApi = {
   suspend: (id: string) => apiClient.patch<VendorProfileDto>(`/vendors/${id}/suspend`).then((r) => r.data),
   setPayoutAccount: (input: SetPayoutAccountInput) =>
     apiClient.patch<VendorProfileDto>("/vendors/me/payout-account", input).then((r) => r.data),
+  setDocuments: (input: { businessRegistrationDocUrl?: string; governmentIdDocUrl?: string }) =>
+    apiClient.patch<VendorProfileDto>("/vendors/me/documents", input).then((r) => r.data),
   listBanks: () => apiClient.get<BankDto[]>("/vendors/banks").then((r) => r.data),
 };
 
@@ -160,12 +161,6 @@ export const SlidesApi = {
 };
 
 export const KycApi = {
-  status: () =>
-    apiClient
-      .get<{ verificationStatus: VendorVerificationStatus; verifiedAt: string | null }>(
-        "/kyc/status",
-      )
-      .then((r) => r.data),
   verifyIdNumber: (input: VerifyIdNumberInput) =>
     apiClient
       .post<IdentityVerificationResultDto>("/kyc/verify-id-number", input)
