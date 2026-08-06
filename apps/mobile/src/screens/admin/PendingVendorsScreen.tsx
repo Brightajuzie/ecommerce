@@ -1,26 +1,11 @@
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, Image, Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import type { VendorProfileDto } from "@ikaystores/shared";
-import { VendorVerificationStatus } from "@ikaystores/shared";
 import { VendorsApi } from "../../api/endpoints";
 import { PrimaryButton } from "../../components/PrimaryButton";
 
 const MAX_CONTENT_WIDTH = 800;
-
-const VERIFICATION_LABELS: Record<VendorVerificationStatus, string> = {
-  [VendorVerificationStatus.NOT_STARTED]: "Not verified",
-  [VendorVerificationStatus.PENDING]: "Verification pending",
-  [VendorVerificationStatus.VERIFIED]: "Identity verified",
-  [VendorVerificationStatus.FAILED]: "Verification failed",
-};
-
-const VERIFICATION_COLORS: Record<VendorVerificationStatus, string> = {
-  [VendorVerificationStatus.NOT_STARTED]: "#9CA3AF",
-  [VendorVerificationStatus.PENDING]: "#D97706",
-  [VendorVerificationStatus.VERIFIED]: "#059669",
-  [VendorVerificationStatus.FAILED]: "#DC2626",
-};
 
 export function PendingVendorsScreen() {
   const queryClient = useQueryClient();
@@ -68,15 +53,26 @@ export function PendingVendorsScreen() {
                 <View
                   style={[
                     styles.badge,
-                    { backgroundColor: VERIFICATION_COLORS[item.verificationStatus] },
+                    { backgroundColor: item.identityVerified ? "#059669" : "#9CA3AF" },
                   ]}
                 >
+                  <Ionicons
+                    name={item.identityVerified ? "shield-checkmark" : "shield-outline"}
+                    size={12}
+                    color="#fff"
+                  />
                   <Text style={styles.badgeText}>
-                    {VERIFICATION_LABELS[item.verificationStatus]}
+                    {item.identityVerified ? "Identity verified" : "Not verified"}
                   </Text>
                 </View>
               </View>
               {item.description ? <Text style={styles.description}>{item.description}</Text> : null}
+
+              <View style={styles.docsRow}>
+                <DocThumb label="Business reg." url={item.businessRegistrationDocUrl} />
+                <DocThumb label="Government ID" url={item.governmentIdDocUrl} />
+              </View>
+
               <View style={styles.actions}>
                 <PrimaryButton title="Approve" onPress={() => approve.mutate(item.id)} />
                 <PrimaryButton
@@ -90,6 +86,27 @@ export function PendingVendorsScreen() {
         )}
       />
     </View>
+  );
+}
+
+function DocThumb({ label, url }: { label: string; url: string | null }) {
+  return (
+    <Pressable
+      style={styles.docThumbWrap}
+      onPress={url ? () => Linking.openURL(url) : undefined}
+      disabled={!url}
+    >
+      {url ? (
+        <Image source={{ uri: url }} style={styles.docThumb} />
+      ) : (
+        <View style={[styles.docThumb, styles.docThumbEmpty]}>
+          <Ionicons name="document-outline" size={18} color="#9CA3AF" />
+        </View>
+      )}
+      <Text style={styles.docThumbLabel} numberOfLines={1}>
+        {label}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -114,8 +131,20 @@ const styles = StyleSheet.create({
   },
   headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 8 },
   businessName: { fontWeight: "700", fontSize: 16, color: "#111827", flex: 1 },
-  badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
+  badge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
   badgeText: { color: "#fff", fontSize: 11, fontWeight: "700" },
   description: { color: "#6B7280", marginTop: 4 },
+  docsRow: { flexDirection: "row", gap: 16, marginTop: 14 },
+  docThumbWrap: { alignItems: "center", width: 72 },
+  docThumb: { width: 56, height: 56, borderRadius: 8, backgroundColor: "#F3F4F6" },
+  docThumbEmpty: { alignItems: "center", justifyContent: "center" },
+  docThumbLabel: { fontSize: 10, color: "#6B7280", marginTop: 4, textAlign: "center" },
   actions: { flexDirection: "row", gap: 10, marginTop: 12 },
 });

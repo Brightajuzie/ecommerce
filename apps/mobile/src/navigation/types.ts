@@ -26,6 +26,7 @@ export type VendorStackParamList = {
   VendorTabs: undefined;
   ProductForm: { productId?: string } | undefined;
   IdentityVerification: undefined;
+  VendorPending: undefined;
 };
 
 export type VendorTabParamList = {

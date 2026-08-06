@@ -50,26 +50,3 @@ export async function pickAndUploadImage(): Promise<string> {
 
   return response.data.url;
 }
-
-/**
- * Opens the system image picker for a selfie and submits it directly to
- * /kyc/verify (not through Cloudinary — Smile ID needs the raw image bytes
- * server-side, not a hosted URL).
- */
-export async function pickAndSubmitKyc(fields: {
-  idType: string;
-  idNumber: string;
-  country: string;
-}): Promise<void> {
-  const asset = await pickImage();
-
-  const formData = new FormData();
-  formData.append("file", assetToFormFile(asset));
-  formData.append("idType", fields.idType);
-  formData.append("idNumber", fields.idNumber);
-  formData.append("country", fields.country);
-
-  await apiClient.post("/kyc/verify", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
-}

@@ -1,78 +1,55 @@
-import { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { Alert, Image, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { kycIdTypes, VendorVerificationStatus } from "@ikaystores/shared";
-import { KycApi } from "../../api/endpoints";
-import { pickAndSubmitKyc, ImagePickerCancelledError } from "../../api/upload";
-import { FormInput } from "../../components/FormInput";
+import { Ionicons } from "@expo/vector-icons";
+import { UsersApi, VendorsApi } from "../../api/endpoints";
+import { pickAndUploadImage, ImagePickerCancelledError } from "../../api/upload";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { useAuthStore } from "../../store/authStore";
+import type { VendorStackParamList } from "../../navigation/types";
 
-const STATUS_LABELS: Record<VendorVerificationStatus, string> = {
-  [VendorVerificationStatus.NOT_STARTED]: "Not started",
-  [VendorVerificationStatus.PENDING]: "Verification in progress…",
-  [VendorVerificationStatus.VERIFIED]: "Identity verified",
-  [VendorVerificationStatus.FAILED]: "Verification failed",
-};
-
-const STATUS_COLORS: Record<VendorVerificationStatus, string> = {
-  [VendorVerificationStatus.NOT_STARTED]: "#6B7280",
-  [VendorVerificationStatus.PENDING]: "#D97706",
-  [VendorVerificationStatus.VERIFIED]: "#059669",
-  [VendorVerificationStatus.FAILED]: "#DC2626",
-};
+type DocumentField = "businessRegistrationDocUrl" | "governmentIdDocUrl";
 
 export function VendorPendingScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<VendorStackParamList>>();
   const logout = useAuthStore((s) => s.logout);
   const queryClient = useQueryClient();
-  const [showForm, setShowForm] = useState(false);
-  const [autoOpened, setAutoOpened] = useState(false);
-  const [idType, setIdType] = useState<(typeof kycIdTypes)[number]>("NIN");
-  const [idNumber, setIdNumber] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const [uploadingField, setUploadingField] = useState<DocumentField | null>(null);
 
-  const kycQuery = useQuery({
-    queryKey: ["kycStatus"],
-    queryFn: KycApi.status,
-    refetchInterval: (query) =>
-      query.state.data?.verificationStatus === VendorVerificationStatus.PENDING ? 4000 : false,
+  const meQuery = useQuery({ queryKey: ["me"], queryFn: UsersApi.me });
+  const vendorQuery = useQuery({ queryKey: ["vendorMe"], queryFn: VendorsApi.me });
+
+  const saveDocument = useMutation({
+    mutationFn: (input: { field: DocumentField; url: string }) =>
+      VendorsApi.setDocuments({ [input.field]: input.url }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vendorMe"] });
+    },
+    onError: (error: any) => {
+      Alert.alert(
+        "Could not save document",
+        error?.response?.data?.message ?? "Please try again.",
+      );
+    },
   });
 
-  const status = kycQuery.data?.verificationStatus ?? VendorVerificationStatus.NOT_STARTED;
-
-  // Open the verification form immediately the first time we see NOT_STARTED, so a
-  // freshly-registered vendor lands straight in the flow instead of needing an extra
-  // tap — this is what makes identity verification feel like a live continuation of
-  // registration rather than a separate later step.
-  useEffect(() => {
-    if (!autoOpened && !kycQuery.isLoading && status === VendorVerificationStatus.NOT_STARTED) {
-      setAutoOpened(true);
-      setShowForm(true);
-    }
-  }, [autoOpened, kycQuery.isLoading, status]);
-
-  const handleSubmit = async () => {
-    if (!idNumber) {
-      Alert.alert("Missing details", "Enter your ID number.");
-      return;
-    }
-    setSubmitting(true);
+  const handleUpload = async (field: DocumentField) => {
+    setUploadingField(field);
     try {
-      await pickAndSubmitKyc({ idType, idNumber, country: "NG" });
-      queryClient.invalidateQueries({ queryKey: ["kycStatus"] });
-      setShowForm(false);
-      Alert.alert("Submitted", "Your identity verification is being processed.");
-    } catch (error: any) {
+      const url = await pickAndUploadImage();
+      saveDocument.mutate({ field, url });
+    } catch (error) {
       if (!(error instanceof ImagePickerCancelledError)) {
-        Alert.alert(
-          "Could not submit",
-          error?.response?.data?.message ?? "Please try again.",
-        );
+        Alert.alert("Upload failed", "Could not upload that photo. Please try again.");
       }
     } finally {
-      setSubmitting(false);
+      setUploadingField(null);
     }
   };
+
+  const identityVerified = meQuery.data?.identityVerified ?? false;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -83,58 +60,47 @@ export function VendorPendingScreen() {
       </Text>
 
       <View style={styles.card}>
-        <Text style={styles.cardLabel}>Identity verification</Text>
-        <View style={styles.statusRow}>
-          {kycQuery.isLoading ? (
-            <ActivityIndicator size="small" />
-          ) : (
-            <Text style={[styles.statusText, { color: STATUS_COLORS[status] }]}>
-              {STATUS_LABELS[status]}
-            </Text>
-          )}
+        <View style={styles.cardHeader}>
+          <Ionicons
+            name={identityVerified ? "shield-checkmark" : "shield-outline"}
+            size={20}
+            color={identityVerified ? "#059669" : "#6B7280"}
+          />
+          <Text style={styles.cardLabel}>Identity verification</Text>
         </View>
-
-        {(status === VendorVerificationStatus.NOT_STARTED ||
-          status === VendorVerificationStatus.FAILED) &&
-          !showForm && (
-            <PrimaryButton title="Verify your identity" onPress={() => setShowForm(true)} />
-          )}
-
-        {showForm && (
-          <View style={styles.form}>
-            <Text style={styles.sectionLabel}>ID type</Text>
-            <View style={styles.chipRow}>
-              {kycIdTypes.map((type) => (
-                <Pressable
-                  key={type}
-                  style={[styles.chip, idType === type && styles.chipActive]}
-                  onPress={() => setIdType(type)}
-                >
-                  <Text style={[styles.chipText, idType === type && styles.chipTextActive]}>
-                    {type.replace("_", " ")}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-
-            <FormInput
-              label="ID number"
-              value={idNumber}
-              onChangeText={setIdNumber}
-              keyboardType="numeric"
-            />
-
-            <Text style={styles.helperText}>
-              You'll be asked to select a selfie photo to submit alongside your ID number.
-            </Text>
-
-            <PrimaryButton
-              title="Upload selfie & submit"
-              onPress={handleSubmit}
-              loading={submitting}
-            />
-          </View>
+        <Text style={styles.cardHint}>
+          {identityVerified
+            ? "Your NIN or BVN has been verified."
+            : "Verify your NIN or BVN in real time — no selfie needed."}
+        </Text>
+        {!identityVerified && (
+          <PrimaryButton
+            title="Verify your identity"
+            onPress={() => navigation.navigate("IdentityVerification")}
+          />
         )}
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.cardLabel}>Documents</Text>
+        <Text style={styles.cardHint}>
+          Upload a photo of each document so an admin can review your application.
+        </Text>
+
+        <DocumentRow
+          label="Business registration document"
+          hint="e.g. CAC certificate"
+          url={vendorQuery.data?.businessRegistrationDocUrl ?? null}
+          uploading={uploadingField === "businessRegistrationDocUrl"}
+          onUpload={() => handleUpload("businessRegistrationDocUrl")}
+        />
+        <DocumentRow
+          label="Government-issued ID"
+          hint="National ID, driver's license, or passport"
+          url={vendorQuery.data?.governmentIdDocUrl ?? null}
+          uploading={uploadingField === "governmentIdDocUrl"}
+          onUpload={() => handleUpload("governmentIdDocUrl")}
+        />
       </View>
 
       <PrimaryButton title="Log out" variant="secondary" onPress={() => logout()} />
@@ -142,21 +108,74 @@ export function VendorPendingScreen() {
   );
 }
 
+function DocumentRow({
+  label,
+  hint,
+  url,
+  uploading,
+  onUpload,
+}: {
+  label: string;
+  hint: string;
+  url: string | null;
+  uploading: boolean;
+  onUpload: () => void;
+}) {
+  return (
+    <View style={styles.docRow}>
+      {url ? (
+        <Image source={{ uri: url }} style={styles.docThumbnail} />
+      ) : (
+        <View style={[styles.docThumbnail, styles.docThumbnailEmpty]}>
+          <Ionicons name="document-outline" size={22} color="#9CA3AF" />
+        </View>
+      )}
+      <View style={styles.docBody}>
+        <Text style={styles.docLabel}>{label}</Text>
+        <Text style={styles.docHint}>{hint}</Text>
+        <Text
+          style={styles.docAction}
+          onPress={uploading ? undefined : onUpload}
+        >
+          {uploading ? "Uploading…" : url ? "Replace" : "Upload"}
+        </Text>
+      </View>
+      {url && !uploading && <Ionicons name="checkmark-circle" size={20} color="#059669" />}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1, backgroundColor: "#F9FAFB" },
   content: { padding: 24, paddingTop: 80 },
   title: { fontSize: 22, fontWeight: "800", color: "#111827", marginBottom: 12, textAlign: "center" },
   body: { fontSize: 15, color: "#6B7280", textAlign: "center", marginBottom: 24, lineHeight: 22 },
-  card: { backgroundColor: "#F9FAFB", borderRadius: 10, padding: 16, marginBottom: 24 },
-  cardLabel: { fontSize: 14, fontWeight: "700", color: "#111827", marginBottom: 8 },
-  statusRow: { marginBottom: 12 },
-  statusText: { fontSize: 15, fontWeight: "600" },
-  form: { marginTop: 12 },
-  sectionLabel: { fontSize: 13, fontWeight: "700", color: "#111827", marginBottom: 8 },
-  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 },
-  chip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, backgroundColor: "#F3F4F6" },
-  chipActive: { backgroundColor: "#111827" },
-  chipText: { color: "#374151", fontWeight: "600", fontSize: 12 },
-  chipTextActive: { color: "#fff" },
-  helperText: { fontSize: 12, color: "#6B7280", marginBottom: 16, lineHeight: 18 },
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
+  },
+  cardHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 },
+  cardLabel: { fontSize: 15, fontWeight: "700", color: "#111827" },
+  cardHint: { color: "#6B7280", fontSize: 13, marginBottom: 12, lineHeight: 18 },
+  docRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
+  },
+  docThumbnail: { width: 48, height: 48, borderRadius: 8, backgroundColor: "#F3F4F6" },
+  docThumbnailEmpty: { alignItems: "center", justifyContent: "center" },
+  docBody: { flex: 1 },
+  docLabel: { fontSize: 14, fontWeight: "700", color: "#111827" },
+  docHint: { fontSize: 12, color: "#9CA3AF", marginTop: 2 },
+  docAction: { fontSize: 13, fontWeight: "700", color: "#15803D", marginTop: 4 },
 });
