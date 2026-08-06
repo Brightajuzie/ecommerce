@@ -81,6 +81,9 @@ export interface ProductDto {
   stock: number;
   images: string[];
   status: ProductStatus;
+  weight: string | null;
+  brand: string | null;
+  sku: string | null;
   createdAt: string;
 }
 
