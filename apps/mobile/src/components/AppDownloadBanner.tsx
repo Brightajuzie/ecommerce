@@ -3,10 +3,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../theme/ThemeContext";
 
 // EAS free-tier build artifacts expire ~30 days after the build (this one on
-// 2026-09-04) — replace with a permanent host (own storage, Play Store listing)
+// 2026-09-06) — replace with a permanent host (own storage, Play Store listing)
 // before that, or re-build and swap this URL.
 const ANDROID_APK_URL =
-  "https://expo.dev/artifacts/eas/-FQ9hKGpKnLLgDGyp9fjle3wxJUduV4wxob_Nuv1AHk.apk";
+  "https://expo.dev/artifacts/eas/nsOlLJcPW35sNvpFcpsSyMQd04QY2KNGG_dkI_nGJ3s.apk";
 
 // No iOS build exists yet — real-device installs need an Apple Developer
 // Program membership for ad-hoc/TestFlight distribution, which this project
