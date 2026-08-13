@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   Param,
   Patch,
   Post,
@@ -24,6 +25,7 @@ export class SlidesController {
   constructor(private readonly slidesService: SlidesService) {}
 
   @Get()
+  @Header("Cache-Control", "public, max-age=60, stale-while-revalidate=120")
   listActive() {
     return this.slidesService.listActive();
   }

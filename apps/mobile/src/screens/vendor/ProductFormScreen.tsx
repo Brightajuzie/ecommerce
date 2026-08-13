@@ -10,6 +10,7 @@ import { pickAndUploadImage, ImagePickerCancelledError } from "../../api/upload"
 import { FormInput } from "../../components/FormInput";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { useTheme } from "../../theme/ThemeContext";
+import { optimizedImageUrl } from "../../utils/image";
 
 const MAX_CONTENT_WIDTH = 700;
 
@@ -161,7 +162,7 @@ export function ProductFormScreen() {
           <View style={styles.photoRow}>
             {images.map((uri) => (
               <View key={uri} style={styles.thumbnailWrap}>
-                <Image source={{ uri }} style={styles.thumbnail} />
+                <Image source={{ uri: optimizedImageUrl(uri, 150) }} style={styles.thumbnail} />
                 <Pressable
                   style={styles.removeBadge}
                   onPress={() => setImages((prev) => prev.filter((img) => img !== uri))}

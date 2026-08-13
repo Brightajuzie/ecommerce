@@ -23,6 +23,7 @@ import { ProductsApi, CategoriesApi } from "../../api/endpoints";
 import { AppDownloadBanner } from "../../components/AppDownloadBanner";
 import { SlideCarousel } from "../../components/SlideCarousel";
 import { useTheme } from "../../theme/ThemeContext";
+import { optimizedImageUrl } from "../../utils/image";
 import type { BuyerStackParamList, BuyerTabParamList } from "../../navigation/types";
 
 // Home is a tab screen but also navigates to stack-level screens (ProductDetail,
@@ -179,7 +180,7 @@ export function HomeScreen() {
     </View>
   );
 
-  const renderProductCard = (item: ProductDto, cardStyle: object) => {
+  const renderProductCard = (item: ProductDto, cardStyle: object, imageWidth = 400) => {
     const isNew = Date.now() - new Date(item.createdAt).getTime() < NEW_PRODUCT_WINDOW_MS;
     const isLowStock = item.stock > 0 && item.stock <= LOW_STOCK_THRESHOLD;
     return (
@@ -189,7 +190,7 @@ export function HomeScreen() {
         onPress={() => navigation.navigate("ProductDetail", { productId: item.id })}
       >
         <View style={styles.cardImageWrap}>
-          <Image source={{ uri: item.images[0] }} style={styles.cardImage} />
+          <Image source={{ uri: optimizedImageUrl(item.images[0], imageWidth) }} style={styles.cardImage} />
           {isNew && (
             <View style={[styles.badge, styles.badgeNew, { backgroundColor: theme.secondaryColor }]}>
               <Text style={styles.badgeText}>NEW</Text>
@@ -293,7 +294,7 @@ export function HomeScreen() {
               colors={[theme.primaryColor]}
             />
           }
-          renderItem={({ item }) => renderProductCard(item, { maxWidth: `${cardMaxWidthPercent}%` })}
+          renderItem={({ item }) => renderProductCard(item, { maxWidth: `${cardMaxWidthPercent}%` }, 500)}
           onEndReached={loadMoreProducts}
           onEndReachedThreshold={0.5}
           ListFooterComponent={
@@ -350,7 +351,7 @@ export function HomeScreen() {
                 keyExtractor={(item) => item.id}
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.categoryRowContent}
-                renderItem={({ item }) => renderProductCard(item, styles.rowCard)}
+                renderItem={({ item }) => renderProductCard(item, styles.rowCard, 300)}
               />
             </View>
           )}

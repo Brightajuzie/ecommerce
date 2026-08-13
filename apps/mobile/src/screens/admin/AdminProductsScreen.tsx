@@ -8,6 +8,7 @@ import { ProductStatus } from "@ikaystores/shared";
 import type { AdminProductDto } from "@ikaystores/shared";
 import { AdminProductsApi } from "../../api/endpoints";
 import { useTheme } from "../../theme/ThemeContext";
+import { optimizedImageUrl } from "../../utils/image";
 import type { AdminStackParamList } from "../../navigation/types";
 
 const MAX_CONTENT_WIDTH = 800;
@@ -68,7 +69,7 @@ export function AdminProductsScreen() {
                 style={styles.row}
                 onPress={() => navigation.navigate("ProductForm", { productId: item.id })}
               >
-                <Image source={{ uri: item.images[0] }} style={styles.image} />
+                <Image source={{ uri: optimizedImageUrl(item.images[0], 110) }} style={styles.image} />
                 <View style={styles.rowBody}>
                   <Text numberOfLines={1} style={styles.rowTitle}>
                     {item.title}
