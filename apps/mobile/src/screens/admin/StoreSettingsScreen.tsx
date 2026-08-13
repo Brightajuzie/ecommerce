@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, Text, View } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { SettingsApi } from "../../api/endpoints";
 import { pickAndUploadImage, ImagePickerCancelledError } from "../../api/upload";
 import { FormInput } from "../../components/FormInput";
 import { PrimaryButton } from "../../components/PrimaryButton";
+import { useTheme } from "../../theme/ThemeContext";
+import { useThemedStyles } from "../../theme/useThemedStyles";
 
 const PRESET_COLORS = [
   "#111827",
@@ -21,7 +23,33 @@ const HEX_PATTERN = /^#[0-9A-Fa-f]{6}$/;
 
 export function StoreSettingsScreen() {
   const queryClient = useQueryClient();
+  const theme = useTheme();
   const settingsQuery = useQuery({ queryKey: ["settings"], queryFn: SettingsApi.get });
+  const styles = useThemedStyles((colors) => ({
+    container: { flex: 1, backgroundColor: colors.surface },
+    center: { flex: 1, alignItems: "center" as const, justifyContent: "center" as const },
+    content: { padding: 20, paddingTop: 60, paddingBottom: 40 },
+    title: { fontSize: 28, fontWeight: "800" as const, color: colors.text, marginBottom: 16 },
+    sectionLabel: { fontSize: 14, fontWeight: "700" as const, color: colors.text, marginBottom: 8, marginTop: 4 },
+    logoRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: 16, marginBottom: 20 },
+    logoPreview: { width: 72, height: 72, borderRadius: 8, backgroundColor: colors.border },
+    logoPlaceholder: { alignItems: "center" as const, justifyContent: "center" as const },
+    logoPlaceholderText: { fontSize: 11, color: colors.textMuted },
+    uploadButton: {
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: 8,
+      backgroundColor: colors.surfaceAlt,
+    },
+    uploadButtonText: { color: colors.text, fontWeight: "600" as const },
+    disabled: { opacity: 0.5 },
+    swatchRow: { flexDirection: "row" as const, flexWrap: "wrap" as const, gap: 10, marginBottom: 12 },
+    swatch: { width: 32, height: 32, borderRadius: 16, borderWidth: 2, borderColor: "transparent" },
+    swatchSelected: { borderColor: colors.text },
+    previewRow: { flexDirection: "row" as const, gap: 10, marginBottom: 24 },
+    previewButton: { flex: 1, borderRadius: 8, paddingVertical: 14, alignItems: "center" as const },
+    previewButtonText: { color: "#fff", fontWeight: "700" as const },
+  }));
 
   const [primaryColor, setPrimaryColor] = useState("#111827");
   const [secondaryColor, setSecondaryColor] = useState("#4B5563");
@@ -72,7 +100,7 @@ export function StoreSettingsScreen() {
   if (settingsQuery.isLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator />
+        <ActivityIndicator color={theme.primaryColor} />
       </View>
     );
   }
@@ -177,29 +205,3 @@ export function StoreSettingsScreen() {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  content: { padding: 20, paddingTop: 60, paddingBottom: 40 },
-  title: { fontSize: 28, fontWeight: "800", color: "#111827", marginBottom: 16 },
-  sectionLabel: { fontSize: 14, fontWeight: "700", color: "#111827", marginBottom: 8, marginTop: 4 },
-  logoRow: { flexDirection: "row", alignItems: "center", gap: 16, marginBottom: 20 },
-  logoPreview: { width: 72, height: 72, borderRadius: 8, backgroundColor: "#E5E7EB" },
-  logoPlaceholder: { alignItems: "center", justifyContent: "center" },
-  logoPlaceholderText: { fontSize: 11, color: "#6B7280" },
-  uploadButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: "#F3F4F6",
-  },
-  uploadButtonText: { color: "#111827", fontWeight: "600" },
-  disabled: { opacity: 0.5 },
-  swatchRow: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 12 },
-  swatch: { width: 32, height: 32, borderRadius: 16, borderWidth: 2, borderColor: "transparent" },
-  swatchSelected: { borderColor: "#111827" },
-  previewRow: { flexDirection: "row", gap: 10, marginBottom: 24 },
-  previewButton: { flex: 1, borderRadius: 8, paddingVertical: 14, alignItems: "center" },
-  previewButtonText: { color: "#fff", fontWeight: "700" },
-});

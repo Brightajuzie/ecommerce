@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, Pressable, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -12,6 +12,7 @@ import { PrimaryButton } from "../../components/PrimaryButton";
 import { FormInput } from "../../components/FormInput";
 import { useAuthStore } from "../../store/authStore";
 import { useTheme } from "../../theme/ThemeContext";
+import { useThemedStyles } from "../../theme/useThemedStyles";
 import type { BuyerStackParamList } from "../../navigation/types";
 
 const MAX_CONTENT_WIDTH = 700;
@@ -26,6 +27,74 @@ export function CheckoutScreen() {
   const [showNewAddress, setShowNewAddress] = useState(false);
   const [newAddress, setNewAddress] = useState({ label: "Home", line1: "", city: "", state: "", phone: "" });
   const [provider, setProvider] = useState<PaymentProvider>(PaymentProvider.FLUTTERWAVE);
+  const styles = useThemedStyles((colors, t) => ({
+    container: { flex: 1, backgroundColor: colors.background, paddingTop: 60 },
+    centeredColumn: { width: "100%" as const, maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" as const, paddingHorizontal: 16, paddingBottom: 24 },
+    center: { flex: 1, alignItems: "center" as const, justifyContent: "center" as const, backgroundColor: colors.surface },
+    title: { fontSize: 26, fontWeight: "800" as const, color: colors.text, marginBottom: 16 },
+    errorBanner: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 8,
+      backgroundColor: t.scheme === "dark" ? "#3A1518" : "#FEF2F2",
+      borderWidth: 1,
+      borderColor: t.scheme === "dark" ? "#5B2226" : "#FECACA",
+      borderRadius: 8,
+      padding: 12,
+      marginBottom: 16,
+    },
+    errorBannerText: { flex: 1, color: t.scheme === "dark" ? "#FCA5A5" : "#B91C1C", fontSize: 13, fontWeight: "600" as const },
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: 14,
+      padding: 16,
+      marginBottom: 14,
+      shadowColor: "#000",
+      shadowOpacity: colors.shadowOpacity,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 1,
+    },
+    sectionHeader: { flexDirection: "row" as const, alignItems: "center" as const, gap: 6, marginBottom: 10 },
+    sectionLabel: { fontSize: 15, fontWeight: "700" as const, color: colors.text },
+    addressList: { maxHeight: 220 },
+    addressCard: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 10,
+      padding: 12,
+      marginBottom: 8,
+    },
+    addressCardActive: {},
+    addressRadio: {
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      borderWidth: 2,
+      borderColor: colors.borderStrong,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+    },
+    addressRadioDot: { width: 10, height: 10, borderRadius: 5 },
+    addressLabel: { fontWeight: "700" as const, color: colors.text },
+    addressText: { color: colors.textMuted, marginTop: 2, fontSize: 13 },
+    empty: { color: colors.textMuted, marginBottom: 8 },
+    addAddressButton: { flexDirection: "row" as const, alignItems: "center" as const, gap: 6, marginTop: 4 },
+    link: { fontWeight: "600" as const },
+    newAddressForm: { marginTop: 12 },
+    providerRow: { flexDirection: "row" as const, gap: 10 },
+    providerChip: {
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 20,
+      backgroundColor: colors.surfaceAlt,
+    },
+    providerChipText: { color: colors.textSecondary, fontWeight: "600" as const },
+    providerChipTextActive: { color: "#fff" },
+  }));
 
   // Defends this screen directly rather than relying solely on CartScreen's
   // button routing guests to Login first — e.g. a stale deep link or a
@@ -92,7 +161,7 @@ export function CheckoutScreen() {
 
         {checkoutErrorMessage && (
           <View style={styles.errorBanner}>
-            <Ionicons name="alert-circle" size={18} color="#DC2626" />
+            <Ionicons name="alert-circle" size={18} color={theme.colors.danger} />
             <Text style={styles.errorBannerText}>{checkoutErrorMessage}</Text>
           </View>
         )}
@@ -230,72 +299,3 @@ export function CheckoutScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F9FAFB", paddingTop: 60 },
-  centeredColumn: { width: "100%", maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center", paddingHorizontal: 16, paddingBottom: 24 },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#fff" },
-  title: { fontSize: 26, fontWeight: "800", color: "#111827", marginBottom: 16 },
-  errorBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: "#FEF2F2",
-    borderWidth: 1,
-    borderColor: "#FECACA",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-  },
-  errorBannerText: { flex: 1, color: "#B91C1C", fontSize: 13, fontWeight: "600" },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 14,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
-  },
-  sectionHeader: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10 },
-  sectionLabel: { fontSize: 15, fontWeight: "700", color: "#111827" },
-  addressList: { maxHeight: 220 },
-  addressCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 8,
-  },
-  addressCardActive: {},
-  addressRadio: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 2,
-    borderColor: "#D1D5DB",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  addressRadioDot: { width: 10, height: 10, borderRadius: 5 },
-  addressLabel: { fontWeight: "700", color: "#111827" },
-  addressText: { color: "#6B7280", marginTop: 2, fontSize: 13 },
-  empty: { color: "#6B7280", marginBottom: 8 },
-  addAddressButton: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 },
-  link: { fontWeight: "600" },
-  newAddressForm: { marginTop: 12 },
-  providerRow: { flexDirection: "row", gap: 10 },
-  providerChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: "#F3F4F6",
-  },
-  providerChipText: { color: "#374151", fontWeight: "600" },
-  providerChipTextActive: { color: "#fff" },
-});

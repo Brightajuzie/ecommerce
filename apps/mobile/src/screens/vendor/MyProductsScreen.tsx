@@ -1,4 +1,4 @@
-import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, Image, Pressable, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
@@ -8,20 +8,64 @@ import type { ProductDto } from "@ikaystores/shared";
 import { ProductsApi } from "../../api/endpoints";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { useTheme } from "../../theme/ThemeContext";
+import { useThemedStyles } from "../../theme/useThemedStyles";
 import type { VendorStackParamList } from "../../navigation/types";
 
 const MAX_CONTENT_WIDTH = 900;
 
-const STATUS_STYLES: Record<ProductStatus, { bg: string; fg: string }> = {
+const STATUS_STYLES_LIGHT: Record<ProductStatus, { bg: string; fg: string }> = {
   [ProductStatus.ACTIVE]: { bg: "#DCFCE7", fg: "#15803D" },
   [ProductStatus.DRAFT]: { bg: "#F3F4F6", fg: "#6B7280" },
   [ProductStatus.ARCHIVED]: { bg: "#FEE2E2", fg: "#B91C1C" },
 };
 
+const STATUS_STYLES_DARK: Record<ProductStatus, { bg: string; fg: string }> = {
+  [ProductStatus.ACTIVE]: { bg: "#0F3D22", fg: "#4ADE80" },
+  [ProductStatus.DRAFT]: { bg: "#212823", fg: "#9CA3AF" },
+  [ProductStatus.ARCHIVED]: { bg: "#450A0A", fg: "#F87171" },
+};
+
 export function MyProductsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<VendorStackParamList>>();
   const theme = useTheme();
+  const statusStyles = theme.scheme === "dark" ? STATUS_STYLES_DARK : STATUS_STYLES_LIGHT;
   const productsQuery = useQuery({ queryKey: ["myProducts"], queryFn: ProductsApi.listMine });
+  const styles = useThemedStyles((colors) => ({
+    container: { flex: 1, backgroundColor: colors.background, paddingTop: 60 },
+    centeredColumn: { width: "100%" as const, maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" as const, paddingHorizontal: 16 },
+    header: { flexDirection: "row" as const, justifyContent: "space-between" as const, alignItems: "center" as const, marginBottom: 18 },
+    title: { fontSize: 26, fontWeight: "800" as const, color: colors.text },
+    subtitle: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
+    loading: { marginTop: 40 },
+    list: { paddingBottom: 32 },
+    empty: { alignItems: "center" as const, marginTop: 60, gap: 6, paddingHorizontal: 32 },
+    emptyTitle: { fontSize: 16, fontWeight: "700" as const, color: colors.text, marginTop: 4 },
+    emptyText: { color: colors.textMuted, textAlign: "center" as const, fontSize: 13 },
+    card: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 12,
+      backgroundColor: colors.surface,
+      borderRadius: 14,
+      padding: 12,
+      marginBottom: 10,
+      shadowColor: "#000",
+      shadowOpacity: colors.shadowOpacity + 0.01,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 2,
+    },
+    cardPressed: { opacity: 0.9 },
+    thumbnail: { width: 64, height: 64, borderRadius: 10, backgroundColor: colors.placeholderBg },
+    cardBody: { flex: 1 },
+    productTitle: { fontSize: 15, fontWeight: "700" as const, color: colors.text },
+    productPrice: { fontSize: 14, fontWeight: "800" as const, marginTop: 2 },
+    metaRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: 8, marginTop: 6 },
+    statusPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
+    statusPillText: { fontSize: 10, fontWeight: "800" as const, textTransform: "uppercase" as const },
+    stockText: { fontSize: 12, color: colors.textMuted },
+    stockTextEmpty: { color: colors.danger, fontWeight: "700" as const },
+  }));
 
   return (
     <View style={styles.container}>
@@ -48,13 +92,13 @@ export function MyProductsScreen() {
           contentContainerStyle={styles.list}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Ionicons name="cube-outline" size={32} color="#9CA3AF" />
+              <Ionicons name="cube-outline" size={32} color={theme.colors.textFaint} />
               <Text style={styles.emptyTitle}>No products yet</Text>
               <Text style={styles.emptyText}>Tap "+ New" above to list your first product.</Text>
             </View>
           }
           renderItem={({ item }) => {
-            const statusStyle = STATUS_STYLES[item.status];
+            const statusStyle = statusStyles[item.status];
             const outOfStock = item.stock === 0;
             return (
               <View style={styles.centeredColumn}>
@@ -79,7 +123,7 @@ export function MyProductsScreen() {
                       </Text>
                     </View>
                   </View>
-                  <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+                  <Ionicons name="chevron-forward" size={20} color={theme.colors.textFaint} />
                 </Pressable>
               </View>
             );
@@ -89,40 +133,3 @@ export function MyProductsScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F9FAFB", paddingTop: 60 },
-  centeredColumn: { width: "100%", maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center", paddingHorizontal: 16 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 18 },
-  title: { fontSize: 26, fontWeight: "800", color: "#111827" },
-  subtitle: { fontSize: 13, color: "#6B7280", marginTop: 2 },
-  loading: { marginTop: 40 },
-  list: { paddingBottom: 32 },
-  empty: { alignItems: "center", marginTop: 60, gap: 6, paddingHorizontal: 32 },
-  emptyTitle: { fontSize: 16, fontWeight: "700", color: "#111827", marginTop: 4 },
-  emptyText: { color: "#6B7280", textAlign: "center", fontSize: 13 },
-  card: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    padding: 12,
-    marginBottom: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  cardPressed: { opacity: 0.9 },
-  thumbnail: { width: 64, height: 64, borderRadius: 10, backgroundColor: "#F0FDF4" },
-  cardBody: { flex: 1 },
-  productTitle: { fontSize: 15, fontWeight: "700", color: "#111827" },
-  productPrice: { fontSize: 14, fontWeight: "800", marginTop: 2 },
-  metaRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 6 },
-  statusPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
-  statusPillText: { fontSize: 10, fontWeight: "800", textTransform: "uppercase" },
-  stockText: { fontSize: 12, color: "#6B7280" },
-  stockTextEmpty: { color: "#DC2626", fontWeight: "700" },
-});

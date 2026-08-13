@@ -4,7 +4,6 @@ import {
   Alert,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   View,
 } from "react-native";
@@ -16,6 +15,7 @@ import { FormInput } from "../../components/FormInput";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { useAuthStore } from "../../store/authStore";
 import { useTheme } from "../../theme/ThemeContext";
+import { useThemedStyles } from "../../theme/useThemedStyles";
 
 // Both ADMIN and SUPER_ADMIN see this screen (revenue-split settings) — the
 // platform/super-admin wallet section below is the one part hidden from
@@ -24,6 +24,40 @@ export function PaymentSettingsScreen() {
   const theme = useTheme();
   const queryClient = useQueryClient();
   const isSuperAdmin = useAuthStore((s) => s.user?.role === UserRole.SUPER_ADMIN);
+  const styles = useThemedStyles((colors) => ({
+    container: { flex: 1, backgroundColor: colors.surface },
+    content: { paddingTop: 60, paddingHorizontal: 16, paddingBottom: 24 },
+    center: { flex: 1, alignItems: "center" as const, justifyContent: "center" as const },
+    title: { fontSize: 28, fontWeight: "800" as const, color: colors.text, marginBottom: 16 },
+    sectionTitle: { fontSize: 18, fontWeight: "700" as const, color: colors.text, marginBottom: 8, marginTop: 8 },
+    subsectionTitle: { fontSize: 14, fontWeight: "700" as const, color: colors.textSecondary, marginBottom: 8, marginTop: 4 },
+    sectionHint: { color: colors.textMuted, fontSize: 13, marginBottom: 12 },
+    warning: { color: colors.danger, fontSize: 12, marginTop: -8, marginBottom: 12 },
+    divider: { height: 1, backgroundColor: colors.border, marginVertical: 24 },
+    section: { marginBottom: 12 },
+    balanceCard: { borderRadius: 14, padding: 20, marginBottom: 16 },
+    balanceLabel: { color: "rgba(255,255,255,0.85)", fontSize: 13, fontWeight: "600" as const },
+    balanceAmount: { color: "#fff", fontSize: 32, fontWeight: "800" as const, marginTop: 4 },
+    changeBank: { fontWeight: "600" as const, marginBottom: 12 },
+    bankList: { maxHeight: 260 },
+    bankRow: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
+    bankRowText: { fontSize: 15, color: colors.text },
+    transactionRow: {
+      flexDirection: "row" as const,
+      justifyContent: "space-between" as const,
+      alignItems: "center" as const,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    transactionInfo: { flex: 1, marginRight: 12 },
+    transactionDescription: { fontSize: 14, color: colors.text, fontWeight: "600" as const },
+    transactionDate: { fontSize: 12, color: colors.textFaint, marginTop: 2 },
+    transactionAmount: { fontSize: 14, fontWeight: "700" as const },
+    empty: { color: colors.textMuted, marginBottom: 12 },
+  }));
+  const creditColor = theme.scheme === "dark" ? "#4ADE80" : "#16A34A";
+  const debitColor = theme.scheme === "dark" ? "#F87171" : "#DC2626";
 
   const settingsQuery = useQuery({ queryKey: ["paymentSettings"], queryFn: PaymentSettingsApi.get });
   const platformWalletQuery = useQuery({
@@ -354,7 +388,7 @@ export function PaymentSettingsScreen() {
                 <Text
                   style={[
                     styles.transactionAmount,
-                    { color: item.type === WalletTransactionType.CREDIT ? "#16A34A" : "#DC2626" },
+                    { color: item.type === WalletTransactionType.CREDIT ? creditColor : debitColor },
                   ]}
                 >
                   {item.type === WalletTransactionType.CREDIT ? "+" : "-"}NGN{" "}
@@ -368,36 +402,3 @@ export function PaymentSettingsScreen() {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  content: { paddingTop: 60, paddingHorizontal: 16, paddingBottom: 24 },
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  title: { fontSize: 28, fontWeight: "800", color: "#111827", marginBottom: 16 },
-  sectionTitle: { fontSize: 18, fontWeight: "700", color: "#111827", marginBottom: 8, marginTop: 8 },
-  subsectionTitle: { fontSize: 14, fontWeight: "700", color: "#374151", marginBottom: 8, marginTop: 4 },
-  sectionHint: { color: "#6B7280", fontSize: 13, marginBottom: 12 },
-  warning: { color: "#DC2626", fontSize: 12, marginTop: -8, marginBottom: 12 },
-  divider: { height: 1, backgroundColor: "#F3F4F6", marginVertical: 24 },
-  section: { marginBottom: 12 },
-  balanceCard: { borderRadius: 14, padding: 20, marginBottom: 16 },
-  balanceLabel: { color: "rgba(255,255,255,0.85)", fontSize: 13, fontWeight: "600" },
-  balanceAmount: { color: "#fff", fontSize: 32, fontWeight: "800", marginTop: 4 },
-  changeBank: { fontWeight: "600", marginBottom: 12 },
-  bankList: { maxHeight: 260 },
-  bankRow: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#F3F4F6" },
-  bankRowText: { fontSize: 15, color: "#111827" },
-  transactionRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
-  },
-  transactionInfo: { flex: 1, marginRight: 12 },
-  transactionDescription: { fontSize: 14, color: "#111827", fontWeight: "600" },
-  transactionDate: { fontSize: 12, color: "#9CA3AF", marginTop: 2 },
-  transactionAmount: { fontSize: 14, fontWeight: "700" },
-  empty: { color: "#6B7280", marginBottom: 12 },
-});

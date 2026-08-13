@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Image, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Image, Platform, Pressable, Text, View, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { useTheme } from "../theme/ThemeContext";
+import { useThemedStyles } from "../theme/useThemedStyles";
 
 const WEB_NAV_BREAKPOINT = 768;
 const BAR_HEIGHT = 60;
@@ -12,6 +13,100 @@ export function ResponsiveTabBar({ state, descriptors, navigation }: BottomTabBa
   const { width } = useWindowDimensions();
   const [menuOpen, setMenuOpen] = useState(false);
   const isWide = width >= WEB_NAV_BREAKPOINT;
+  const styles = useThemedStyles((colors) => ({
+    barWide: {
+      height: BAR_HEIGHT,
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      justifyContent: "space-between" as const,
+      paddingHorizontal: 24,
+      shadowColor: "#000",
+      shadowOpacity: 0.1,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 3,
+    },
+    wrapperNarrow: {
+      ...(Platform.OS === "web" ? ({ position: "relative" } as const) : null),
+      zIndex: 30,
+    },
+    barNarrow: {
+      height: BAR_HEIGHT,
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      justifyContent: "space-between" as const,
+      paddingHorizontal: 16,
+      shadowColor: "#000",
+      shadowOpacity: 0.1,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 3,
+    },
+    hamburgerButton: { padding: 4 },
+    brandRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: 6 },
+    brandLogo: { height: 36, width: 82 },
+    navItemsRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: 4 },
+    navItemRow: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 6,
+      height: BAR_HEIGHT,
+      paddingHorizontal: 14,
+      borderBottomWidth: 3,
+      borderBottomColor: "transparent",
+    },
+    navItemRowActive: { borderBottomColor: "#fff" },
+    navItemStack: { flexDirection: "row" as const, alignItems: "center" as const, gap: 6, padding: 10 },
+    navItemBlock: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 10,
+      paddingHorizontal: 20,
+      paddingVertical: 14,
+      borderRadius: 8,
+      marginHorizontal: 8,
+      marginVertical: 2,
+    },
+    iconWrap: { position: "relative" as const },
+    badge: {
+      position: "absolute" as const,
+      top: -6,
+      right: -10,
+      minWidth: 16,
+      height: 16,
+      borderRadius: 8,
+      paddingHorizontal: 3,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+    },
+    badgeText: { color: "#fff", fontSize: 10, fontWeight: "800" as const },
+    navItemText: { fontSize: 14, fontWeight: "600" as const },
+    navItemTextActive: { fontWeight: "800" as const },
+    backdrop: {
+      position: (Platform.OS === "web" ? "fixed" : "absolute") as "absolute",
+      top: BAR_HEIGHT,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: 20,
+    },
+    dropdown: {
+      position: "absolute" as const,
+      top: BAR_HEIGHT,
+      left: 0,
+      right: 0,
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      paddingVertical: 8,
+      zIndex: 30,
+      shadowColor: "#000",
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 4,
+    },
+  }));
 
   const goTo = (routeName: string, routeKey: string, isFocused: boolean) => {
     const event = navigation.emit({ type: "tabPress", target: routeKey, canPreventDefault: true });
@@ -40,7 +135,7 @@ export function ResponsiveTabBar({ state, descriptors, navigation }: BottomTabBa
     const { options } = descriptors[route.key];
     const label = typeof options.title === "string" ? options.title : route.name;
     const isFocused = state.index === index;
-    const color = isFocused ? theme.primaryColor : "#6B7280";
+    const color = isFocused ? theme.primaryColor : theme.colors.textMuted;
     const icon = options.tabBarIcon?.({ focused: isFocused, color, size: 18 });
     const badge = options.tabBarBadge;
     return { route, index, label, isFocused, color, icon, badge };
@@ -119,98 +214,3 @@ export function ResponsiveTabBar({ state, descriptors, navigation }: BottomTabBa
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  barWide: {
-    height: BAR_HEIGHT,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 24,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-  },
-  wrapperNarrow: {
-    ...(Platform.OS === "web" ? ({ position: "relative" } as const) : null),
-    zIndex: 30,
-  },
-  barNarrow: {
-    height: BAR_HEIGHT,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-  },
-  hamburgerButton: { padding: 4 },
-  brandRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  brandLogo: { height: 36, width: 82 },
-  navItemsRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  navItemRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    height: BAR_HEIGHT,
-    paddingHorizontal: 14,
-    borderBottomWidth: 3,
-    borderBottomColor: "transparent",
-  },
-  navItemRowActive: { borderBottomColor: "#fff" },
-  navItemStack: { flexDirection: "row", alignItems: "center", gap: 6, padding: 10 },
-  navItemBlock: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderRadius: 8,
-    marginHorizontal: 8,
-    marginVertical: 2,
-  },
-  iconWrap: { position: "relative" },
-  badge: {
-    position: "absolute",
-    top: -6,
-    right: -10,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    paddingHorizontal: 3,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  badgeText: { color: "#fff", fontSize: 10, fontWeight: "800" },
-  navItemText: { fontSize: 14, fontWeight: "600" },
-  navItemTextActive: { fontWeight: "800" },
-  backdrop: {
-    position: (Platform.OS === "web" ? "fixed" : "absolute") as "absolute",
-    top: BAR_HEIGHT,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 20,
-  },
-  dropdown: {
-    position: "absolute",
-    top: BAR_HEIGHT,
-    left: 0,
-    right: 0,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-    paddingVertical: 8,
-    zIndex: 30,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
-  },
-});
