@@ -12,6 +12,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import type { SlideDto } from "@ikaystores/shared";
 import { SlidesApi } from "../api/endpoints";
+import { optimizedImageUrl } from "../utils/image";
 
 export function SlideCarousel() {
   const slidesQuery = useQuery({ queryKey: ["slides"], queryFn: SlidesApi.listActive });
@@ -48,7 +49,7 @@ export function SlideCarousel() {
               style={[styles.slide, { width: slideWidth }]}
               onPress={() => openSlideLink(item.linkUrl)}
             >
-              <Image source={{ uri: item.imageUrl }} style={styles.image} />
+              <Image source={{ uri: optimizedImageUrl(item.imageUrl, slideWidth * 2) }} style={styles.image} />
               {item.title ? (
                 <View style={styles.captionOverlay}>
                   <Text style={styles.captionText} numberOfLines={2}>

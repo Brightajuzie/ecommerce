@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   Param,
   Patch,
   Post,
@@ -27,7 +28,13 @@ import { AdminProductQueryDto } from "./dto/admin-product-query.dto";
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
+  // Public, unauthenticated, and identical for every visitor at a given
+  // moment — a short browser cache (with stale-while-revalidate so a
+  // slightly-stale list still paints instantly while a fresh one loads in
+  // the background) meaningfully speeds up repeat navigation without ever
+  // showing data older than ~90s.
   @Get()
+  @Header("Cache-Control", "public, max-age=30, stale-while-revalidate=60")
   browse(@Query() query: ProductQueryDto) {
     return this.productsService.browse(query);
   }
@@ -52,6 +59,7 @@ export class ProductsController {
   }
 
   @Get(":id")
+  @Header("Cache-Control", "public, max-age=30, stale-while-revalidate=60")
   findOne(@Param("id") id: string) {
     return this.productsService.findOne(id);
   }

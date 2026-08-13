@@ -9,6 +9,7 @@ import { PrimaryButton } from "../../components/PrimaryButton";
 import { useTheme } from "../../theme/ThemeContext";
 import { useAuthStore } from "../../store/authStore";
 import { useGuestCartStore } from "../../store/guestCartStore";
+import { optimizedImageUrl } from "../../utils/image";
 import type { BuyerStackParamList } from "../../navigation/types";
 
 const MAX_CONTENT_WIDTH = 700;
@@ -80,7 +81,7 @@ export function CartScreen() {
         renderItem={({ item }) => (
           <View style={styles.centeredColumn}>
             <View style={styles.card}>
-              <Image source={{ uri: item.product.images[0] }} style={styles.image} />
+              <Image source={{ uri: optimizedImageUrl(item.product.images[0], 150) }} style={styles.image} />
               <View style={styles.rowBody}>
                 <Text numberOfLines={1} style={styles.itemTitle}>
                   {item.product.title}

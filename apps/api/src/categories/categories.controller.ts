@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Header, Post, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { UserRole } from "@prisma/client";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
@@ -12,7 +12,9 @@ import { CreateCategoryDto } from "./dto/create-category.dto";
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
+  // Categories change rarely — a longer cache than products is safe here.
   @Get()
+  @Header("Cache-Control", "public, max-age=300, stale-while-revalidate=600")
   list() {
     return this.categoriesService.list();
   }

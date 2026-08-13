@@ -21,7 +21,22 @@ export function ResponsiveTabBar({ state, descriptors, navigation }: BottomTabBa
     setMenuOpen(false);
   };
 
+  // The bar itself is now solid brand-green (see styles.barWide/barNarrow),
+  // so items need light-on-dark colors here; the dropdown panel below stays
+  // white/dark-text since it floats over page content, not the green bar.
+  const INACTIVE_ON_BRAND = "rgba(255,255,255,0.75)";
+
   const items = state.routes.map((route, index) => {
+    const { options } = descriptors[route.key];
+    const label = typeof options.title === "string" ? options.title : route.name;
+    const isFocused = state.index === index;
+    const color = isFocused ? "#fff" : INACTIVE_ON_BRAND;
+    const icon = options.tabBarIcon?.({ focused: isFocused, color, size: 18 });
+    const badge = options.tabBarBadge;
+    return { route, index, label, isFocused, color, icon, badge };
+  });
+
+  const dropdownItems = state.routes.map((route, index) => {
     const { options } = descriptors[route.key];
     const label = typeof options.title === "string" ? options.title : route.name;
     const isFocused = state.index === index;
@@ -42,15 +57,15 @@ export function ResponsiveTabBar({ state, descriptors, navigation }: BottomTabBa
         layout === "row" && styles.navItemRow,
         layout === "stack" && styles.navItemStack,
         layout === "block" && styles.navItemBlock,
-        item.isFocused && layout === "row" && { borderBottomColor: theme.primaryColor },
+        item.isFocused && layout === "row" && styles.navItemRowActive,
         item.isFocused && layout === "block" && { backgroundColor: theme.accentColor ?? "#F0FDF4" },
       ]}
     >
       <View style={styles.iconWrap}>
         {item.icon}
         {item.badge !== undefined && (
-          <View style={[styles.badge, { backgroundColor: theme.secondaryColor }]}>
-            <Text style={styles.badgeText}>{item.badge}</Text>
+          <View style={[styles.badge, { backgroundColor: "#fff" }]}>
+            <Text style={[styles.badgeText, { color: theme.primaryColor }]}>{item.badge}</Text>
           </View>
         )}
       </View>
@@ -70,7 +85,7 @@ export function ResponsiveTabBar({ state, descriptors, navigation }: BottomTabBa
         <Image source={{ uri: theme.logoUrl }} style={styles.brandLogo} resizeMode="contain" />
       ) : (
         <Image
-          source={require("../../assets/logo-green.png")}
+          source={require("../../assets/logo-white.png")}
           style={styles.brandLogo}
           resizeMode="contain"
         />
@@ -80,7 +95,7 @@ export function ResponsiveTabBar({ state, descriptors, navigation }: BottomTabBa
 
   if (isWide) {
     return (
-      <View style={styles.barWide}>
+      <View style={[styles.barWide, { backgroundColor: theme.primaryColor }]}>
         {Brand}
         <View style={styles.navItemsRow}>{items.map((item) => renderItem(item, "row"))}</View>
       </View>
@@ -89,16 +104,16 @@ export function ResponsiveTabBar({ state, descriptors, navigation }: BottomTabBa
 
   return (
     <View style={styles.wrapperNarrow}>
-      <View style={styles.barNarrow}>
+      <View style={[styles.barNarrow, { backgroundColor: theme.primaryColor }]}>
         {Brand}
         <Pressable onPress={() => setMenuOpen((open) => !open)} hitSlop={10} style={styles.hamburgerButton}>
-          <Ionicons name={menuOpen ? "close" : "menu"} size={26} color={theme.primaryColor} />
+          <Ionicons name={menuOpen ? "close" : "menu"} size={26} color="#fff" />
         </Pressable>
       </View>
       {menuOpen && (
         <>
           <Pressable style={styles.backdrop} onPress={() => setMenuOpen(false)} />
-          <View style={styles.dropdown}>{items.map((item) => renderItem(item, "block"))}</View>
+          <View style={styles.dropdown}>{dropdownItems.map((item) => renderItem(item, "block"))}</View>
         </>
       )}
     </View>
@@ -112,9 +127,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 24,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
   wrapperNarrow: {
     ...(Platform.OS === "web" ? ({ position: "relative" } as const) : null),
@@ -126,9 +143,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
   hamburgerButton: { padding: 4 },
   brandRow: { flexDirection: "row", alignItems: "center", gap: 6 },
@@ -143,6 +162,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 3,
     borderBottomColor: "transparent",
   },
+  navItemRowActive: { borderBottomColor: "#fff" },
   navItemStack: { flexDirection: "row", alignItems: "center", gap: 6, padding: 10 },
   navItemBlock: {
     flexDirection: "row",

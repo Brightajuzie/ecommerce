@@ -8,6 +8,7 @@ import { ProductsApi, CartApi, CategoriesApi, VendorsApi } from "../../api/endpo
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { useTheme } from "../../theme/ThemeContext";
 import { useAuthStore } from "../../store/authStore";
+import { optimizedImageUrl } from "../../utils/image";
 import type { BuyerStackParamList } from "../../navigation/types";
 
 const NEW_PRODUCT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
@@ -77,7 +78,11 @@ export function ProductDetailScreen() {
       <View style={styles.centeredColumn}>
         <View style={styles.imageWrap}>
           <View style={styles.imageBox}>
-            <Image source={{ uri: product.images[0] }} style={styles.image} resizeMode="cover" />
+            <Image
+              source={{ uri: optimizedImageUrl(product.images[0], 440) }}
+              style={styles.image}
+              resizeMode="cover"
+            />
             {isNew && (
               <View style={[styles.badge, styles.badgeNew, { backgroundColor: theme.secondaryColor }]}>
                 <Text style={styles.badgeText}>NEW</Text>
