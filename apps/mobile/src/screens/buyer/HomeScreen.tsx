@@ -12,7 +12,6 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, type CompositeNavigationProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -214,23 +213,15 @@ export function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={[theme.primaryColor, theme.secondaryColor]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.hero, { paddingTop: insets.top + 14 }]}
-      >
+      {/* Flat, exactly theme.primaryColor — same as the nav bar directly
+          above it, so the two read as one continuous brand-green block
+          instead of a bar-then-gradient seam. */}
+      <View style={[styles.hero, { backgroundColor: theme.primaryColor, paddingTop: insets.top + 14 }]}>
         <View style={styles.heroInner}>
+          {/* No logo here — the nav bar directly above already shows it
+              (same brand-green background), so repeating it would just be
+              a redundant "logo, then logo again" right at the top. */}
           <View style={styles.heroTop}>
-            {theme.logoUrl ? (
-              <Image source={{ uri: theme.logoUrl }} style={styles.logo} resizeMode="contain" />
-            ) : (
-              <Image
-                source={require("../../../assets/logo-white.png")}
-                style={styles.bundledLogo}
-                resizeMode="contain"
-              />
-            )}
             <Text style={styles.tagline}>Fresh finds, everyday prices 🌿</Text>
           </View>
 
@@ -250,7 +241,7 @@ export function HomeScreen() {
             )}
           </View>
         </View>
-      </LinearGradient>
+      </View>
 
       <View style={styles.quickActions}>
         {QUICK_ACTIONS.map((action) => (
@@ -384,9 +375,7 @@ const styles = StyleSheet.create({
   },
   heroInner: { width: "100%", maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" },
   heroTop: { marginBottom: 14 },
-  tagline: { color: "rgba(255,255,255,0.85)", fontSize: 13, marginTop: 4, fontWeight: "500" },
-  logo: { height: 32, width: 150, marginBottom: 4, alignSelf: "flex-start" },
-  bundledLogo: { height: 34, width: 78, marginBottom: 4, alignSelf: "flex-start" },
+  tagline: { color: "#fff", fontSize: 16, fontWeight: "700" },
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
