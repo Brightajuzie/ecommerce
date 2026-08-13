@@ -26,7 +26,7 @@ import { optimizedImageUrl } from "../../utils/image";
 import type { BuyerStackParamList, BuyerTabParamList } from "../../navigation/types";
 
 // Home is a tab screen but also navigates to stack-level screens (ProductDetail,
-// Register) and sibling tabs (Orders) â€” a composite type is needed so both
+// Register) and sibling tabs (Orders) — a composite type is needed so both
 // `navigate("Orders")` and `navigate("ProductDetail", {...})` type-check.
 type HomeNavigationProp = CompositeNavigationProp<
   BottomTabNavigationProp<BuyerTabParamList>,
@@ -102,8 +102,22 @@ export function HomeScreen() {
       borderBottomRightRadius: 24,
     },
     heroInner: { width: "100%" as const, maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" as const },
-    heroTop: { marginBottom: 14 },
-    tagline: { color: "#fff", fontSize: 16, fontWeight: "700" as const },
+    heroTop: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      justifyContent: "space-between" as const,
+      marginBottom: 14,
+    },
+    tagline: { color: "#fff", fontSize: 16, fontWeight: "700" as const, flexShrink: 1 },
+    themeToggle: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      backgroundColor: "rgba(255,255,255,0.18)",
+      marginLeft: 10,
+    },
     searchBar: {
       flexDirection: "row" as const,
       alignItems: "center" as const,
@@ -259,7 +273,7 @@ export function HomeScreen() {
   }, [products, categories]);
 
   // Rendered inside both FlatLists' ListHeaderComponent (not as a static
-  // sibling of the hero) so it scrolls away with the rest of the content â€”
+  // sibling of the hero) so it scrolls away with the rest of the content —
   // only the search header stays pinned above the list.
   const categoryGridElement = (
     <View style={styles.categoryGrid}>
@@ -326,16 +340,27 @@ export function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Flat, exactly theme.primaryColor â€” same as the nav bar directly
+      {/* Flat, exactly theme.primaryColor — same as the nav bar directly
           above it, so the two read as one continuous brand-green block
           instead of a bar-then-gradient seam. */}
       <View style={[styles.hero, { backgroundColor: theme.primaryColor, paddingTop: insets.top + 14 }]}>
         <View style={styles.heroInner}>
-          {/* No logo here â€” the nav bar directly above already shows it
+          {/* No logo here — the nav bar directly above already shows it
               (same brand-green background), so repeating it would just be
               a redundant "logo, then logo again" right at the top. */}
           <View style={styles.heroTop}>
-            <Text style={styles.tagline}>Fresh finds, everyday prices ðŸŒ¿</Text>
+            <Text style={styles.tagline}>Fresh finds, everyday prices 🌿</Text>
+            {/* Quick day/night switch, separate from the fuller Light/Dark/
+                System picker on Profile — tapping here always sets an
+                explicit mode (never "system"), since a single tap toggling
+                between exactly two states is the whole point of a switch. */}
+            <Pressable
+              onPress={() => theme.setMode(theme.scheme === "dark" ? "light" : "dark")}
+              hitSlop={8}
+              style={styles.themeToggle}
+            >
+              <Ionicons name={theme.scheme === "dark" ? "sunny" : "moon"} size={18} color="#fff" />
+            </Pressable>
           </View>
 
           <View style={styles.searchBar}>
