@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
@@ -9,6 +9,7 @@ import type { AdminUserDto } from "@ikaystores/shared";
 import { AdminUsersApi } from "../../api/endpoints";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { useTheme } from "../../theme/ThemeContext";
+import { useThemedStyles } from "../../theme/useThemedStyles";
 import type { AdminStackParamList } from "../../navigation/types";
 
 const MAX_CONTENT_WIDTH = 800;
@@ -19,6 +20,59 @@ export function AdminUsersScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AdminStackParamList>>();
   const theme = useTheme();
   const [search, setSearch] = useState("");
+  const styles = useThemedStyles((colors) => ({
+    container: { flex: 1, backgroundColor: colors.background, paddingTop: 60 },
+    centeredColumn: { width: "100%" as const, maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" as const, paddingHorizontal: 16 },
+    headerRow: { flexDirection: "row" as const, alignItems: "center" as const, justifyContent: "space-between" as const, marginBottom: 16, gap: 12 },
+    title: { fontSize: 26, fontWeight: "800" as const, color: colors.text },
+    searchWrap: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 8,
+      backgroundColor: colors.surface,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      marginBottom: 16,
+      shadowColor: "#000",
+      shadowOpacity: colors.shadowOpacity,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 1,
+    },
+    search: {
+      flex: 1,
+      paddingVertical: 12,
+      fontSize: 15,
+      color: colors.text,
+    },
+    loading: { marginTop: 40 },
+    list: { paddingBottom: 24 },
+    empty: { alignItems: "center" as const, marginTop: 40, gap: 8 },
+    emptyText: { color: colors.textMuted },
+    row: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      justifyContent: "space-between" as const,
+      gap: 12,
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 14,
+      marginBottom: 10,
+      shadowColor: "#000",
+      shadowOpacity: colors.shadowOpacity,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 1,
+    },
+    rowBody: { flex: 1 },
+    rowName: { fontSize: 15, fontWeight: "700" as const, color: colors.text },
+    rowEmail: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
+    rowVendor: { fontSize: 12, color: colors.textFaint, marginTop: 2 },
+    badgeColumn: { gap: 6, alignItems: "flex-end" as const },
+    roleBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
+    suspendedBadge: { backgroundColor: colors.danger },
+    badgeText: { color: "#fff", fontSize: 10, fontWeight: "700" as const },
+  }));
 
   const usersQuery = useQuery({
     queryKey: ["adminUsers", search],
@@ -33,11 +87,11 @@ export function AdminUsersScreen() {
           <PrimaryButton title="+ Add user" onPress={() => navigation.navigate("UserForm", undefined)} />
         </View>
         <View style={styles.searchWrap}>
-          <Ionicons name="search" size={16} color="#9CA3AF" />
+          <Ionicons name="search" size={16} color={theme.colors.textFaint} />
           <TextInput
             style={styles.search}
             placeholder="Search by name or email..."
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={theme.colors.textFaint}
             value={search}
             onChangeText={setSearch}
           />
@@ -54,7 +108,7 @@ export function AdminUsersScreen() {
           ListEmptyComponent={
             <View style={styles.centeredColumn}>
               <View style={styles.empty}>
-                <Ionicons name="people-outline" size={32} color="#9CA3AF" />
+                <Ionicons name="people-outline" size={32} color={theme.colors.textFaint} />
                 <Text style={styles.emptyText}>No users found.</Text>
               </View>
             </View>
@@ -78,7 +132,7 @@ export function AdminUsersScreen() {
                   <View
                     style={[
                       styles.roleBadge,
-                      { backgroundColor: item.role === UserRole.VENDOR ? theme.primaryColor : "#6B7280" },
+                      { backgroundColor: item.role === UserRole.VENDOR ? theme.primaryColor : theme.colors.textMuted },
                     ]}
                   >
                     <Text style={styles.badgeText}>{item.role}</Text>
@@ -89,7 +143,7 @@ export function AdminUsersScreen() {
                     </View>
                   )}
                 </View>
-                <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+                <Ionicons name="chevron-forward" size={18} color={theme.colors.textFaint} />
               </Pressable>
             </View>
           )}
@@ -98,57 +152,3 @@ export function AdminUsersScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F9FAFB", paddingTop: 60 },
-  centeredColumn: { width: "100%", maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center", paddingHorizontal: 16 },
-  headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16, gap: 12 },
-  title: { fontSize: 26, fontWeight: "800", color: "#111827" },
-  searchWrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
-  },
-  search: {
-    flex: 1,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: "#111827",
-  },
-  loading: { marginTop: 40 },
-  list: { paddingBottom: 24 },
-  empty: { alignItems: "center", marginTop: 40, gap: 8 },
-  emptyText: { color: "#6B7280" },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
-  },
-  rowBody: { flex: 1 },
-  rowName: { fontSize: 15, fontWeight: "700", color: "#111827" },
-  rowEmail: { fontSize: 13, color: "#6B7280", marginTop: 2 },
-  rowVendor: { fontSize: 12, color: "#9CA3AF", marginTop: 2 },
-  badgeColumn: { gap: 6, alignItems: "flex-end" },
-  roleBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
-  suspendedBadge: { backgroundColor: "#DC2626" },
-  badgeText: { color: "#fff", fontSize: 10, fontWeight: "700" },
-});

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Alert, Image, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Image, ScrollView, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -8,6 +8,9 @@ import { UsersApi, VendorsApi } from "../../api/endpoints";
 import { pickAndUploadImage, ImagePickerCancelledError } from "../../api/upload";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { useAuthStore } from "../../store/authStore";
+import { useTheme } from "../../theme/ThemeContext";
+import { useThemedStyles } from "../../theme/useThemedStyles";
+import type { ThemeColors } from "../../theme/colors";
 import type { VendorStackParamList } from "../../navigation/types";
 
 type DocumentField = "businessRegistrationDocUrl" | "governmentIdDocUrl";
@@ -16,7 +19,42 @@ export function VendorPendingScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<VendorStackParamList>>();
   const logout = useAuthStore((s) => s.logout);
   const queryClient = useQueryClient();
+  const theme = useTheme();
   const [uploadingField, setUploadingField] = useState<DocumentField | null>(null);
+  const styles = useThemedStyles((colors) => ({
+    container: { flex: 1, backgroundColor: colors.background },
+    content: { padding: 24, paddingTop: 80 },
+    title: { fontSize: 22, fontWeight: "800" as const, color: colors.text, marginBottom: 12, textAlign: "center" as const },
+    body: { fontSize: 15, color: colors.textMuted, textAlign: "center" as const, marginBottom: 24, lineHeight: 22 },
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: 14,
+      padding: 16,
+      marginBottom: 20,
+      shadowColor: "#000",
+      shadowOpacity: colors.shadowOpacity,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 1,
+    },
+    cardHeader: { flexDirection: "row" as const, alignItems: "center" as const, gap: 8, marginBottom: 6 },
+    cardLabel: { fontSize: 15, fontWeight: "700" as const, color: colors.text },
+    cardHint: { color: colors.textMuted, fontSize: 13, marginBottom: 12, lineHeight: 18 },
+    docRow: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 12,
+      paddingVertical: 10,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    docThumbnail: { width: 48, height: 48, borderRadius: 8, backgroundColor: colors.surfaceAlt },
+    docThumbnailEmpty: { alignItems: "center" as const, justifyContent: "center" as const },
+    docBody: { flex: 1 },
+    docLabel: { fontSize: 14, fontWeight: "700" as const, color: colors.text },
+    docHint: { fontSize: 12, color: colors.textFaint, marginTop: 2 },
+    docAction: { fontSize: 13, fontWeight: "700" as const, color: theme.primaryColor, marginTop: 4 },
+  }));
 
   const meQuery = useQuery({ queryKey: ["me"], queryFn: UsersApi.me });
   const vendorQuery = useQuery({ queryKey: ["vendorMe"], queryFn: VendorsApi.me });
@@ -64,7 +102,7 @@ export function VendorPendingScreen() {
           <Ionicons
             name={identityVerified ? "shield-checkmark" : "shield-outline"}
             size={20}
-            color={identityVerified ? "#059669" : "#6B7280"}
+            color={identityVerified ? theme.colors.success : theme.colors.textMuted}
           />
           <Text style={styles.cardLabel}>Identity verification</Text>
         </View>
@@ -93,6 +131,8 @@ export function VendorPendingScreen() {
           url={vendorQuery.data?.businessRegistrationDocUrl ?? null}
           uploading={uploadingField === "businessRegistrationDocUrl"}
           onUpload={() => handleUpload("businessRegistrationDocUrl")}
+          colors={theme.colors}
+          actionColor={theme.primaryColor}
         />
         <DocumentRow
           label="Government-issued ID"
@@ -100,6 +140,8 @@ export function VendorPendingScreen() {
           url={vendorQuery.data?.governmentIdDocUrl ?? null}
           uploading={uploadingField === "governmentIdDocUrl"}
           onUpload={() => handleUpload("governmentIdDocUrl")}
+          colors={theme.colors}
+          actionColor={theme.primaryColor}
         />
       </View>
 
@@ -114,68 +156,53 @@ function DocumentRow({
   url,
   uploading,
   onUpload,
+  colors,
+  actionColor,
 }: {
   label: string;
   hint: string;
   url: string | null;
   uploading: boolean;
   onUpload: () => void;
+  colors: ThemeColors;
+  actionColor: string;
 }) {
+  const styles = useThemedStyles((c) => ({
+    docRow: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 12,
+      paddingVertical: 10,
+      borderTopWidth: 1,
+      borderTopColor: c.border,
+    },
+    docThumbnail: { width: 48, height: 48, borderRadius: 8, backgroundColor: c.surfaceAlt },
+    docThumbnailEmpty: { alignItems: "center" as const, justifyContent: "center" as const },
+    docBody: { flex: 1 },
+    docLabel: { fontSize: 14, fontWeight: "700" as const, color: c.text },
+    docHint: { fontSize: 12, color: c.textFaint, marginTop: 2 },
+  }));
+
   return (
     <View style={styles.docRow}>
       {url ? (
         <Image source={{ uri: url }} style={styles.docThumbnail} />
       ) : (
         <View style={[styles.docThumbnail, styles.docThumbnailEmpty]}>
-          <Ionicons name="document-outline" size={22} color="#9CA3AF" />
+          <Ionicons name="document-outline" size={22} color={colors.textFaint} />
         </View>
       )}
       <View style={styles.docBody}>
         <Text style={styles.docLabel}>{label}</Text>
         <Text style={styles.docHint}>{hint}</Text>
         <Text
-          style={styles.docAction}
+          style={{ fontSize: 13, fontWeight: "700", color: actionColor, marginTop: 4 }}
           onPress={uploading ? undefined : onUpload}
         >
           {uploading ? "Uploading…" : url ? "Replace" : "Upload"}
         </Text>
       </View>
-      {url && !uploading && <Ionicons name="checkmark-circle" size={20} color="#059669" />}
+      {url && !uploading && <Ionicons name="checkmark-circle" size={20} color={colors.success} />}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F9FAFB" },
-  content: { padding: 24, paddingTop: 80 },
-  title: { fontSize: 22, fontWeight: "800", color: "#111827", marginBottom: 12, textAlign: "center" },
-  body: { fontSize: 15, color: "#6B7280", textAlign: "center", marginBottom: 24, lineHeight: 22 },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
-  },
-  cardHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 },
-  cardLabel: { fontSize: 15, fontWeight: "700", color: "#111827" },
-  cardHint: { color: "#6B7280", fontSize: 13, marginBottom: 12, lineHeight: 18 },
-  docRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: "#F3F4F6",
-  },
-  docThumbnail: { width: 48, height: 48, borderRadius: 8, backgroundColor: "#F3F4F6" },
-  docThumbnailEmpty: { alignItems: "center", justifyContent: "center" },
-  docBody: { flex: 1 },
-  docLabel: { fontSize: 14, fontWeight: "700", color: "#111827" },
-  docHint: { fontSize: 12, color: "#9CA3AF", marginTop: 2 },
-  docAction: { fontSize: 13, fontWeight: "700", color: "#15803D", marginTop: 4 },
-});

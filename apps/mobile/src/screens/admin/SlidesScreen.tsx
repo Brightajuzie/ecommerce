@@ -1,16 +1,34 @@
-import { ActivityIndicator, Alert, FlatList, Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, Image, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { SlideDto } from "@ikaystores/shared";
 import { SlidesApi } from "../../api/endpoints";
 import { PrimaryButton } from "../../components/PrimaryButton";
+import { useTheme } from "../../theme/ThemeContext";
+import { useThemedStyles } from "../../theme/useThemedStyles";
 import type { AdminStackParamList } from "../../navigation/types";
 
 export function SlidesScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AdminStackParamList>>();
+  const theme = useTheme();
   const queryClient = useQueryClient();
   const slidesQuery = useQuery({ queryKey: ["adminSlides"], queryFn: SlidesApi.listAll });
+  const styles = useThemedStyles((colors) => ({
+    container: { flex: 1, backgroundColor: colors.surface, paddingTop: 60, paddingHorizontal: 16 },
+    center: { flex: 1, alignItems: "center" as const, justifyContent: "center" as const },
+    header: { flexDirection: "row" as const, justifyContent: "space-between" as const, alignItems: "center" as const, marginBottom: 16 },
+    title: { fontSize: 28, fontWeight: "800" as const, color: colors.text },
+    empty: { textAlign: "center" as const, marginTop: 40, color: colors.textMuted },
+    card: { flexDirection: "row" as const, marginBottom: 14, gap: 12 },
+    thumbnail: { width: 90, height: 60, borderRadius: 8, backgroundColor: colors.border },
+    cardBody: { flex: 1, justifyContent: "center" as const },
+    slideTitle: { fontWeight: "700" as const, color: colors.text },
+    slideMeta: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+    actionsRow: { flexDirection: "row" as const, gap: 16, marginTop: 8 },
+    actionText: { color: colors.text, fontWeight: "600" as const },
+    deleteText: { color: colors.danger, fontWeight: "600" as const },
+  }));
 
   const reorderMutation = useMutation({
     mutationFn: (orderedIds: string[]) => SlidesApi.reorder({ orderedIds }),
@@ -33,7 +51,7 @@ export function SlidesScreen() {
   if (slidesQuery.isLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator />
+        <ActivityIndicator color={theme.primaryColor} />
       </View>
     );
   }
@@ -91,19 +109,3 @@ export function SlidesScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff", paddingTop: 60, paddingHorizontal: 16 },
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
-  title: { fontSize: 28, fontWeight: "800", color: "#111827" },
-  empty: { textAlign: "center", marginTop: 40, color: "#6B7280" },
-  card: { flexDirection: "row", marginBottom: 14, gap: 12 },
-  thumbnail: { width: 90, height: 60, borderRadius: 8, backgroundColor: "#E5E7EB" },
-  cardBody: { flex: 1, justifyContent: "center" },
-  slideTitle: { fontWeight: "700", color: "#111827" },
-  slideMeta: { fontSize: 12, color: "#6B7280", marginTop: 2 },
-  actionsRow: { flexDirection: "row", gap: 16, marginTop: 8 },
-  actionText: { color: "#111827", fontWeight: "600" },
-  deleteText: { color: "#DC2626", fontWeight: "600" },
-});

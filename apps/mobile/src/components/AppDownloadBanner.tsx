@@ -1,6 +1,7 @@
-import { Alert, Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Linking, Platform, Pressable, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../theme/ThemeContext";
+import { useThemedStyles } from "../theme/useThemedStyles";
 
 // EAS free-tier build artifacts expire ~30 days after the build (this one on
 // 2026-09-06) — replace with a permanent host (own storage, Play Store listing)
@@ -15,6 +16,37 @@ const IOS_APP_URL: string | null = null;
 
 export function AppDownloadBanner() {
   const theme = useTheme();
+  const styles = useThemedStyles((colors) => ({
+    wrapper: {
+      flexDirection: "row" as const,
+      flexWrap: "wrap" as const,
+      alignItems: "center" as const,
+      justifyContent: "space-between" as const,
+      gap: 12,
+      backgroundColor: colors.surfaceAlt,
+      borderRadius: 14,
+      padding: 16,
+      marginHorizontal: 16,
+      marginBottom: 16,
+    },
+    textBlock: { flexShrink: 1, minWidth: 180 },
+    title: { fontSize: 15, fontWeight: "800" as const, color: colors.text },
+    subtitle: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+    buttonRow: { flexDirection: "row" as const, gap: 10 },
+    button: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 8,
+      paddingHorizontal: 14,
+      paddingVertical: 9,
+      borderRadius: 10,
+    },
+    buttonMuted: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+    buttonCaption: { fontSize: 9, color: "rgba(255,255,255,0.85)", fontWeight: "600" as const },
+    buttonCaptionMuted: { color: colors.textMuted },
+    buttonLabel: { fontSize: 13, color: "#fff", fontWeight: "800" as const },
+    buttonLabelMuted: { color: colors.text },
+  }));
 
   if (Platform.OS !== "web") {
     return null;
@@ -57,7 +89,7 @@ export function AppDownloadBanner() {
           </View>
         </Pressable>
         <Pressable style={[styles.button, styles.buttonMuted]} onPress={handleIosPress}>
-          <Ionicons name="logo-apple" size={20} color="#111827" />
+          <Ionicons name="logo-apple" size={20} color={theme.colors.text} />
           <View>
             <Text style={[styles.buttonCaption, styles.buttonCaptionMuted]}>Download for</Text>
             <Text style={[styles.buttonLabel, styles.buttonLabelMuted]}>iOS</Text>
@@ -67,35 +99,3 @@ export function AppDownloadBanner() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  wrapper: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-    backgroundColor: "#F9FAFB",
-    borderRadius: 14,
-    padding: 16,
-    marginHorizontal: 16,
-    marginBottom: 16,
-  },
-  textBlock: { flexShrink: 1, minWidth: 180 },
-  title: { fontSize: 15, fontWeight: "800", color: "#111827" },
-  subtitle: { fontSize: 12, color: "#6B7280", marginTop: 2 },
-  buttonRow: { flexDirection: "row", gap: 10 },
-  button: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 10,
-  },
-  buttonMuted: { backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
-  buttonCaption: { fontSize: 9, color: "rgba(255,255,255,0.85)", fontWeight: "600" },
-  buttonCaptionMuted: { color: "#6B7280" },
-  buttonLabel: { fontSize: 13, color: "#fff", fontWeight: "800" },
-  buttonLabelMuted: { color: "#111827" },
-});

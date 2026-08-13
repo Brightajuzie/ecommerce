@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Alert, Image, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Image, KeyboardAvoidingView, Platform, Pressable, Text, View } from "react-native";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQueryClient } from "@tanstack/react-query";
@@ -9,6 +9,7 @@ import { AuthApi, CartApi } from "../../api/endpoints";
 import { getErrorMessage } from "../../api/errorMessage";
 import { useAuthStore } from "../../store/authStore";
 import { syncGuestCartToServer } from "../../store/guestCartStore";
+import { useThemedStyles } from "../../theme/useThemedStyles";
 import type { BuyerStackParamList } from "../../navigation/types";
 
 const MAX_CONTENT_WIDTH = 440;
@@ -21,6 +22,14 @@ export function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const styles = useThemedStyles((colors) => ({
+    flex: { flex: 1 },
+    container: { flex: 1, justifyContent: "center" as const, padding: 24, backgroundColor: colors.surface },
+    centeredColumn: { width: "100%" as const, maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" as const },
+    logo: { height: 56, width: 128, marginBottom: 12, alignSelf: "flex-start" as const },
+    subtitle: { fontSize: 16, color: colors.textMuted, marginBottom: 32 },
+    link: { marginTop: 20, textAlign: "center" as const, color: colors.text, fontWeight: "600" as const },
+  }));
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -100,12 +109,3 @@ export function LoginScreen() {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  container: { flex: 1, justifyContent: "center", padding: 24, backgroundColor: "#fff" },
-  centeredColumn: { width: "100%", maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" },
-  logo: { height: 56, width: 128, marginBottom: 12, alignSelf: "flex-start" },
-  subtitle: { fontSize: 16, color: "#6B7280", marginBottom: 32 },
-  link: { marginTop: 20, textAlign: "center", color: "#111827", fontWeight: "600" },
-});

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { Alert, Image, Pressable, ScrollView, Switch, Text, View } from "react-native";
 import { useRoute, useNavigation, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -7,6 +7,7 @@ import { SlidesApi } from "../../api/endpoints";
 import { pickAndUploadImage, ImagePickerCancelledError } from "../../api/upload";
 import { FormInput } from "../../components/FormInput";
 import { PrimaryButton } from "../../components/PrimaryButton";
+import { useThemedStyles } from "../../theme/useThemedStyles";
 import type { AdminStackParamList } from "../../navigation/types";
 
 export function SlideFormScreen() {
@@ -23,6 +24,32 @@ export function SlideFormScreen() {
   const [linkUrl, setLinkUrl] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const styles = useThemedStyles((colors) => ({
+    container: { flex: 1, backgroundColor: colors.surface },
+    content: { padding: 20, paddingTop: 60, paddingBottom: 40 },
+    title: { fontSize: 24, fontWeight: "800" as const, color: colors.text, marginBottom: 16 },
+    sectionLabel: { fontSize: 14, fontWeight: "700" as const, color: colors.text, marginBottom: 8 },
+    preview: { width: "100%" as const, aspectRatio: 2.4, borderRadius: 8, backgroundColor: colors.border, marginBottom: 12 },
+    previewPlaceholder: { alignItems: "center" as const, justifyContent: "center" as const },
+    placeholderText: { color: colors.textMuted },
+    uploadButton: {
+      alignSelf: "flex-start" as const,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: 8,
+      backgroundColor: colors.surfaceAlt,
+      marginBottom: 20,
+    },
+    uploadButtonText: { color: colors.text, fontWeight: "600" as const },
+    disabled: { opacity: 0.5 },
+    toggleRow: {
+      flexDirection: "row" as const,
+      justifyContent: "space-between" as const,
+      alignItems: "center" as const,
+      marginBottom: 24,
+    },
+    toggleLabel: { fontSize: 15, color: colors.text, fontWeight: "600" as const, flex: 1 },
+  }));
 
   useEffect(() => {
     if (existingSlide) {
@@ -113,30 +140,3 @@ export function SlideFormScreen() {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  content: { padding: 20, paddingTop: 60, paddingBottom: 40 },
-  title: { fontSize: 24, fontWeight: "800", color: "#111827", marginBottom: 16 },
-  sectionLabel: { fontSize: 14, fontWeight: "700", color: "#111827", marginBottom: 8 },
-  preview: { width: "100%", aspectRatio: 2.4, borderRadius: 8, backgroundColor: "#E5E7EB", marginBottom: 12 },
-  previewPlaceholder: { alignItems: "center", justifyContent: "center" },
-  placeholderText: { color: "#6B7280" },
-  uploadButton: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: "#F3F4F6",
-    marginBottom: 20,
-  },
-  uploadButtonText: { color: "#111827", fontWeight: "600" },
-  disabled: { opacity: 0.5 },
-  toggleRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  toggleLabel: { fontSize: 15, color: "#111827", fontWeight: "600", flex: 1 },
-});

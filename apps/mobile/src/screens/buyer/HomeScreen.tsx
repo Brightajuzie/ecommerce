@@ -5,7 +5,6 @@ import {
   Image,
   Pressable,
   RefreshControl,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -22,11 +21,12 @@ import { ProductsApi, CategoriesApi } from "../../api/endpoints";
 import { AppDownloadBanner } from "../../components/AppDownloadBanner";
 import { SlideCarousel } from "../../components/SlideCarousel";
 import { useTheme } from "../../theme/ThemeContext";
+import { useThemedStyles } from "../../theme/useThemedStyles";
 import { optimizedImageUrl } from "../../utils/image";
 import type { BuyerStackParamList, BuyerTabParamList } from "../../navigation/types";
 
 // Home is a tab screen but also navigates to stack-level screens (ProductDetail,
-// Register) and sibling tabs (Orders) — a composite type is needed so both
+// Register) and sibling tabs (Orders) â€” a composite type is needed so both
 // `navigate("Orders")` and `navigate("ProductDetail", {...})` type-check.
 type HomeNavigationProp = CompositeNavigationProp<
   BottomTabNavigationProp<BuyerTabParamList>,
@@ -93,6 +93,119 @@ export function HomeScreen() {
   const cardMaxWidthPercent = 100 / numColumns - (numColumns > 2 ? 1.5 : 3);
   const [search, setSearch] = useState("");
   const [categoryId, setCategoryId] = useState<string | undefined>(undefined);
+  const styles = useThemedStyles((colors) => ({
+    container: { flex: 1, backgroundColor: colors.background },
+    hero: {
+      paddingHorizontal: 16,
+      paddingBottom: 22,
+      borderBottomLeftRadius: 24,
+      borderBottomRightRadius: 24,
+    },
+    heroInner: { width: "100%" as const, maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" as const },
+    heroTop: { marginBottom: 14 },
+    tagline: { color: "#fff", fontSize: 16, fontWeight: "700" as const },
+    searchBar: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 8,
+      backgroundColor: colors.surface,
+      borderRadius: 14,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      shadowColor: "#000",
+      shadowOpacity: 0.12,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 3,
+    },
+    searchInput: { flex: 1, fontSize: 14, color: colors.text, padding: 0 },
+    quickActions: {
+      flexDirection: "row" as const,
+      flexShrink: 0,
+      paddingHorizontal: 16,
+      marginTop: 14,
+      gap: 10,
+    },
+    quickActionCard: {
+      flexGrow: 1,
+      flexBasis: 0,
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      gap: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 14,
+      borderRadius: 14,
+    },
+    quickActionText: { fontWeight: "700" as const, fontSize: 12, flexShrink: 1 },
+    categoryGrid: {
+      flexDirection: "row" as const,
+      flexWrap: "wrap" as const,
+      flexShrink: 0,
+      justifyContent: "flex-start" as const,
+      paddingHorizontal: 16,
+      marginTop: 18,
+      marginBottom: 6,
+      gap: 14,
+    },
+    productList: { flex: 1 },
+    categoryTile: { width: 76, alignItems: "center" as const },
+    categoryIconBox: {
+      width: 56,
+      height: 56,
+      borderRadius: 16,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      marginBottom: 6,
+    },
+    categoryTileText: { fontWeight: "600" as const, fontSize: 11, color: colors.textSecondary, textAlign: "center" as const },
+    loading: { marginTop: 40 },
+    loadingMore: { marginVertical: 20 },
+    sectionHeader: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 6,
+      paddingHorizontal: 16,
+      marginTop: 8,
+      marginBottom: 10,
+    },
+    sectionHeaderText: { fontSize: 16, fontWeight: "800" as const, flex: 1 },
+    seeAll: { flexDirection: "row" as const, alignItems: "center" as const, gap: 2 },
+    seeAllText: { fontSize: 12, fontWeight: "700" as const },
+    grid: { paddingBottom: 24, paddingHorizontal: 10, width: "100%" as const, maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" as const },
+    groupedList: { paddingBottom: 24, width: "100%" as const, maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" as const },
+    categorySection: { marginBottom: 12 },
+    categoryRowContent: { paddingHorizontal: 12, gap: 4 },
+    card: {
+      flex: 1,
+      margin: 6,
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      padding: 10,
+      maxWidth: "47%" as const,
+      shadowColor: "#000",
+      shadowOpacity: 0.06,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 2,
+    },
+    rowCard: { flexGrow: 0, flexShrink: 0, flexBasis: 150, width: 150, maxWidth: 150 },
+    cardImageWrap: { position: "relative" as const, marginBottom: 8 },
+    cardImage: { width: "100%" as const, aspectRatio: 1, borderRadius: 12, backgroundColor: colors.placeholderBg },
+    badge: {
+      position: "absolute" as const,
+      paddingHorizontal: 7,
+      paddingVertical: 3,
+      borderRadius: 8,
+    },
+    badgeNew: { top: 6, left: 6 },
+    badgeStock: { top: 6, right: 6, backgroundColor: colors.danger },
+    badgeText: { color: "#fff", fontSize: 10, fontWeight: "800" as const },
+    cardTitle: { fontSize: 14, fontWeight: "700" as const, color: colors.text },
+    cardPrice: { fontSize: 14, fontWeight: "800" as const, marginTop: 3 },
+    empty: { alignItems: "center" as const, marginTop: 60, gap: 8 },
+    emptyText: { color: colors.textMuted },
+  }));
 
   const categoriesQuery = useQuery({
     queryKey: ["categories"],
@@ -146,7 +259,7 @@ export function HomeScreen() {
   }, [products, categories]);
 
   // Rendered inside both FlatLists' ListHeaderComponent (not as a static
-  // sibling of the hero) so it scrolls away with the rest of the content —
+  // sibling of the hero) so it scrolls away with the rest of the content â€”
   // only the search header stays pinned above the list.
   const categoryGridElement = (
     <View style={styles.categoryGrid}>
@@ -213,30 +326,30 @@ export function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Flat, exactly theme.primaryColor — same as the nav bar directly
+      {/* Flat, exactly theme.primaryColor â€” same as the nav bar directly
           above it, so the two read as one continuous brand-green block
           instead of a bar-then-gradient seam. */}
       <View style={[styles.hero, { backgroundColor: theme.primaryColor, paddingTop: insets.top + 14 }]}>
         <View style={styles.heroInner}>
-          {/* No logo here — the nav bar directly above already shows it
+          {/* No logo here â€” the nav bar directly above already shows it
               (same brand-green background), so repeating it would just be
               a redundant "logo, then logo again" right at the top. */}
           <View style={styles.heroTop}>
-            <Text style={styles.tagline}>Fresh finds, everyday prices 🌿</Text>
+            <Text style={styles.tagline}>Fresh finds, everyday prices ðŸŒ¿</Text>
           </View>
 
           <View style={styles.searchBar}>
-            <Ionicons name="search" size={18} color="#9CA3AF" />
+            <Ionicons name="search" size={18} color={theme.colors.textFaint} />
             <TextInput
               style={styles.searchInput}
               placeholder="Search products..."
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={theme.colors.textFaint}
               value={search}
               onChangeText={setSearch}
             />
             {search.length > 0 && (
               <Pressable onPress={() => setSearch("")} hitSlop={8}>
-                <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+                <Ionicons name="close-circle" size={18} color={theme.colors.textFaint} />
               </Pressable>
             )}
           </View>
@@ -295,7 +408,7 @@ export function HomeScreen() {
           }
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Ionicons name="leaf-outline" size={32} color="#9CA3AF" />
+              <Ionicons name="leaf-outline" size={32} color={theme.colors.textFaint} />
               <Text style={styles.emptyText}>No products found.</Text>
             </View>
           }
@@ -355,7 +468,7 @@ export function HomeScreen() {
           }
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Ionicons name="leaf-outline" size={32} color="#9CA3AF" />
+              <Ionicons name="leaf-outline" size={32} color={theme.colors.textFaint} />
               <Text style={styles.emptyText}>No products found.</Text>
             </View>
           }
@@ -365,126 +478,3 @@ export function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  hero: {
-    paddingHorizontal: 16,
-    paddingBottom: 22,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-  },
-  heroInner: { width: "100%", maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" },
-  heroTop: { marginBottom: 14 },
-  tagline: { color: "#fff", fontSize: 16, fontWeight: "700" },
-  searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
-  },
-  searchInput: { flex: 1, fontSize: 14, color: "#111827", padding: 0 },
-  quickActions: {
-    flexDirection: "row",
-    flexShrink: 0,
-    paddingHorizontal: 16,
-    marginTop: 14,
-    gap: 10,
-  },
-  quickActionCard: {
-    flexGrow: 1,
-    flexBasis: 0,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 14,
-    borderRadius: 14,
-  },
-  quickActionText: { fontWeight: "700", fontSize: 12, flexShrink: 1 },
-  // Wraps to as many rows as needed instead of scrolling horizontally, so
-  // every category is visible up front with no swipe required. flexShrink: 0
-  // keeps it from being squeezed by the sibling product FlatList's flex — see
-  // productList below for the other half of that fix.
-  categoryGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    flexShrink: 0,
-    justifyContent: "flex-start",
-    paddingHorizontal: 16,
-    marginTop: 18,
-    marginBottom: 6,
-    gap: 14,
-  },
-  // Gives the product FlatList itself (not just its contentContainer) a
-  // bounded flex-basis, so it consumes remaining column space instead of
-  // sizing to its full natural (huge) content height and shrinking siblings.
-  productList: { flex: 1 },
-  categoryTile: { width: 76, alignItems: "center" },
-  categoryIconBox: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 6,
-  },
-  categoryTileText: { fontWeight: "600", fontSize: 11, color: "#374151", textAlign: "center" },
-  loading: { marginTop: 40 },
-  loadingMore: { marginVertical: 20 },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 16,
-    marginTop: 8,
-    marginBottom: 10,
-  },
-  sectionHeaderText: { fontSize: 16, fontWeight: "800", flex: 1 },
-  seeAll: { flexDirection: "row", alignItems: "center", gap: 2 },
-  seeAllText: { fontSize: 12, fontWeight: "700" },
-  grid: { paddingBottom: 24, paddingHorizontal: 10, width: "100%", maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" },
-  groupedList: { paddingBottom: 24, width: "100%", maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" },
-  categorySection: { marginBottom: 12 },
-  categoryRowContent: { paddingHorizontal: 12, gap: 4 },
-  card: {
-    flex: 1,
-    margin: 6,
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 10,
-    maxWidth: "47%",
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  // `flex: 0` (not flexGrow/flexShrink individually) sets flex-basis: 0% on
-  // web, which wins over `width` on the main axis of a horizontal FlatList
-  // and collapses the card — explicit flexBasis avoids that entirely.
-  rowCard: { flexGrow: 0, flexShrink: 0, flexBasis: 150, width: 150, maxWidth: 150 },
-  cardImageWrap: { position: "relative", marginBottom: 8 },
-  cardImage: { width: "100%", aspectRatio: 1, borderRadius: 12, backgroundColor: "#F0FDF4" },
-  badge: {
-    position: "absolute",
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 8,
-  },
-  badgeNew: { top: 6, left: 6 },
-  badgeStock: { top: 6, right: 6, backgroundColor: "#DC2626" },
-  badgeText: { color: "#fff", fontSize: 10, fontWeight: "800" },
-  cardTitle: { fontSize: 14, fontWeight: "700", color: "#111827" },
-  cardPrice: { fontSize: 14, fontWeight: "800", marginTop: 3 },
-  empty: { alignItems: "center", marginTop: 60, gap: 8 },
-  emptyText: { color: "#6B7280" },
-});

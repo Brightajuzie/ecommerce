@@ -1,23 +1,30 @@
 import { useState } from "react";
-import {
-  FlatList,
-  Image,
-  type LayoutChangeEvent,
-  Linking,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { FlatList, Image, type LayoutChangeEvent, Linking, Pressable, Text, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import type { SlideDto } from "@ikaystores/shared";
 import { SlidesApi } from "../api/endpoints";
 import { optimizedImageUrl } from "../utils/image";
+import { useThemedStyles } from "../theme/useThemedStyles";
 
 export function SlideCarousel() {
   const slidesQuery = useQuery({ queryKey: ["slides"], queryFn: SlidesApi.listActive });
   const slides = slidesQuery.data ?? [];
   const [slideWidth, setSlideWidth] = useState(0);
+  const styles = useThemedStyles((colors) => ({
+    wrapper: { marginBottom: 16 },
+    slide: { height: 140, borderRadius: 12, overflow: "hidden" as const },
+    image: { width: "100%" as const, height: "100%" as const, backgroundColor: colors.border },
+    captionOverlay: {
+      position: "absolute" as const,
+      bottom: 0,
+      left: 0,
+      right: 0,
+      backgroundColor: "rgba(0,0,0,0.45)",
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+    },
+    captionText: { color: "#fff", fontWeight: "700" as const, fontSize: 14 },
+  }));
 
   if (slides.length === 0) {
     return null;
@@ -64,19 +71,3 @@ export function SlideCarousel() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  wrapper: { marginBottom: 16 },
-  slide: { height: 140, borderRadius: 12, overflow: "hidden" },
-  image: { width: "100%", height: "100%", backgroundColor: "#E5E7EB" },
-  captionOverlay: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: "rgba(0,0,0,0.45)",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  captionText: { color: "#fff", fontWeight: "700", fontSize: 14 },
-});

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Image, Pressable, ScrollView, Text, View } from "react-native";
 import { useRoute, useNavigation, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -10,6 +10,7 @@ import { pickAndUploadImage, ImagePickerCancelledError } from "../../api/upload"
 import { FormInput } from "../../components/FormInput";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { useTheme } from "../../theme/ThemeContext";
+import { useThemedStyles } from "../../theme/useThemedStyles";
 import { optimizedImageUrl } from "../../utils/image";
 
 const MAX_CONTENT_WIDTH = 700;
@@ -46,6 +47,70 @@ export function ProductFormScreen() {
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [status, setStatus] = useState<ProductStatus>(ProductStatus.ACTIVE);
   const [uploading, setUploading] = useState(false);
+  const styles = useThemedStyles((colors) => ({
+    container: { flex: 1, backgroundColor: colors.background },
+    content: { paddingTop: 60, paddingBottom: 32 },
+    centeredColumn: { width: "100%" as const, maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" as const, paddingHorizontal: 20 },
+    headerRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: 10, marginBottom: 16 },
+    backButton: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.surface,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+    },
+    title: { fontSize: 22, fontWeight: "800" as const, color: colors.text },
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: 14,
+      padding: 16,
+      marginBottom: 14,
+      shadowColor: "#000",
+      shadowOpacity: colors.shadowOpacity,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 1,
+    },
+    twoCol: { flexDirection: "row" as const, gap: 12 },
+    twoColItem: { flex: 1 },
+    sectionLabel: { fontSize: 14, fontWeight: "700" as const, color: colors.text, marginBottom: 10 },
+    sectionLabelSpaced: { marginTop: 16 },
+    photoRow: { flexDirection: "row" as const, flexWrap: "wrap" as const, gap: 10 },
+    thumbnailWrap: { position: "relative" as const },
+    thumbnail: { width: 76, height: 76, borderRadius: 10, backgroundColor: colors.placeholderBg },
+    removeBadge: {
+      position: "absolute" as const,
+      top: -6,
+      right: -6,
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      backgroundColor: colors.danger,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+    },
+    removeBadgeText: { color: "#fff", fontSize: 14, fontWeight: "700" as const, lineHeight: 16 },
+    addPhotoButton: {
+      width: 76,
+      height: 76,
+      borderRadius: 10,
+      borderWidth: 1.5,
+      borderColor: colors.borderStrong,
+      borderStyle: "dashed" as const,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      gap: 4,
+      padding: 4,
+    },
+    addPhotoText: { fontSize: 10, color: colors.textMuted, textAlign: "center" as const, fontWeight: "600" as const },
+    disabled: { opacity: 0.5 },
+    chipRow: { flexDirection: "row" as const, flexWrap: "wrap" as const, gap: 8 },
+    chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: colors.surfaceAlt },
+    chipText: { color: colors.textSecondary, fontWeight: "600" as const },
+    chipTextActive: { color: "#fff" },
+    deleteButtonWrap: { marginTop: 12 },
+  }));
 
   useEffect(() => {
     if (productQuery.data) {
@@ -121,7 +186,7 @@ export function ProductFormScreen() {
       <View style={styles.centeredColumn}>
         <View style={styles.headerRow}>
           <Pressable onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={22} color="#111827" />
+            <Ionicons name="arrow-back" size={22} color={theme.colors.text} />
           </Pressable>
           <Text style={styles.title}>{productId ? "Edit product" : "New product"}</Text>
         </View>
@@ -176,7 +241,7 @@ export function ProductFormScreen() {
               onPress={handleAddPhoto}
               disabled={uploading}
             >
-              <Ionicons name="camera" size={20} color="#6B7280" />
+              <Ionicons name="camera" size={20} color={theme.colors.textMuted} />
               <Text style={styles.addPhotoText}>{uploading ? "Uploading…" : "Add photo"}</Text>
             </Pressable>
           </View>
@@ -241,68 +306,3 @@ export function ProductFormScreen() {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F9FAFB" },
-  content: { paddingTop: 60, paddingBottom: 32 },
-  centeredColumn: { width: "100%", maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center", paddingHorizontal: 20 },
-  headerRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 16 },
-  backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: { fontSize: 22, fontWeight: "800", color: "#111827" },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 14,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
-  },
-  twoCol: { flexDirection: "row", gap: 12 },
-  twoColItem: { flex: 1 },
-  sectionLabel: { fontSize: 14, fontWeight: "700", color: "#111827", marginBottom: 10 },
-  sectionLabelSpaced: { marginTop: 16 },
-  photoRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  thumbnailWrap: { position: "relative" },
-  thumbnail: { width: 76, height: 76, borderRadius: 10, backgroundColor: "#F0FDF4" },
-  removeBadge: {
-    position: "absolute",
-    top: -6,
-    right: -6,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: "#DC2626",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  removeBadgeText: { color: "#fff", fontSize: 14, fontWeight: "700", lineHeight: 16 },
-  addPhotoButton: {
-    width: 76,
-    height: 76,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: "#D1D5DB",
-    borderStyle: "dashed",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 4,
-    padding: 4,
-  },
-  addPhotoText: { fontSize: 10, color: "#6B7280", textAlign: "center", fontWeight: "600" },
-  disabled: { opacity: 0.5 },
-  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: "#F3F4F6" },
-  chipText: { color: "#374151", fontWeight: "600" },
-  chipTextActive: { color: "#fff" },
-  deleteButtonWrap: { marginTop: 12 },
-});

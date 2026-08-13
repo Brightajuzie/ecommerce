@@ -1,15 +1,57 @@
-import { ActivityIndicator, FlatList, Image, Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, Image, Linking, Pressable, Text, View } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import type { VendorProfileDto } from "@ikaystores/shared";
 import { VendorsApi } from "../../api/endpoints";
 import { PrimaryButton } from "../../components/PrimaryButton";
+import { useTheme } from "../../theme/ThemeContext";
+import { useThemedStyles } from "../../theme/useThemedStyles";
+import type { ThemeColors } from "../../theme/colors";
 
 const MAX_CONTENT_WIDTH = 800;
 
 export function PendingVendorsScreen() {
+  const theme = useTheme();
   const queryClient = useQueryClient();
   const pendingQuery = useQuery({ queryKey: ["pendingVendors"], queryFn: VendorsApi.pending });
+  const styles = useThemedStyles((colors) => ({
+    container: { flex: 1, backgroundColor: colors.background, paddingTop: 60 },
+    centeredColumn: { width: "100%" as const, maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" as const, paddingHorizontal: 16 },
+    center: { flex: 1, alignItems: "center" as const, justifyContent: "center" as const },
+    title: { fontSize: 26, fontWeight: "800" as const, color: colors.text, marginBottom: 16 },
+    list: { paddingBottom: 24 },
+    empty: { alignItems: "center" as const, marginTop: 40, gap: 8 },
+    emptyText: { color: colors.textMuted },
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: 14,
+      padding: 16,
+      marginBottom: 12,
+      shadowColor: "#000",
+      shadowOpacity: colors.shadowOpacity,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 1,
+    },
+    headerRow: { flexDirection: "row" as const, justifyContent: "space-between" as const, alignItems: "flex-start" as const, gap: 8 },
+    businessName: { fontWeight: "700" as const, fontSize: 16, color: colors.text, flex: 1 },
+    badge: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
+    },
+    badgeText: { color: "#fff", fontSize: 11, fontWeight: "700" as const },
+    description: { color: colors.textMuted, marginTop: 4 },
+    docsRow: { flexDirection: "row" as const, gap: 16, marginTop: 14 },
+    docThumbWrap: { alignItems: "center" as const, width: 72 },
+    docThumb: { width: 56, height: 56, borderRadius: 8, backgroundColor: colors.surfaceAlt },
+    docThumbEmpty: { alignItems: "center" as const, justifyContent: "center" as const },
+    docThumbLabel: { fontSize: 10, color: colors.textMuted, marginTop: 4, textAlign: "center" as const },
+    actions: { flexDirection: "row" as const, gap: 10, marginTop: 12 },
+  }));
 
   const approve = useMutation({
     mutationFn: (id: string) => VendorsApi.approve(id),
@@ -23,7 +65,7 @@ export function PendingVendorsScreen() {
   if (pendingQuery.isLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator />
+        <ActivityIndicator color={theme.primaryColor} />
       </View>
     );
   }
@@ -40,7 +82,7 @@ export function PendingVendorsScreen() {
         ListEmptyComponent={
           <View style={styles.centeredColumn}>
             <View style={styles.empty}>
-              <Ionicons name="storefront-outline" size={32} color="#9CA3AF" />
+              <Ionicons name="storefront-outline" size={32} color={theme.colors.textFaint} />
               <Text style={styles.emptyText}>No pending applications.</Text>
             </View>
           </View>
@@ -53,7 +95,7 @@ export function PendingVendorsScreen() {
                 <View
                   style={[
                     styles.badge,
-                    { backgroundColor: item.identityVerified ? "#059669" : "#9CA3AF" },
+                    { backgroundColor: item.identityVerified ? theme.colors.success : theme.colors.textFaint },
                   ]}
                 >
                   <Ionicons
@@ -69,8 +111,8 @@ export function PendingVendorsScreen() {
               {item.description ? <Text style={styles.description}>{item.description}</Text> : null}
 
               <View style={styles.docsRow}>
-                <DocThumb label="Business reg." url={item.businessRegistrationDocUrl} />
-                <DocThumb label="Government ID" url={item.governmentIdDocUrl} />
+                <DocThumb label="Business reg." url={item.businessRegistrationDocUrl} colors={theme.colors} />
+                <DocThumb label="Government ID" url={item.governmentIdDocUrl} colors={theme.colors} />
               </View>
 
               <View style={styles.actions}>
@@ -89,7 +131,14 @@ export function PendingVendorsScreen() {
   );
 }
 
-function DocThumb({ label, url }: { label: string; url: string | null }) {
+function DocThumb({ label, url, colors }: { label: string; url: string | null; colors: ThemeColors }) {
+  const styles = useThemedStyles((c) => ({
+    docThumbWrap: { alignItems: "center" as const, width: 72 },
+    docThumb: { width: 56, height: 56, borderRadius: 8, backgroundColor: c.surfaceAlt },
+    docThumbEmpty: { alignItems: "center" as const, justifyContent: "center" as const },
+    docThumbLabel: { fontSize: 10, color: c.textMuted, marginTop: 4, textAlign: "center" as const },
+  }));
+
   return (
     <Pressable
       style={styles.docThumbWrap}
@@ -100,7 +149,7 @@ function DocThumb({ label, url }: { label: string; url: string | null }) {
         <Image source={{ uri: url }} style={styles.docThumb} />
       ) : (
         <View style={[styles.docThumb, styles.docThumbEmpty]}>
-          <Ionicons name="document-outline" size={18} color="#9CA3AF" />
+          <Ionicons name="document-outline" size={18} color={colors.textFaint} />
         </View>
       )}
       <Text style={styles.docThumbLabel} numberOfLines={1}>
@@ -109,42 +158,3 @@ function DocThumb({ label, url }: { label: string; url: string | null }) {
     </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F9FAFB", paddingTop: 60 },
-  centeredColumn: { width: "100%", maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center", paddingHorizontal: 16 },
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  title: { fontSize: 26, fontWeight: "800", color: "#111827", marginBottom: 16 },
-  list: { paddingBottom: 24 },
-  empty: { alignItems: "center", marginTop: 40, gap: 8 },
-  emptyText: { color: "#6B7280" },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
-  },
-  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 8 },
-  businessName: { fontWeight: "700", fontSize: 16, color: "#111827", flex: 1 },
-  badge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  badgeText: { color: "#fff", fontSize: 11, fontWeight: "700" },
-  description: { color: "#6B7280", marginTop: 4 },
-  docsRow: { flexDirection: "row", gap: 16, marginTop: 14 },
-  docThumbWrap: { alignItems: "center", width: 72 },
-  docThumb: { width: 56, height: 56, borderRadius: 8, backgroundColor: "#F3F4F6" },
-  docThumbEmpty: { alignItems: "center", justifyContent: "center" },
-  docThumbLabel: { fontSize: 10, color: "#6B7280", marginTop: 4, textAlign: "center" },
-  actions: { flexDirection: "row", gap: 10, marginTop: 12 },
-});

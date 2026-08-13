@@ -1,4 +1,6 @@
-import { StyleSheet, Text, TextInput, TextInputProps, View } from "react-native";
+import { Text, TextInput, TextInputProps, View } from "react-native";
+import { useTheme } from "../theme/ThemeContext";
+import { useThemedStyles } from "../theme/useThemedStyles";
 
 interface FormInputProps extends TextInputProps {
   label: string;
@@ -6,12 +8,30 @@ interface FormInputProps extends TextInputProps {
 }
 
 export function FormInput({ label, error, style, ...rest }: FormInputProps) {
+  const theme = useTheme();
+  const styles = useThemedStyles((colors) => ({
+    container: { marginBottom: 16 },
+    label: { fontSize: 14, fontWeight: "600" as const, marginBottom: 6, color: colors.text },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.borderStrong,
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontSize: 16,
+      color: colors.text,
+      backgroundColor: colors.surface,
+    },
+    inputError: { borderColor: colors.danger },
+    error: { color: colors.danger, fontSize: 12, marginTop: 4 },
+  }));
+
   return (
     <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
       <TextInput
         style={[styles.input, error ? styles.inputError : null, style]}
-        placeholderTextColor="#9CA3AF"
+        placeholderTextColor={theme.colors.textFaint}
         autoCapitalize="none"
         {...rest}
       />
@@ -19,19 +39,3 @@ export function FormInput({ label, error, style, ...rest }: FormInputProps) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { marginBottom: 16 },
-  label: { fontSize: 14, fontWeight: "600", marginBottom: 6, color: "#111827" },
-  input: {
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-    color: "#111827",
-  },
-  inputError: { borderColor: "#DC2626" },
-  error: { color: "#DC2626", fontSize: 12, marginTop: 4 },
-});

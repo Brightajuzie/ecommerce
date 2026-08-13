@@ -6,7 +6,6 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  StyleSheet,
   Switch,
   Text,
   View,
@@ -22,6 +21,8 @@ import { AuthApi, CartApi } from "../../api/endpoints";
 import { getErrorMessage } from "../../api/errorMessage";
 import { useAuthStore } from "../../store/authStore";
 import { syncGuestCartToServer } from "../../store/guestCartStore";
+import { useTheme } from "../../theme/ThemeContext";
+import { useThemedStyles } from "../../theme/useThemedStyles";
 import type { BuyerStackParamList } from "../../navigation/types";
 
 const MAX_CONTENT_WIDTH = 440;
@@ -31,6 +32,47 @@ export function RegisterScreen() {
   const route = useRoute<RouteProp<BuyerStackParamList, "Register">>();
   const queryClient = useQueryClient();
   const setSession = useAuthStore((s) => s.setSession);
+  const theme = useTheme();
+  const styles = useThemedStyles((colors, t) => ({
+    flex: { flex: 1 },
+    container: { padding: 24, backgroundColor: colors.background, flexGrow: 1, justifyContent: "center" as const },
+    centeredColumn: { width: "100%" as const, maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" as const },
+    logo: { height: 48, width: 110, marginBottom: 8, alignSelf: "flex-start" as const },
+    title: { fontSize: 26, fontWeight: "800" as const, color: colors.text, marginBottom: 20 },
+    errorBanner: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 8,
+      backgroundColor: t.scheme === "dark" ? "#3A1518" : "#FEF2F2",
+      borderWidth: 1,
+      borderColor: t.scheme === "dark" ? "#5B2226" : "#FECACA",
+      borderRadius: 8,
+      padding: 12,
+      marginBottom: 16,
+    },
+    errorBannerText: { flex: 1, color: t.scheme === "dark" ? "#FCA5A5" : "#B91C1C", fontSize: 13, fontWeight: "600" as const },
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: 14,
+      padding: 16,
+      marginBottom: 16,
+      shadowColor: "#000",
+      shadowOpacity: colors.shadowOpacity,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 1,
+    },
+    toggleRow: {
+      flexDirection: "row" as const,
+      justifyContent: "space-between" as const,
+      alignItems: "center" as const,
+      marginBottom: 16,
+    },
+    toggleTextWrap: { flex: 1, marginRight: 12 },
+    toggleLabel: { fontSize: 15, color: colors.text, fontWeight: "700" as const },
+    toggleHint: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+    link: { marginTop: 20, textAlign: "center" as const, color: colors.text, fontWeight: "600" as const },
+  }));
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -126,7 +168,7 @@ export function RegisterScreen() {
 
           {errorMessage && (
             <View style={styles.errorBanner}>
-              <Ionicons name="alert-circle" size={18} color="#DC2626" />
+              <Ionicons name="alert-circle" size={18} color={theme.colors.danger} />
               <Text style={styles.errorBannerText}>{errorMessage}</Text>
             </View>
           )}
@@ -180,44 +222,3 @@ export function RegisterScreen() {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  container: { padding: 24, backgroundColor: "#F9FAFB", flexGrow: 1, justifyContent: "center" },
-  centeredColumn: { width: "100%", maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" },
-  logo: { height: 48, width: 110, marginBottom: 8, alignSelf: "flex-start" },
-  title: { fontSize: 26, fontWeight: "800", color: "#111827", marginBottom: 20 },
-  errorBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: "#FEF2F2",
-    borderWidth: 1,
-    borderColor: "#FECACA",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-  },
-  errorBannerText: { flex: 1, color: "#B91C1C", fontSize: 13, fontWeight: "600" },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
-  },
-  toggleRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  toggleTextWrap: { flex: 1, marginRight: 12 },
-  toggleLabel: { fontSize: 15, color: "#111827", fontWeight: "700" },
-  toggleHint: { fontSize: 12, color: "#6B7280", marginTop: 2 },
-  link: { marginTop: 20, textAlign: "center", color: "#111827", fontWeight: "600" },
-});

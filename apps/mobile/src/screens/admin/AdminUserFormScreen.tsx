@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { ScrollView, Switch, Text, View } from "react-native";
 import { useRoute, useNavigation, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -8,6 +8,7 @@ import { AdminUsersApi } from "../../api/endpoints";
 import { getErrorMessage } from "../../api/errorMessage";
 import { FormInput } from "../../components/FormInput";
 import { PrimaryButton } from "../../components/PrimaryButton";
+import { useThemedStyles } from "../../theme/useThemedStyles";
 import type { AdminStackParamList } from "../../navigation/types";
 
 // Create/edit for BUYER/VENDOR accounts only — the backend rejects any
@@ -33,6 +34,28 @@ export function AdminUserFormScreen() {
   const [businessName, setBusinessName] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const styles = useThemedStyles((colors, t) => ({
+    container: { flex: 1, backgroundColor: colors.surface },
+    content: { padding: 20, paddingTop: 60, paddingBottom: 40 },
+    title: { fontSize: 24, fontWeight: "800" as const, color: colors.text, marginBottom: 16 },
+    errorBanner: {
+      backgroundColor: t.scheme === "dark" ? "#3A1518" : "#FEF2F2",
+      borderWidth: 1,
+      borderColor: t.scheme === "dark" ? "#5B2226" : "#FECACA",
+      borderRadius: 8,
+      padding: 12,
+      marginBottom: 16,
+    },
+    errorBannerText: { color: t.scheme === "dark" ? "#FCA5A5" : "#B91C1C", fontSize: 13, fontWeight: "600" as const },
+    toggleRow: {
+      flexDirection: "row" as const,
+      justifyContent: "space-between" as const,
+      alignItems: "center" as const,
+      marginTop: 8,
+      marginBottom: 16,
+    },
+    toggleLabel: { fontSize: 15, color: colors.text, fontWeight: "600" as const, flex: 1 },
+  }));
 
   useEffect(() => {
     if (userQuery.data) {
@@ -144,26 +167,3 @@ export function AdminUserFormScreen() {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  content: { padding: 20, paddingTop: 60, paddingBottom: 40 },
-  title: { fontSize: 24, fontWeight: "800", color: "#111827", marginBottom: 16 },
-  errorBanner: {
-    backgroundColor: "#FEF2F2",
-    borderWidth: 1,
-    borderColor: "#FECACA",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-  },
-  errorBannerText: { color: "#B91C1C", fontSize: 13, fontWeight: "600" },
-  toggleRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 8,
-    marginBottom: 16,
-  },
-  toggleLabel: { fontSize: 15, color: "#111827", fontWeight: "600", flex: 1 },
-});

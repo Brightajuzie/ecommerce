@@ -1,4 +1,4 @@
-import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, Image, Pressable, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -7,6 +7,7 @@ import type { CartItemDto } from "@ikaystores/shared";
 import { CartApi } from "../../api/endpoints";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { useTheme } from "../../theme/ThemeContext";
+import { useThemedStyles } from "../../theme/useThemedStyles";
 import { useAuthStore } from "../../store/authStore";
 import { useGuestCartStore } from "../../store/guestCartStore";
 import { optimizedImageUrl } from "../../utils/image";
@@ -22,6 +23,52 @@ export function CartScreen() {
   const guestItems = useGuestCartStore((s) => s.items);
   const guestUpdateItem = useGuestCartStore((s) => s.updateItem);
   const guestRemoveItem = useGuestCartStore((s) => s.removeItem);
+  const styles = useThemedStyles((colors) => ({
+    container: { flex: 1, backgroundColor: colors.background, paddingTop: 60 },
+    centeredColumn: { width: "100%" as const, maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" as const, paddingHorizontal: 16 },
+    center: { flex: 1, alignItems: "center" as const, justifyContent: "center" as const },
+    title: { fontSize: 28, fontWeight: "800" as const, color: colors.text, marginBottom: 16 },
+    list: { paddingBottom: 20 },
+    empty: { alignItems: "center" as const, marginTop: 60, gap: 8 },
+    emptyText: { color: colors.textMuted },
+    card: {
+      flexDirection: "row" as const,
+      backgroundColor: colors.surface,
+      borderRadius: 14,
+      padding: 12,
+      marginBottom: 10,
+      shadowColor: "#000",
+      shadowOpacity: colors.shadowOpacity,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 1,
+    },
+    image: { width: 72, height: 72, borderRadius: 10, backgroundColor: colors.placeholderBg },
+    rowBody: { flex: 1, marginLeft: 12, justifyContent: "center" as const },
+    itemTitle: { fontSize: 15, fontWeight: "700" as const, color: colors.text },
+    itemPrice: { fontSize: 14, fontWeight: "800" as const, marginTop: 3 },
+    actionsRow: { flexDirection: "row" as const, alignItems: "center" as const, justifyContent: "space-between" as const, marginTop: 10 },
+    stepper: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 2,
+      backgroundColor: colors.surfaceAlt,
+      borderRadius: 8,
+      padding: 3,
+    },
+    stepperButton: { width: 28, height: 28, alignItems: "center" as const, justifyContent: "center" as const, borderRadius: 6 },
+    stepperValue: { fontSize: 14, fontWeight: "700" as const, color: colors.text, minWidth: 24, textAlign: "center" as const },
+    footer: {
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      backgroundColor: colors.surface,
+      paddingTop: 16,
+      paddingBottom: 24,
+    },
+    totalRow: { flexDirection: "row" as const, justifyContent: "space-between" as const, alignItems: "baseline" as const, marginBottom: 12 },
+    totalLabel: { fontSize: 14, color: colors.textMuted, fontWeight: "600" as const },
+    totalValue: { fontSize: 20, fontWeight: "800" as const, color: colors.text },
+  }));
 
   const cartQuery = useQuery({ queryKey: ["cart"], queryFn: CartApi.get, enabled: !!user });
 
@@ -74,7 +121,7 @@ export function CartScreen() {
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Ionicons name="cart-outline" size={36} color="#9CA3AF" />
+            <Ionicons name="cart-outline" size={36} color={theme.colors.textFaint} />
             <Text style={styles.emptyText}>Your cart is empty.</Text>
           </View>
         }
@@ -95,18 +142,18 @@ export function CartScreen() {
                       style={styles.stepperButton}
                       onPress={() => handleUpdate(item, Math.max(1, item.quantity - 1))}
                     >
-                      <Ionicons name="remove" size={16} color="#111827" />
+                      <Ionicons name="remove" size={16} color={theme.colors.text} />
                     </Pressable>
                     <Text style={styles.stepperValue}>{item.quantity}</Text>
                     <Pressable
                       style={styles.stepperButton}
                       onPress={() => handleUpdate(item, item.quantity + 1)}
                     >
-                      <Ionicons name="add" size={16} color="#111827" />
+                      <Ionicons name="add" size={16} color={theme.colors.text} />
                     </Pressable>
                   </View>
                   <Pressable onPress={() => handleRemove(item)} hitSlop={8}>
-                    <Ionicons name="trash-outline" size={18} color="#DC2626" />
+                    <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
                   </Pressable>
                 </View>
               </View>
@@ -138,50 +185,3 @@ export function CartScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F9FAFB", paddingTop: 60 },
-  centeredColumn: { width: "100%", maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center", paddingHorizontal: 16 },
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  title: { fontSize: 28, fontWeight: "800", color: "#111827", marginBottom: 16 },
-  list: { paddingBottom: 20 },
-  empty: { alignItems: "center", marginTop: 60, gap: 8 },
-  emptyText: { color: "#6B7280" },
-  card: {
-    flexDirection: "row",
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    padding: 12,
-    marginBottom: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
-  },
-  image: { width: 72, height: 72, borderRadius: 10, backgroundColor: "#F0FDF4" },
-  rowBody: { flex: 1, marginLeft: 12, justifyContent: "center" },
-  itemTitle: { fontSize: 15, fontWeight: "700", color: "#111827" },
-  itemPrice: { fontSize: 14, fontWeight: "800", marginTop: 3 },
-  actionsRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 10 },
-  stepper: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-    backgroundColor: "#F3F4F6",
-    borderRadius: 8,
-    padding: 3,
-  },
-  stepperButton: { width: 28, height: 28, alignItems: "center", justifyContent: "center", borderRadius: 6 },
-  stepperValue: { fontSize: 14, fontWeight: "700", color: "#111827", minWidth: 24, textAlign: "center" },
-  footer: {
-    borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
-    backgroundColor: "#fff",
-    paddingTop: 16,
-    paddingBottom: 24,
-  },
-  totalRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 },
-  totalLabel: { fontSize: 14, color: "#6B7280", fontWeight: "600" },
-  totalValue: { fontSize: 20, fontWeight: "800", color: "#111827" },
-});

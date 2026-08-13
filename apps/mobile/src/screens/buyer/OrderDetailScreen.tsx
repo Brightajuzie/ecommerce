@@ -1,4 +1,4 @@
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -9,6 +9,7 @@ import { OrdersApi, PaymentsApi } from "../../api/endpoints";
 import { getErrorMessage } from "../../api/errorMessage";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { useTheme } from "../../theme/ThemeContext";
+import { useThemedStyles } from "../../theme/useThemedStyles";
 import type { BuyerStackParamList } from "../../navigation/types";
 
 const MAX_CONTENT_WIDTH = 700;
@@ -23,6 +24,65 @@ export function OrderDetailScreen() {
   const route = useRoute<RouteProp<BuyerStackParamList, "OrderDetail">>();
   const navigation = useNavigation<NativeStackNavigationProp<BuyerStackParamList>>();
   const theme = useTheme();
+  const styles = useThemedStyles((colors) => ({
+    container: { flex: 1, backgroundColor: colors.background },
+    center: { flex: 1, alignItems: "center" as const, justifyContent: "center" as const },
+    scrollContent: { paddingTop: 60, paddingHorizontal: 16, paddingBottom: 24 },
+    centeredColumn: { width: "100%" as const, maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" as const },
+    receiptCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      padding: 24,
+      alignItems: "center" as const,
+      marginBottom: 16,
+      shadowColor: "#000",
+      shadowOpacity: colors.shadowOpacity + 0.01,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 2,
+    },
+    receiptLabel: { fontSize: 12, fontWeight: "800" as const, color: colors.textFaint, letterSpacing: 2 },
+    title: { fontSize: 22, fontWeight: "800" as const, color: colors.text, marginTop: 6 },
+    date: { fontSize: 13, color: colors.textMuted, marginTop: 4 },
+    statusPill: { marginTop: 14, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16 },
+    statusPillText: { fontWeight: "800" as const, fontSize: 13 },
+    retryBlock: { width: "100%" as const, marginTop: 16 },
+    errorBanner: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 8,
+      backgroundColor: theme.scheme === "dark" ? "#3A1518" : "#FEF2F2",
+      borderWidth: 1,
+      borderColor: theme.scheme === "dark" ? "#5B2226" : "#FECACA",
+      borderRadius: 8,
+      padding: 10,
+      marginBottom: 10,
+    },
+    errorBannerText: { flex: 1, color: theme.scheme === "dark" ? "#FCA5A5" : "#B91C1C", fontSize: 12, fontWeight: "600" as const },
+    qrWrap: { alignItems: "center" as const, marginTop: 20 },
+    qrHint: { fontSize: 12, color: colors.textFaint, marginTop: 10, textAlign: "center" as const },
+    divider: { height: 1, backgroundColor: colors.border, width: "100%" as const, marginVertical: 20 },
+    total: { fontSize: 18, fontWeight: "800" as const, color: colors.text },
+    vendorCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 10,
+      padding: 12,
+      marginBottom: 12,
+      shadowColor: "#000",
+      shadowOpacity: colors.shadowOpacity,
+      shadowRadius: 5,
+      shadowOffset: { width: 0, height: 1 },
+      elevation: 1,
+    },
+    vendorStatus: { fontWeight: "700" as const, marginBottom: 8, color: colors.text },
+    itemRow: { flexDirection: "row" as const, justifyContent: "space-between" as const, paddingVertical: 4 },
+    itemTitle: { color: colors.textSecondary },
+    itemPrice: { color: colors.text, fontWeight: "600" as const },
+  }));
+  const statusColors =
+    theme.scheme === "dark"
+      ? { paid: "#0F3D22", pending: "#3F2D07", paidFg: "#4ADE80", pendingFg: "#FBBF24" }
+      : { paid: "#DCFCE7", pending: "#FEF3C7", paidFg: "#15803D", pendingFg: "#B45309" };
   const orderQuery = useQuery({
     queryKey: ["order", route.params.orderId],
     queryFn: () => OrdersApi.findOne(route.params.orderId),
@@ -74,10 +134,10 @@ export function OrderDetailScreen() {
             <View
               style={[
                 styles.statusPill,
-                { backgroundColor: isPaid ? "#DCFCE7" : "#FEF3C7" },
+                { backgroundColor: isPaid ? statusColors.paid : statusColors.pending },
               ]}
             >
-              <Text style={[styles.statusPillText, { color: isPaid ? "#15803D" : "#B45309" }]}>
+              <Text style={[styles.statusPillText, { color: isPaid ? statusColors.paidFg : statusColors.pendingFg }]}>
                 {STATUS_LABELS[order.status] ?? order.status}
               </Text>
             </View>
@@ -86,7 +146,7 @@ export function OrderDetailScreen() {
               <View style={styles.retryBlock}>
                 {retryPayment.isError && (
                   <View style={styles.errorBanner}>
-                    <Ionicons name="alert-circle" size={16} color="#DC2626" />
+                    <Ionicons name="alert-circle" size={16} color={theme.colors.danger} />
                     <Text style={styles.errorBannerText}>
                       {getErrorMessage(retryPayment.error, "Could not start payment. Please try again.")}
                     </Text>
@@ -101,6 +161,9 @@ export function OrderDetailScreen() {
             )}
 
             <View style={styles.qrWrap}>
+              {/* The QR code itself stays fixed dark-on-white regardless of
+                  app theme — scanners need real contrast, and an inverted
+                  (light-on-dark) QR image is unreliable to scan. */}
               <QRCode value={`IKAYSTORES:ORDER:${order.id}`} size={160} color="#111827" backgroundColor="#fff" />
               <Text style={styles.qrHint}>Scan at pickup or for order verification</Text>
             </View>
@@ -133,59 +196,3 @@ export function OrderDetailScreen() {
     />
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F9FAFB" },
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  scrollContent: { paddingTop: 60, paddingHorizontal: 16, paddingBottom: 24 },
-  centeredColumn: { width: "100%", maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" },
-  receiptCard: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 24,
-    alignItems: "center",
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  receiptLabel: { fontSize: 12, fontWeight: "800", color: "#9CA3AF", letterSpacing: 2 },
-  title: { fontSize: 22, fontWeight: "800", color: "#111827", marginTop: 6 },
-  date: { fontSize: 13, color: "#6B7280", marginTop: 4 },
-  statusPill: { marginTop: 14, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16 },
-  statusPillText: { fontWeight: "800", fontSize: 13 },
-  retryBlock: { width: "100%", marginTop: 16 },
-  errorBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: "#FEF2F2",
-    borderWidth: 1,
-    borderColor: "#FECACA",
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 10,
-  },
-  errorBannerText: { flex: 1, color: "#B91C1C", fontSize: 12, fontWeight: "600" },
-  qrWrap: { alignItems: "center", marginTop: 20 },
-  qrHint: { fontSize: 12, color: "#9CA3AF", marginTop: 10, textAlign: "center" },
-  divider: { height: 1, backgroundColor: "#E5E7EB", width: "100%", marginVertical: 20 },
-  total: { fontSize: 18, fontWeight: "800", color: "#111827" },
-  vendorCard: {
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.04,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 1,
-  },
-  vendorStatus: { fontWeight: "700", marginBottom: 8, color: "#111827" },
-  itemRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 4 },
-  itemTitle: { color: "#374151" },
-  itemPrice: { color: "#111827", fontWeight: "600" },
-});

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ActivityIndicator, Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Image, Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { useRoute, useNavigation, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ProductsApi, CartApi, CategoriesApi, VendorsApi } from "../../api/endpoints";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { useTheme } from "../../theme/ThemeContext";
+import { useThemedStyles } from "../../theme/useThemedStyles";
 import { useAuthStore } from "../../store/authStore";
 import { optimizedImageUrl } from "../../utils/image";
 import type { BuyerStackParamList } from "../../navigation/types";
@@ -22,6 +23,67 @@ export function ProductDetailScreen() {
   const theme = useTheme();
   const user = useAuthStore((s) => s.user);
   const [quantity, setQuantity] = useState(1);
+  const styles = useThemedStyles((colors) => ({
+    container: { flex: 1, backgroundColor: colors.surface },
+    scrollContent: {},
+    center: { flex: 1, alignItems: "center" as const, justifyContent: "center" as const },
+    centeredColumn: { width: "100%" as const, maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" as const },
+    imageWrap: { alignItems: "center" as const, paddingTop: 16, backgroundColor: colors.surface },
+    imageBox: { position: "relative" as const, width: "55%" as const, maxWidth: 220 },
+    image: { width: "100%" as const, aspectRatio: 1, borderRadius: 16, backgroundColor: colors.placeholderBg },
+    badge: {
+      position: "absolute" as const,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
+    },
+    badgeNew: { top: 12, left: 12 },
+    badgeStock: { top: 12, right: 12, backgroundColor: colors.danger },
+    badgeText: { color: "#fff", fontSize: 11, fontWeight: "800" as const },
+    body: { padding: 20 },
+    metaRow: { flexDirection: "row" as const, flexWrap: "wrap" as const, gap: 8, marginBottom: 10 },
+    metaChip: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 5,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 14,
+      backgroundColor: colors.surfaceAlt,
+    },
+    metaChipText: { fontSize: 12, fontWeight: "700" as const },
+    metaChipTextMuted: { fontSize: 12, fontWeight: "700" as const, color: colors.textMuted },
+    title: { fontSize: 22, fontWeight: "700" as const, color: colors.text },
+    price: { fontSize: 20, fontWeight: "800" as const, marginTop: 8 },
+    description: { fontSize: 15, color: colors.textSecondary, marginTop: 12, lineHeight: 22 },
+    stock: { fontSize: 13, color: colors.textMuted, marginTop: 8 },
+    quantityRow: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      gap: 20,
+      marginVertical: 20,
+    },
+    quantity: { fontSize: 18, fontWeight: "700" as const, minWidth: 30, textAlign: "center" as const, color: colors.text },
+    alertBackdrop: {
+      flex: 1,
+      backgroundColor: colors.overlay,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      padding: 24,
+    },
+    alertCard: {
+      width: "100%" as const,
+      maxWidth: 380,
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      padding: 20,
+    },
+    alertHeader: { flexDirection: "row" as const, alignItems: "center" as const, gap: 8, marginBottom: 8 },
+    alertTitle: { color: colors.success, fontWeight: "800" as const, fontSize: 17 },
+    alertBody: { color: colors.textSecondary, fontSize: 14, marginBottom: 18, lineHeight: 20 },
+    alertActions: { flexDirection: "row" as const, gap: 10 },
+  }));
 
   const productQuery = useQuery({
     queryKey: ["product", route.params.productId],
@@ -107,19 +169,19 @@ export function ProductDetailScreen() {
               )}
               {vendor && (
                 <View style={styles.metaChip}>
-                  <Ionicons name="storefront" size={12} color="#6B7280" />
+                  <Ionicons name="storefront" size={12} color={theme.colors.textMuted} />
                   <Text style={styles.metaChipTextMuted}>{vendor.businessName}</Text>
                 </View>
               )}
               {product.weight && (
                 <View style={styles.metaChip}>
-                  <Ionicons name="scale" size={12} color="#6B7280" />
+                  <Ionicons name="scale" size={12} color={theme.colors.textMuted} />
                   <Text style={styles.metaChipTextMuted}>{product.weight}</Text>
                 </View>
               )}
               {product.brand && (
                 <View style={styles.metaChip}>
-                  <Ionicons name="ribbon" size={12} color="#6B7280" />
+                  <Ionicons name="ribbon" size={12} color={theme.colors.textMuted} />
                   <Text style={styles.metaChipTextMuted}>{product.brand}</Text>
                 </View>
               )}
@@ -168,7 +230,7 @@ export function ProductDetailScreen() {
         <Pressable style={styles.alertBackdrop} onPress={() => setShowAddedAlert(false)}>
           <Pressable style={styles.alertCard} onPress={(e) => e.stopPropagation()}>
             <View style={styles.alertHeader}>
-              <Ionicons name="checkmark-circle" size={22} color="#059669" />
+              <Ionicons name="checkmark-circle" size={22} color={theme.colors.success} />
               <Text style={styles.alertTitle}>Added to cart</Text>
             </View>
             <Text style={styles.alertBody}>
@@ -197,65 +259,3 @@ export function ProductDetailScreen() {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  scrollContent: {},
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  centeredColumn: { width: "100%", maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" },
-  imageWrap: { alignItems: "center", paddingTop: 16, backgroundColor: "#fff" },
-  imageBox: { position: "relative", width: "55%", maxWidth: 220 },
-  image: { width: "100%", aspectRatio: 1, borderRadius: 16, backgroundColor: "#F0FDF4" },
-  badge: {
-    position: "absolute",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  badgeNew: { top: 12, left: 12 },
-  badgeStock: { top: 12, right: 12, backgroundColor: "#DC2626" },
-  badgeText: { color: "#fff", fontSize: 11, fontWeight: "800" },
-  body: { padding: 20 },
-  metaRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 10 },
-  metaChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 14,
-    backgroundColor: "#F3F4F6",
-  },
-  metaChipText: { fontSize: 12, fontWeight: "700" },
-  metaChipTextMuted: { fontSize: 12, fontWeight: "700", color: "#6B7280" },
-  title: { fontSize: 22, fontWeight: "700", color: "#111827" },
-  price: { fontSize: 20, fontWeight: "800", marginTop: 8 },
-  description: { fontSize: 15, color: "#4B5563", marginTop: 12, lineHeight: 22 },
-  stock: { fontSize: 13, color: "#6B7280", marginTop: 8 },
-  quantityRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 20,
-    marginVertical: 20,
-  },
-  quantity: { fontSize: 18, fontWeight: "700", minWidth: 30, textAlign: "center" },
-  alertBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(17, 24, 39, 0.5)",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24,
-  },
-  alertCard: {
-    width: "100%",
-    maxWidth: 380,
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 20,
-  },
-  alertHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
-  alertTitle: { color: "#059669", fontWeight: "800", fontSize: 17 },
-  alertBody: { color: "#374151", fontSize: 14, marginBottom: 18, lineHeight: 20 },
-  alertActions: { flexDirection: "row", gap: 10 },
-});

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -9,6 +9,8 @@ import { KycApi } from "../../api/endpoints";
 import { FormInput } from "../../components/FormInput";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { getErrorMessage } from "../../api/errorMessage";
+import { useTheme } from "../../theme/ThemeContext";
+import { useThemedStyles } from "../../theme/useThemedStyles";
 import type { BuyerStackParamList } from "../../navigation/types";
 
 type IdType = "NIN" | "BVN";
@@ -16,10 +18,43 @@ type IdType = "NIN" | "BVN";
 export function IdentityVerificationScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<BuyerStackParamList>>();
   const queryClient = useQueryClient();
+  const theme = useTheme();
   const [idType, setIdType] = useState<IdType>("NIN");
   const [idNumber, setIdNumber] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<IdentityVerificationResultDto | null>(null);
+  const styles = useThemedStyles((colors) => ({
+    container: { flex: 1, backgroundColor: colors.surface },
+    content: { padding: 20, paddingTop: 60 },
+    title: { fontSize: 24, fontWeight: "800" as const, color: colors.text, marginBottom: 8 },
+    hint: { color: colors.textMuted, fontSize: 14, lineHeight: 20, marginBottom: 24 },
+    typeRow: { flexDirection: "row" as const, gap: 10, marginBottom: 16 },
+    typeOption: {
+      borderWidth: 1,
+      borderColor: colors.borderStrong,
+      borderRadius: 8,
+      paddingHorizontal: 18,
+      paddingVertical: 10,
+      fontWeight: "700" as const,
+      color: colors.textMuted,
+      overflow: "hidden" as const,
+    },
+    typeOptionActive: {
+      borderColor: theme.primaryColor,
+      backgroundColor: theme.accentColor ?? colors.placeholderBg,
+      color: theme.primaryColor,
+    },
+    errorText: { color: colors.danger, fontSize: 13, marginBottom: 16 },
+    resultCard: {
+      backgroundColor: theme.accentColor ?? colors.placeholderBg,
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 20,
+    },
+    resultHeader: { flexDirection: "row" as const, alignItems: "center" as const, gap: 6, marginBottom: 10 },
+    resultTitle: { color: colors.success, fontWeight: "800" as const, fontSize: 15 },
+    resultLine: { color: colors.text, fontSize: 14, marginTop: 4 },
+  }));
 
   const verifyMutation = useMutation({
     mutationFn: () => KycApi.verifyIdNumber({ idType, idNumber: idNumber.trim() }),
@@ -78,7 +113,7 @@ export function IdentityVerificationScreen() {
       {result && (
         <View style={styles.resultCard}>
           <View style={styles.resultHeader}>
-            <Ionicons name="shield-checkmark" size={20} color="#059669" />
+            <Ionicons name="shield-checkmark" size={20} color={theme.colors.success} />
             <Text style={styles.resultTitle}>Verified</Text>
           </View>
           {result.fullName && <Text style={styles.resultLine}>Name on record: {result.fullName}</Text>}
@@ -100,36 +135,3 @@ export function IdentityVerificationScreen() {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  content: { padding: 20, paddingTop: 60 },
-  title: { fontSize: 24, fontWeight: "800", color: "#111827", marginBottom: 8 },
-  hint: { color: "#6B7280", fontSize: 14, lineHeight: 20, marginBottom: 24 },
-  typeRow: { flexDirection: "row", gap: 10, marginBottom: 16 },
-  typeOption: {
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    borderRadius: 8,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    fontWeight: "700",
-    color: "#6B7280",
-    overflow: "hidden",
-  },
-  typeOptionActive: {
-    borderColor: "#15803D",
-    backgroundColor: "#F0FDF4",
-    color: "#15803D",
-  },
-  errorText: { color: "#DC2626", fontSize: 13, marginBottom: 16 },
-  resultCard: {
-    backgroundColor: "#F0FDF4",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-  },
-  resultHeader: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10 },
-  resultTitle: { color: "#059669", fontWeight: "800", fontSize: 15 },
-  resultLine: { color: "#111827", fontSize: 14, marginTop: 4 },
-});
