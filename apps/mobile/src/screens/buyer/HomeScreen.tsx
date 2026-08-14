@@ -19,6 +19,7 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import type { CategoryDto, ProductDto } from "@ikaystores/shared";
 import { ProductsApi, CategoriesApi } from "../../api/endpoints";
 import { AppDownloadBanner } from "../../components/AppDownloadBanner";
+import { FloatingProduce } from "../../components/FloatingProduce";
 import { SlideCarousel } from "../../components/SlideCarousel";
 import { useTheme } from "../../theme/ThemeContext";
 import { useThemedStyles } from "../../theme/useThemedStyles";
@@ -55,6 +56,13 @@ const QUICK_ACTIONS: {
     onPress: (navigation) => navigation.navigate("Orders"),
   },
 ];
+
+// The catalogue "logo" is a dedicated icon badge (not a photo/brand mark) —
+// consistent with how the other quick actions above are icon-led rather
+// than image-led, and instant to theme/re-color without an asset.
+const CATALOGUE_ICON = "grid" as const;
+const CATALOGUE_BG = "#DBEAFE";
+const CATALOGUE_COLOR = "#1D4ED8";
 
 const NEW_PRODUCT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 const LOW_STOCK_THRESHOLD = 5;
@@ -93,9 +101,15 @@ export function HomeScreen() {
   const cardMaxWidthPercent = 100 / numColumns - (numColumns > 2 ? 1.5 : 3);
   const [search, setSearch] = useState("");
   const [categoryId, setCategoryId] = useState<string | undefined>(undefined);
+  // "Browse Catalogue" forces the flat, all-products grid even with no
+  // search term or category selected — otherwise that empty-filter state
+  // would fall through to the grouped-by-category view further down.
+  const [catalogueMode, setCatalogueMode] = useState(false);
   const styles = useThemedStyles((colors) => ({
     container: { flex: 1, backgroundColor: colors.background },
     hero: {
+      position: "relative" as const,
+      overflow: "hidden" as const,
       paddingHorizontal: 16,
       paddingBottom: 22,
       borderBottomLeftRadius: 24,
@@ -150,6 +164,11 @@ export function HomeScreen() {
       paddingHorizontal: 10,
       paddingVertical: 14,
       borderRadius: 14,
+      shadowColor: "#000",
+      shadowOpacity: colors.shadowOpacity + 0.02,
+      shadowRadius: 5,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 1,
     },
     quickActionText: { fontWeight: "700" as const, fontSize: 12, flexShrink: 1 },
     categoryGrid: {
@@ -171,6 +190,11 @@ export function HomeScreen() {
       alignItems: "center" as const,
       justifyContent: "center" as const,
       marginBottom: 6,
+      shadowColor: "#000",
+      shadowOpacity: colors.shadowOpacity,
+      shadowRadius: 4,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 1,
     },
     categoryTileText: { fontWeight: "600" as const, fontSize: 11, color: colors.textSecondary, textAlign: "center" as const },
     loading: { marginTop: 40 },
@@ -194,18 +218,20 @@ export function HomeScreen() {
       flex: 1,
       margin: 6,
       backgroundColor: colors.surface,
-      borderRadius: 16,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: colors.border,
       padding: 10,
       maxWidth: "47%" as const,
       shadowColor: "#000",
-      shadowOpacity: 0.06,
+      shadowOpacity: colors.shadowOpacity + 0.01,
       shadowRadius: 6,
       shadowOffset: { width: 0, height: 2 },
       elevation: 2,
     },
     rowCard: { flexGrow: 0, flexShrink: 0, flexBasis: 150, width: 150, maxWidth: 150 },
     cardImageWrap: { position: "relative" as const, marginBottom: 8 },
-    cardImage: { width: "100%" as const, aspectRatio: 1, borderRadius: 12, backgroundColor: colors.placeholderBg },
+    cardImage: { width: "100%" as const, aspectRatio: 1, borderRadius: 14, backgroundColor: colors.placeholderBg },
     badge: {
       position: "absolute" as const,
       paddingHorizontal: 7,
@@ -253,9 +279,15 @@ export function HomeScreen() {
   };
 
   // With no active filter, group the full catalog into per-category rows
-  // (grocery-app style browsing); a selected category or search term instead
-  // shows a single flat grid of just those results.
-  const isFiltering = Boolean(search || categoryId);
+  // (grocery-app style browsing); a selected category, search term, or the
+  // "Browse Catalogue" quick action instead shows a single flat grid.
+  const isFiltering = Boolean(search || categoryId || catalogueMode);
+
+  const clearFilters = () => {
+    setSearch("");
+    setCategoryId(undefined);
+    setCatalogueMode(false);
+  };
 
   const productsByCategory = useMemo(() => {
     const grouped = new Map<string, ProductDto[]>();
@@ -282,7 +314,10 @@ export function HomeScreen() {
         return (
           <Pressable
             key={item.id}
-            onPress={() => setCategoryId(active ? undefined : item.id)}
+            onPress={() => {
+              setCatalogueMode(false);
+              setCategoryId(active ? undefined : item.id);
+            }}
             style={styles.categoryTile}
           >
             <View
@@ -344,6 +379,9 @@ export function HomeScreen() {
           above it, so the two read as one continuous brand-green block
           instead of a bar-then-gradient seam. */}
       <View style={[styles.hero, { backgroundColor: theme.primaryColor, paddingTop: insets.top + 14 }]}>
+        {/* Decorative drifting leaves/fruit, behind everything else in the
+            hero — purely atmospheric, never intercepts taps. */}
+        <FloatingProduce />
         <View style={styles.heroInner}>
           {/* No logo here — the nav bar directly above already shows it
               (same brand-green background), so repeating it would just be
@@ -382,6 +420,17 @@ export function HomeScreen() {
       </View>
 
       <View style={styles.quickActions}>
+        <Pressable
+          style={[styles.quickActionCard, { backgroundColor: CATALOGUE_BG }]}
+          onPress={() => {
+            setSearch("");
+            setCategoryId(undefined);
+            setCatalogueMode(true);
+          }}
+        >
+          <Ionicons name={CATALOGUE_ICON} size={18} color={CATALOGUE_COLOR} />
+          <Text style={[styles.quickActionText, { color: CATALOGUE_COLOR }]}>Browse Catalogue</Text>
+        </Pressable>
         {QUICK_ACTIONS.map((action) => (
           <Pressable
             key={action.label}
@@ -408,10 +457,16 @@ export function HomeScreen() {
             <>
               {categoryGridElement}
               <View style={styles.sectionHeader}>
-                <Ionicons name="leaf" size={16} color={theme.primaryColor} />
+                <Ionicons name={catalogueMode && !search && !categoryId ? CATALOGUE_ICON : "leaf"} size={16} color={theme.primaryColor} />
                 <Text style={[styles.sectionHeaderText, { color: theme.primaryColor }]}>
-                  {search ? `Results for "${search}"` : categories.find((c) => c.id === categoryId)?.name ?? "Products"}
+                  {search
+                    ? `Results for "${search}"`
+                    : categories.find((c) => c.id === categoryId)?.name ?? "Full catalogue"}
                 </Text>
+                <Pressable style={styles.seeAll} onPress={clearFilters}>
+                  <Text style={[styles.seeAllText, { color: theme.primaryColor }]}>Back</Text>
+                  <Ionicons name="close-circle" size={14} color={theme.primaryColor} />
+                </Pressable>
               </View>
             </>
           }
