@@ -30,6 +30,7 @@ export type VendorStackParamList = {
 };
 
 export type VendorTabParamList = {
+  Dashboard: undefined;
   MyProducts: undefined;
   VendorOrders: undefined;
   Wallet: undefined;
@@ -45,6 +46,7 @@ export type AdminStackParamList = {
 };
 
 export type AdminTabParamList = {
+  Dashboard: undefined;
   PendingVendors: undefined;
   Users: undefined;
   Products: undefined;

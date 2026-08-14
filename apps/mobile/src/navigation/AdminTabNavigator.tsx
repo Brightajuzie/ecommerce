@@ -1,6 +1,7 @@
 import { Platform } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
+import { AdminDashboardScreen } from "../screens/admin/AdminDashboardScreen";
 import { PendingVendorsScreen } from "../screens/admin/PendingVendorsScreen";
 import { AdminUsersScreen } from "../screens/admin/AdminUsersScreen";
 import { AdminProductsScreen } from "../screens/admin/AdminProductsScreen";
@@ -16,6 +17,7 @@ import type { AdminTabParamList } from "./types";
 const Tab = createBottomTabNavigator<AdminTabParamList>();
 
 const TAB_ICONS: Record<keyof AdminTabParamList, keyof typeof Ionicons.glyphMap> = {
+  Dashboard: "grid",
   PendingVendors: "checkmark-done",
   Users: "people",
   Products: "cube",
@@ -44,6 +46,7 @@ export function AdminTabNavigator() {
         ),
       })}
     >
+      <Tab.Screen name="Dashboard" component={AdminDashboardScreen} />
       <Tab.Screen name="PendingVendors" component={PendingVendorsScreen} options={{ title: "Vendors" }} />
       <Tab.Screen name="Users" component={AdminUsersScreen} />
       <Tab.Screen name="Products" component={AdminProductsScreen} />
