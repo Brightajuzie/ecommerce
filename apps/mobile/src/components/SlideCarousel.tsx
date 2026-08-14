@@ -28,7 +28,7 @@ export function SlideCarousel() {
   const listRef = useRef<FlatList<SlideDto>>(null);
   const styles = useThemedStyles((colors) => ({
     wrapper: { marginBottom: 16 },
-    slide: { height: 160, borderRadius: 16, overflow: "hidden" as const },
+    slide: { height: 208, borderRadius: 16, overflow: "hidden" as const },
     image: { width: "100%" as const, height: "100%" as const, backgroundColor: colors.border },
     captionOverlay: {
       position: "absolute" as const,
