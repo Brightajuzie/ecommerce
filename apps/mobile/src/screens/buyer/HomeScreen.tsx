@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -288,6 +288,19 @@ export function HomeScreen() {
     setCategoryId(undefined);
     setCatalogueMode(false);
   };
+
+  // The nav bar's logo presses the Home tab via the same tabPress mechanism
+  // as a real tap on the "Home" tab item (see ResponsiveTabBar's Brand
+  // button) — React Navigation delivers that event here regardless of
+  // whether Home is already focused, so this is what makes "click the logo"
+  // actually take you back to a clean, unfiltered Home rather than leaving
+  // whatever search/category/catalogue state was active untouched.
+  useEffect(() => {
+    return navigation.addListener("tabPress", () => {
+      clearFilters();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigation]);
 
   const productsByCategory = useMemo(() => {
     const grouped = new Map<string, ProductDto[]>();
