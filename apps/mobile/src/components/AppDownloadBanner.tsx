@@ -3,11 +3,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../theme/ThemeContext";
 import { useThemedStyles } from "../theme/useThemedStyles";
 
-// EAS free-tier build artifacts expire ~30 days after the build (this one on
-// 2026-09-06) — replace with a permanent host (own storage, Play Store listing)
-// before that, or re-build and swap this URL.
+// EAS free-tier "preview" build artifacts expire 14 days after the build
+// (this one was built 2026-08-17, expires 2026-08-31) — replace with a
+// permanent host (own storage, Play Store listing) before that, or re-build
+// and swap this URL. Includes: dark mode, vendor/admin dashboards, the Home
+// UI refresh, and everything from this build's commit (c4d62d8).
 const ANDROID_APK_URL =
-  "https://expo.dev/artifacts/eas/nsOlLJcPW35sNvpFcpsSyMQd04QY2KNGG_dkI_nGJ3s.apk";
+  "https://expo.dev/artifacts/eas/pU96PZYtG0WQY7SSq20hfzLiatXZR0vCi6aq2wOJ_Q4.apk";
 
 // No iOS build exists yet — real-device installs need an Apple Developer
 // Program membership for ad-hoc/TestFlight distribution, which this project
