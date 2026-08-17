@@ -6,10 +6,11 @@ import { useThemedStyles } from "../theme/useThemedStyles";
 // EAS free-tier "preview" build artifacts expire 14 days after the build
 // (this one was built 2026-08-17, expires 2026-08-31) — replace with a
 // permanent host (own storage, Play Store listing) before that, or re-build
-// and swap this URL. Includes: dark mode, vendor/admin dashboards, the Home
-// UI refresh, and everything from this build's commit (c4d62d8).
+// and swap this URL. Built under the new Android package name
+// com.ikaydigitalservices.ikaystores (commit 87c27b3), replacing the
+// earlier com.ikaystores.app builds.
 const ANDROID_APK_URL =
-  "https://expo.dev/artifacts/eas/pU96PZYtG0WQY7SSq20hfzLiatXZR0vCi6aq2wOJ_Q4.apk";
+  "https://expo.dev/artifacts/eas/qhTHaEC5Y5OwPCbWxaDu2KPLYehn2YcqkiJxi1SKbbE.apk";
 
 // No iOS build exists yet — real-device installs need an Apple Developer
 // Program membership for ad-hoc/TestFlight distribution, which this project
