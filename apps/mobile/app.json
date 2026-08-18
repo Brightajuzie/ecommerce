@@ -14,7 +14,7 @@
       }
     },
     "android": {
-      "package": "com.ikaydigitalservices.ikaystores",
+      "package": "com.ikaystores.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
