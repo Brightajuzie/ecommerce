@@ -4,13 +4,16 @@ import { useTheme } from "../theme/ThemeContext";
 import { useThemedStyles } from "../theme/useThemedStyles";
 
 // EAS free-tier "preview" build artifacts expire 14 days after the build
-// (this one was built 2026-08-17, expires 2026-08-31) — replace with a
+// (this one was built 2026-08-22, expires 2026-09-05) — replace with a
 // permanent host (own storage, Play Store listing) before that, or re-build
-// and swap this URL. Built under the new Android package name
-// com.ikaydigitalservices.ikaystores (commit 87c27b3), replacing the
-// earlier com.ikaystores.app builds.
+// and swap this URL. Package reverted to com.ikaystores.app (matching the
+// Play Store listing), and — critically — this is the first build with
+// EXPO_PUBLIC_API_URL correctly pinned to the deployed Render API via
+// eas.json instead of the local-dev .env's localhost value; verified by
+// extracting the compiled bundle and confirming it contains the Render URL
+// and zero occurrences of "localhost".
 const ANDROID_APK_URL =
-  "https://expo.dev/artifacts/eas/qhTHaEC5Y5OwPCbWxaDu2KPLYehn2YcqkiJxi1SKbbE.apk";
+  "https://expo.dev/artifacts/eas/vQro4UNlF1f9cgfLEStEI0_x_Y-ltEBMUr-ZsPYogpc.apk";
 
 // No iOS build exists yet — real-device installs need an Apple Developer
 // Program membership for ad-hoc/TestFlight distribution, which this project
