@@ -13,7 +13,7 @@ import { useThemedStyles } from "../theme/useThemedStyles";
 // extracting the compiled bundle and confirming it contains the Render URL
 // and zero occurrences of "localhost".
 const ANDROID_APK_URL =
-  "https://expo.dev/artifacts/eas/vQro4UNlF1f9cgfLEStEI0_x_Y-ltEBMUr-ZsPYogpc.apk";
+  "https://expo.dev/artifacts/eas/mw6QLZsLOuIyffraO5RznxeeGqr2sAHgBp7WcSGab1k.apk";
 
 // No iOS build exists yet — real-device installs need an Apple Developer
 // Program membership for ad-hoc/TestFlight distribution, which this project
