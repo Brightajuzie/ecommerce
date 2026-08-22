@@ -95,6 +95,11 @@ jobs:
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git add src/components/AppDownloadBanner.tsx
             git commit -m "Auto-update Home page APK link to latest EAS build [skip ci]"
+            # The build takes long enough that main can move in the meantime
+            # (another push, or this same job's earlier steps) — rebase right
+            # before pushing rather than risk a stale-ref rejection.
+            git fetch origin main
+            git rebase origin/main
             git push
           fi
 
