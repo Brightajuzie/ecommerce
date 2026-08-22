@@ -1,0 +1,115 @@
+name: EAS Build (Android)
+
+# Automates what's been a manual "rebuild apk/aab" step all along:
+# - push to main touching the mobile app or shared package → build both
+#   the preview APK and production AAB
+# - manual runs let you pick just one profile
+#
+# Store submission is intentionally NOT automated here — eas.json's
+# submit.production has no Google Play service account key configured,
+# and publishing to real users is an explicit, one-at-a-time decision,
+# not something that should happen silently on every push. See the
+# commented `submit` job below for wiring it up once a key exists.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/mobile/**"
+      - "packages/shared/**"
+      - ".github/workflows/eas-build.yml"
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: "EAS build profile to run"
+        required: true
+        default: "both"
+        type: choice
+        options:
+          - both
+          - preview
+          - production
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared package
+        run: pnpm --filter @ikaystores/shared build
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Typecheck mobile app
+        run: pnpm --filter mobile exec tsc --noEmit
+
+      - name: Build preview APK
+        if: github.event_name == 'push' || github.event.inputs.profile == 'both' || github.event.inputs.profile == 'preview'
+        working-directory: apps/mobile
+        run: |
+          eas build --platform android --profile preview --non-interactive --json > preview-build.json
+          cat preview-build.json
+
+      - name: Build production AAB
+        if: github.event_name == 'push' || github.event.inputs.profile == 'both' || github.event.inputs.profile == 'production'
+        working-directory: apps/mobile
+        run: |
+          eas build --platform android --profile production --non-interactive --json > production-build.json
+          cat production-build.json
+
+      - name: Update Home page download link to the new preview APK
+        if: github.event_name == 'push' || github.event.inputs.profile == 'both' || github.event.inputs.profile == 'preview'
+        working-directory: apps/mobile
+        run: |
+          APK_URL=$(node -e "console.log(JSON.parse(require('fs').readFileSync('preview-build.json'))[0].artifacts.applicationArchiveUrl)")
+          node -e "
+            const fs = require('fs');
+            const path = 'src/components/AppDownloadBanner.tsx';
+            let content = fs.readFileSync(path, 'utf8');
+            content = content.replace(
+              /const ANDROID_APK_URL =\n\s*\"[^\"]*\";/,
+              'const ANDROID_APK_URL =\n  \"${APK_URL}\";',
+            );
+            fs.writeFileSync(path, content);
+          "
+          if ! git diff --quiet -- src/components/AppDownloadBanner.tsx; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add src/components/AppDownloadBanner.tsx
+            git commit -m "Auto-update Home page APK link to latest EAS build [skip ci]"
+            git push
+          fi
+
+  # submit:
+  #   needs: build
+  #   runs-on: ubuntu-latest
+  #   if: github.ref == 'refs/heads/main'
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: expo/expo-github-action@v8
+  #       with:
+  #         eas-version: latest
+  #         token: ${{ secrets.EXPO_TOKEN }}
+  #     - working-directory: apps/mobile
+  #       run: eas submit --platform android --profile production --non-interactive --latest
+  #       # Requires a Google Play service account key configured in eas.json's
+  #       # submit.production (see https://docs.expo.dev/submit/android/) —
+  #       # not set up yet, so this job stays commented out until it is.
