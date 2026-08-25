@@ -132,9 +132,14 @@ export function HomeScreen() {
       backgroundColor: "rgba(255,255,255,0.18)",
       marginLeft: 10,
     },
+    // Reduced to 70% width (30% narrower) and centered — same on every
+    // platform since this is the one shared style/layout RN renders from
+    // for web, iOS, and Android alike.
     searchBar: {
       flexDirection: "row" as const,
       alignItems: "center" as const,
+      alignSelf: "center" as const,
+      width: "70%" as const,
       gap: 8,
       backgroundColor: colors.surface,
       borderRadius: 14,
@@ -150,7 +155,8 @@ export function HomeScreen() {
     quickActions: {
       flexDirection: "row" as const,
       flexShrink: 0,
-      paddingHorizontal: 16,
+      alignSelf: "center" as const,
+      width: "70%" as const,
       marginTop: 14,
       gap: 10,
     },
