@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Alert, Image, KeyboardAvoidingView, Platform, Pressable, Text, View } from "react-native";
+import { Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQueryClient } from "@tanstack/react-query";
@@ -24,7 +24,7 @@ export function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const styles = useThemedStyles((colors) => ({
     flex: { flex: 1 },
-    container: { flex: 1, justifyContent: "center" as const, padding: 24, backgroundColor: colors.surface },
+    container: { padding: 24, backgroundColor: colors.surface, flexGrow: 1, justifyContent: "center" as const },
     centeredColumn: { width: "100%" as const, maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" as const },
     logo: { height: 56, width: 128, marginBottom: 12, alignSelf: "flex-start" as const },
     subtitle: { fontSize: 16, color: colors.textMuted, marginBottom: 32 },
@@ -70,7 +70,7 @@ export function LoginScreen() {
       style={styles.flex}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.centeredColumn}>
           <Pressable onPress={() => navigation.navigate("BuyerTabs")} hitSlop={8}>
             <Image
@@ -105,7 +105,7 @@ export function LoginScreen() {
             Don't have an account? Sign up
           </Text>
         </View>
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
