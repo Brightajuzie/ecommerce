@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import * as LocalAuthentication from "expo-local-authentication";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { useAuthStore } from "../../store/authStore";
@@ -11,7 +11,7 @@ export function LockScreen() {
   const [checking, setChecking] = useState(false);
   const [lastFailed, setLastFailed] = useState(false);
   const styles = useThemedStyles((colors) => ({
-    container: { flex: 1, backgroundColor: colors.surface, justifyContent: "center" as const, padding: 24 },
+    container: { flexGrow: 1, backgroundColor: colors.surface, justifyContent: "center" as const, padding: 24 },
     title: { fontSize: 22, fontWeight: "800" as const, color: colors.text, marginBottom: 12, textAlign: "center" as const },
     subtitle: { fontSize: 15, color: colors.textMuted, textAlign: "center" as const, marginBottom: 24, lineHeight: 22 },
     spacer: { height: 12 },
@@ -40,17 +40,19 @@ export function LockScreen() {
   }, [promptBiometrics]);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Ikaystores is locked</Text>
-      <Text style={styles.subtitle}>
-        {lastFailed
-          ? "Authentication failed. Try again, or log out to sign in with your password."
-          : "Use Face ID, Touch ID, or your device passcode to continue."}
-      </Text>
+    <ScrollView contentContainerStyle={styles.container}>
+      <View>
+        <Text style={styles.title}>Ikaystores is locked</Text>
+        <Text style={styles.subtitle}>
+          {lastFailed
+            ? "Authentication failed. Try again, or log out to sign in with your password."
+            : "Use Face ID, Touch ID, or your device passcode to continue."}
+        </Text>
 
-      <PrimaryButton title="Try again" onPress={promptBiometrics} loading={checking} />
-      <View style={styles.spacer} />
-      <PrimaryButton title="Log out instead" variant="secondary" onPress={() => logout()} />
-    </View>
+        <PrimaryButton title="Try again" onPress={promptBiometrics} loading={checking} />
+        <View style={styles.spacer} />
+        <PrimaryButton title="Log out instead" variant="secondary" onPress={() => logout()} />
+      </View>
+    </ScrollView>
   );
 }
