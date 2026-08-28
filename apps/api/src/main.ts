@@ -5,6 +5,7 @@ import type { NestExpressApplication } from "@nestjs/platform-express";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { Logger } from "nestjs-pino";
 import helmet from "helmet";
+import compression from "compression";
 import { AppModule } from "./app.module";
 import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter";
 
@@ -18,6 +19,10 @@ async function bootstrap() {
 
   app.useLogger(app.get(Logger));
   app.use(helmet());
+  // Every JSON response was shipping uncompressed — gzip cuts a typical
+  // product-list payload by roughly 70-80% (highly repetitive JSON text),
+  // directly reducing transfer time, especially over mobile connections.
+  app.use(compression());
 
   const corsOrigin = configService.get<string>("CORS_ORIGIN", "");
   app.enableCors({
