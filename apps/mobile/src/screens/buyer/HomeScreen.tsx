@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -101,6 +101,12 @@ export function HomeScreen() {
   const numColumns = columnsForWidth(windowWidth);
   const cardMaxWidthPercent = 100 / numColumns - (numColumns > 2 ? 1.5 : 3);
   const [search, setSearch] = useState("");
+  const searchInputRef = useRef<TextInput>(null);
+  // Search already runs live as you type — this just gives "press to
+  // search" a real, felt action (submitting via keyboard or tapping the
+  // icon dismisses the keyboard) rather than the icon being purely
+  // decorative with no way to explicitly confirm you're done typing.
+  const submitSearch = () => searchInputRef.current?.blur();
   const [categoryId, setCategoryId] = useState<string | undefined>(undefined);
   // "Browse Catalogue" forces the flat, all-products grid even with no
   // search term or category selected — otherwise that empty-filter state
@@ -422,13 +428,18 @@ export function HomeScreen() {
           </View>
 
           <View style={styles.searchBar}>
-            <Ionicons name="search" size={18} color={theme.colors.textFaint} />
+            <Pressable onPress={submitSearch} hitSlop={8} accessibilityRole="button" accessibilityLabel="Search">
+              <Ionicons name="search" size={18} color={theme.colors.textFaint} />
+            </Pressable>
             <TextInput
+              ref={searchInputRef}
               style={styles.searchInput}
               placeholder="Search products..."
               placeholderTextColor={theme.colors.textFaint}
               value={search}
               onChangeText={setSearch}
+              returnKeyType="search"
+              onSubmitEditing={submitSearch}
             />
             {search.length > 0 && (
               <Pressable onPress={() => setSearch("")} hitSlop={8}>
