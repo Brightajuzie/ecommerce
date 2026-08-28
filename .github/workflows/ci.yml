@@ -1,0 +1,78 @@
+name: CI
+
+# Runs on every PR and on pushes to main — until now nothing automatically
+# verified a change before it merged; typecheck/build/test were only ever
+# run manually. This is the gate that catches a broken change before it
+# reaches main instead of after.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# A newer push on the same PR cancels the previous run instead of queuing
+# behind it.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # prisma generate only needs a syntactically valid connection string to
+  # read the schema/datasource block — it never actually connects, so a
+  # placeholder is fine and no Postgres service container is needed here.
+  DATABASE_URL: "postgresql://ci:ci@localhost:5432/ci?schema=public"
+  DIRECT_URL: "postgresql://ci:ci@localhost:5432/ci?schema=public"
+  JWT_SECRET: "ci-access-secret"
+  JWT_REFRESH_SECRET: "ci-refresh-secret"
+
+jobs:
+  api:
+    name: API (build + test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared package
+        run: pnpm --filter @ikaystores/shared build
+
+      - name: Build API
+        run: pnpm --filter api build
+
+      - name: Test API
+        run: pnpm --filter api test
+
+  mobile:
+    name: Mobile (typecheck)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared package
+        run: pnpm --filter @ikaystores/shared build
+
+      - name: Typecheck mobile
+        run: pnpm --filter mobile exec tsc --noEmit
