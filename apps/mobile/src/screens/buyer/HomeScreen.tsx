@@ -20,6 +20,7 @@ import type { CategoryDto, ProductDto } from "@ikaystores/shared";
 import { ProductsApi, CategoriesApi } from "../../api/endpoints";
 import { AppDownloadBanner } from "../../components/AppDownloadBanner";
 import { FloatingProduce } from "../../components/FloatingProduce";
+import { Footer } from "../../components/Footer";
 import { SlideCarousel } from "../../components/SlideCarousel";
 import { useTheme } from "../../theme/ThemeContext";
 import { useThemedStyles } from "../../theme/useThemedStyles";
@@ -501,9 +502,12 @@ export function HomeScreen() {
           onEndReached={loadMoreProducts}
           onEndReachedThreshold={0.5}
           ListFooterComponent={
-            productsQuery.isFetchingNextPage ? (
-              <ActivityIndicator style={styles.loadingMore} color={theme.primaryColor} />
-            ) : null
+            <>
+              {productsQuery.isFetchingNextPage && (
+                <ActivityIndicator style={styles.loadingMore} color={theme.primaryColor} />
+              )}
+              <Footer />
+            </>
           }
           ListEmptyComponent={
             <View style={styles.empty}>
@@ -561,9 +565,12 @@ export function HomeScreen() {
           onEndReached={loadMoreProducts}
           onEndReachedThreshold={0.5}
           ListFooterComponent={
-            productsQuery.isFetchingNextPage ? (
-              <ActivityIndicator style={styles.loadingMore} color={theme.primaryColor} />
-            ) : null
+            <>
+              {productsQuery.isFetchingNextPage && (
+                <ActivityIndicator style={styles.loadingMore} color={theme.primaryColor} />
+              )}
+              <Footer />
+            </>
           }
           ListEmptyComponent={
             <View style={styles.empty}>
