@@ -2,6 +2,13 @@ packages:
   - "apps/*"
   - "packages/*"
 minimumReleaseAge: 0
+# multer is a transitive dep of @nestjs/platform-express — 2.1.1 (what it
+# currently resolves to) has two known DoS advisories (deeply-nested field
+# names; incomplete cleanup of aborted uploads), both fixed in 2.2.0. This
+# directly covers our own POST /uploads/image endpoint, so it's worth
+# pinning ahead of platform-express's own next bump rather than waiting.
+overrides:
+  multer: ">=2.2.0"
 allowBuilds:
   '@prisma/client': true
   '@prisma/engines': true
