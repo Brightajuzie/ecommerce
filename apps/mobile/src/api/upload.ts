@@ -1,3 +1,4 @@
+import { Platform } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import type { UploadResultDto } from "@ikaystores/shared";
 import { apiClient } from "./client";
@@ -23,12 +24,27 @@ async function pickImage(): Promise<ImagePicker.ImagePickerAsset> {
   return result.assets[0];
 }
 
-function assetToFormFile(asset: ImagePicker.ImagePickerAsset) {
-  return {
-    uri: asset.uri,
-    name: asset.fileName ?? `photo-${Date.now()}.jpg`,
-    type: asset.mimeType ?? "image/jpeg",
-  } as unknown as Blob;
+// React Native's own FormData polyfill (native iOS/Android) special-cases a
+// plain { uri, name, type } object as a file field. On web, FormData is the
+// browser's native implementation, which has no such special-casing — it
+// just stringifies a plain object ("[object Object]"), silently dropping
+// the actual file content and producing a request the server rejects as
+// "No file was uploaded". Web needs a real Blob/File instead, fetched from
+// the asset's blob: URI that expo-image-picker's web implementation hands
+// back.
+async function assetToFormFile(asset: ImagePicker.ImagePickerAsset): Promise<Blob> {
+  const name = asset.fileName ?? `photo-${Date.now()}.jpg`;
+  const type = asset.mimeType ?? "image/jpeg";
+
+  if (Platform.OS === "web") {
+    const response = await fetch(asset.uri);
+    const blob = await response.blob();
+    // A File (Blob subclass with a name) so the multipart part carries a
+    // filename, matching what the server/multer expects.
+    return new File([blob], name, { type: blob.type || type });
+  }
+
+  return { uri: asset.uri, name, type } as unknown as Blob;
 }
 
 /**
@@ -42,7 +58,7 @@ export async function pickAndUploadImage(): Promise<string> {
   // React Native's FormData accepts this { uri, name, type } shape for file fields;
   // axios/XHR sets the multipart boundary header automatically for FormData bodies.
   const formData = new FormData();
-  formData.append("file", assetToFormFile(asset));
+  formData.append("file", await assetToFormFile(asset));
 
   const response = await apiClient.post<UploadResultDto>("/uploads/image", formData, {
     headers: { "Content-Type": "multipart/form-data" },
