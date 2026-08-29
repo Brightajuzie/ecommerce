@@ -196,6 +196,7 @@ export function HomeScreen() {
     },
     productList: { flex: 1 },
     categoryTile: { width: 76, alignItems: "center" as const },
+    categoryTilePressed: { opacity: 0.6 },
     categoryIconBox: {
       width: 56,
       height: 56,
@@ -344,7 +345,7 @@ export function HomeScreen() {
               setCatalogueMode(false);
               setCategoryId(active ? undefined : item.id);
             }}
-            style={styles.categoryTile}
+            style={({ pressed }) => [styles.categoryTile, pressed && styles.categoryTilePressed]}
           >
             <View
               style={[

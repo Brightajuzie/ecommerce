@@ -18,16 +18,21 @@ export function PrimaryButton({
   variant = "primary",
 }: PrimaryButtonProps) {
   const theme = useTheme();
-  const styles = useThemedStyles(() => ({
+  const styles = useThemedStyles((colors) => ({
     button: {
-      borderRadius: 8,
+      borderRadius: 10,
       paddingVertical: 14,
-      alignItems: "center",
-      justifyContent: "center",
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      shadowColor: "#000",
+      shadowOpacity: colors.shadowOpacity + 0.06,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 3 },
+      elevation: 2,
     },
-    disabled: { opacity: 0.5 },
-    pressed: { opacity: 0.85 },
-    text: { color: "#fff", fontSize: 16, fontWeight: "600" },
+    disabled: { opacity: 0.5, shadowOpacity: 0, elevation: 0 },
+    pressed: { opacity: 0.85, shadowOpacity: 0, elevation: 0 },
+    text: { color: "#fff", fontSize: 16, fontWeight: "600" as const },
   }));
   const variantColors: Record<NonNullable<PrimaryButtonProps["variant"]>, string> = {
     primary: theme.primaryColor,
