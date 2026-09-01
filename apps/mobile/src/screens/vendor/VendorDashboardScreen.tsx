@@ -150,6 +150,11 @@ export function VendorDashboardScreen() {
 
   const businessName = vendorQuery.data?.businessName;
   const identityVerified = meQuery.data?.identityVerified;
+  const livenessVerified = meQuery.data?.livenessVerified;
+  // Both checks are optional at signup (see VendorPendingScreen's "Skip for
+  // now") so we don't nag from day one — only remind once a vendor has some
+  // real listings up and buyer trust starts to matter.
+  const showVerificationReminder = stats.productCount >= 5 && (!identityVerified || !livenessVerified);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -171,13 +176,21 @@ export function VendorDashboardScreen() {
             </View>
           </View>
 
-          {!identityVerified && (
+          {showVerificationReminder && (
             <Pressable
               style={styles.identityBanner}
-              onPress={() => navigation.navigate("IdentityVerification")}
+              onPress={() =>
+                navigation.navigate(!identityVerified ? "IdentityVerification" : "LivenessCheck")
+              }
             >
               <Ionicons name="shield-outline" size={18} color="#fff" />
-              <Text style={styles.identityBannerText}>Verify your identity to unlock full selling access</Text>
+              <Text style={styles.identityBannerText}>
+                {!identityVerified && !livenessVerified
+                  ? "You've listed 5+ products — verify your identity and take a liveness selfie to build buyer trust"
+                  : !identityVerified
+                    ? "You've listed 5+ products — verify your identity to build buyer trust"
+                    : "You've listed 5+ products — take a quick liveness selfie to build buyer trust"}
+              </Text>
               <Ionicons name="chevron-forward" size={16} color="#fff" />
             </Pressable>
           )}

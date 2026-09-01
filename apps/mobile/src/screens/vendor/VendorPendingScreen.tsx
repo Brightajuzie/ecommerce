@@ -1,14 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, Image, ScrollView, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
-import { KycApi, UsersApi, VendorsApi } from "../../api/endpoints";
-import { captureSelfieBase64, pickAndUploadImage, ImagePickerCancelledError } from "../../api/upload";
-import { getErrorMessage } from "../../api/errorMessage";
+import { UsersApi, VendorsApi } from "../../api/endpoints";
+import { pickAndUploadImage, ImagePickerCancelledError } from "../../api/upload";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { useAuthStore } from "../../store/authStore";
+import { secureStorage } from "../../store/secureStorage";
 import { useTheme } from "../../theme/ThemeContext";
 import { useThemedStyles } from "../../theme/useThemedStyles";
 import type { ThemeColors } from "../../theme/colors";
@@ -16,13 +16,41 @@ import type { VendorStackParamList } from "../../navigation/types";
 
 type DocumentField = "businessRegistrationDocUrl" | "governmentIdDocUrl";
 
+// Neither check actually blocks admin approval (see vendors.service.ts) —
+// these flags are purely so the onboarding cards stop nagging once a vendor
+// has explicitly said "not now", without hiding the option to still do it.
+// Scoped per-user since the same device could see more than one account.
+function skipStorageKey(kind: "identity" | "liveness", userId: string) {
+  return `ikaystores.skipVerification.${kind}.${userId}`;
+}
+
 export function VendorPendingScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<VendorStackParamList>>();
   const logout = useAuthStore((s) => s.logout);
+  const userId = useAuthStore((s) => s.user?.id);
   const queryClient = useQueryClient();
   const theme = useTheme();
   const [uploadingField, setUploadingField] = useState<DocumentField | null>(null);
-  const [livenessError, setLivenessError] = useState<string | null>(null);
+  const [skippedIdentity, setSkippedIdentity] = useState(false);
+  const [skippedLiveness, setSkippedLiveness] = useState(false);
+
+  useEffect(() => {
+    if (!userId) return;
+    (async () => {
+      const [skipId, skipLive] = await Promise.all([
+        secureStorage.getItem(skipStorageKey("identity", userId)),
+        secureStorage.getItem(skipStorageKey("liveness", userId)),
+      ]);
+      setSkippedIdentity(skipId === "1");
+      setSkippedLiveness(skipLive === "1");
+    })();
+  }, [userId]);
+
+  const skipVerification = (kind: "identity" | "liveness") => {
+    if (kind === "identity") setSkippedIdentity(true);
+    else setSkippedLiveness(true);
+    if (userId) secureStorage.setItem(skipStorageKey(kind, userId), "1");
+  };
   const styles = useThemedStyles((colors) => ({
     container: { flex: 1, backgroundColor: colors.background },
     content: { padding: 24, paddingTop: 80 },
@@ -42,7 +70,19 @@ export function VendorPendingScreen() {
     cardHeader: { flexDirection: "row" as const, alignItems: "center" as const, gap: 8, marginBottom: 6 },
     cardLabel: { fontSize: 15, fontWeight: "700" as const, color: colors.text },
     cardHint: { color: colors.textMuted, fontSize: 13, marginBottom: 12, lineHeight: 18 },
-    livenessError: { color: colors.danger, fontSize: 13, marginBottom: 12, lineHeight: 18 },
+    skipLink: {
+      color: colors.textMuted,
+      fontSize: 13,
+      fontWeight: "700" as const,
+      textAlign: "center" as const,
+      marginTop: 10,
+    },
+    skipNote: {
+      color: colors.textFaint,
+      fontSize: 12,
+      textAlign: "center" as const,
+      marginTop: 10,
+    },
     docRow: {
       flexDirection: "row" as const,
       alignItems: "center" as const,
@@ -90,35 +130,6 @@ export function VendorPendingScreen() {
     }
   };
 
-  const livenessMutation = useMutation({
-    mutationFn: (imageBase64: string) => KycApi.checkLiveness({ imageBase64 }),
-    onSuccess: (result) => {
-      if (result.live) {
-        setLivenessError(null);
-        queryClient.invalidateQueries({ queryKey: ["me"] });
-      } else {
-        setLivenessError(result.message);
-      }
-    },
-    onError: (error) => {
-      setLivenessError(getErrorMessage(error, "Couldn't run the liveness check. Please try again."));
-    },
-  });
-
-  const handleLivenessCheck = async () => {
-    setLivenessError(null);
-    try {
-      const imageBase64 = await captureSelfieBase64();
-      livenessMutation.mutate(imageBase64);
-    } catch (error) {
-      if (!(error instanceof ImagePickerCancelledError)) {
-        setLivenessError(
-          error instanceof Error ? error.message : "Couldn't take that photo. Please try again.",
-        );
-      }
-    }
-  };
-
   const identityVerified = meQuery.data?.identityVerified ?? false;
   const livenessVerified = meQuery.data?.livenessVerified ?? false;
 
@@ -142,13 +153,22 @@ export function VendorPendingScreen() {
         <Text style={styles.cardHint}>
           {identityVerified
             ? "Your NIN or BVN has been verified."
-            : "Verify your NIN or BVN in real time — no selfie needed."}
+            : "Verify your NIN or BVN in real time — no selfie needed. Optional for now — you can also do this later from your dashboard."}
         </Text>
         {!identityVerified && (
-          <PrimaryButton
-            title="Verify your identity"
-            onPress={() => navigation.navigate("IdentityVerification")}
-          />
+          <>
+            <PrimaryButton
+              title="Verify your identity"
+              onPress={() => navigation.navigate("IdentityVerification")}
+            />
+            {skippedIdentity ? (
+              <Text style={styles.skipNote}>Skipped for now — you can still verify anytime.</Text>
+            ) : (
+              <Text style={styles.skipLink} onPress={() => skipVerification("identity")}>
+                Skip for now
+              </Text>
+            )}
+          </>
         )}
       </View>
 
@@ -164,15 +184,22 @@ export function VendorPendingScreen() {
         <Text style={styles.cardHint}>
           {livenessVerified
             ? "We've confirmed you're a real, live person."
-            : "Take a quick selfie to confirm you're a real, live person — a live-person check, separate from the NIN/BVN lookup above."}
+            : "Take a quick selfie to confirm you're a real, live person — separate from the NIN/BVN lookup above. Optional for now — you can also do this later from your dashboard."}
         </Text>
-        {livenessError && <Text style={styles.livenessError}>{livenessError}</Text>}
         {!livenessVerified && (
-          <PrimaryButton
-            title="Take a selfie"
-            onPress={handleLivenessCheck}
-            loading={livenessMutation.isPending}
-          />
+          <>
+            <PrimaryButton
+              title="Take a selfie"
+              onPress={() => navigation.navigate("LivenessCheck")}
+            />
+            {skippedLiveness ? (
+              <Text style={styles.skipNote}>Skipped for now — you can still verify anytime.</Text>
+            ) : (
+              <Text style={styles.skipLink} onPress={() => skipVerification("liveness")}>
+                Skip for now
+              </Text>
+            )}
+          </>
         )}
       </View>
 
