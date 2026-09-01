@@ -37,5 +37,8 @@ export const updateGatewaySettingsSchema = z.object({
   opayPublicKey: z.string().max(500).optional(),
   opaySecretKey: z.string().max(500).optional(),
   supportEmail: z.string().email().optional(),
+  dojahAppId: z.string().max(200).optional(),
+  dojahSecretKey: z.string().max(500).optional(),
+  dojahEnvironment: z.enum(["sandbox", "production"]).optional(),
 });
 export type UpdateGatewaySettingsInput = z.infer<typeof updateGatewaySettingsSchema>;

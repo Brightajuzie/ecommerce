@@ -49,6 +49,7 @@ export class UsersService {
         vendorProfile: true,
         referralCode: true,
         identityVerified: true,
+        livenessVerified: true,
         _count: { select: { referrals: true } },
       },
     });

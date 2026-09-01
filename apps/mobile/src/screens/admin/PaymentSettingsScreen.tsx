@@ -94,6 +94,9 @@ export function PaymentSettingsScreen() {
   const [opayPublicKey, setOpayPublicKey] = useState("");
   const [opaySecretKey, setOpaySecretKey] = useState("");
   const [supportEmail, setSupportEmail] = useState("");
+  const [dojahAppId, setDojahAppId] = useState("");
+  const [dojahSecretKey, setDojahSecretKey] = useState("");
+  const [dojahEnvironment, setDojahEnvironment] = useState<"sandbox" | "production">("sandbox");
 
   useEffect(() => {
     if (settingsQuery.data) {
@@ -110,6 +113,10 @@ export function PaymentSettingsScreen() {
       setOpayMerchantId(gatewaySettingsQuery.data.opayMerchantId ?? "");
       setOpayPublicKey(gatewaySettingsQuery.data.opayPublicKey ?? "");
       setSupportEmail(gatewaySettingsQuery.data.supportEmail ?? "");
+      setDojahAppId(gatewaySettingsQuery.data.dojahAppId ?? "");
+      setDojahEnvironment(
+        gatewaySettingsQuery.data.dojahEnvironment === "production" ? "production" : "sandbox",
+      );
     }
   }, [gatewaySettingsQuery.data]);
 
@@ -158,12 +165,16 @@ export function PaymentSettingsScreen() {
         opayPublicKey: opayPublicKey || undefined,
         opaySecretKey: opaySecretKey || undefined,
         supportEmail: supportEmail || undefined,
+        dojahAppId: dojahAppId || undefined,
+        dojahSecretKey: dojahSecretKey || undefined,
+        dojahEnvironment,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["gatewaySettings"] });
       setFlwSecretKey("");
       setFlwEncryptionKey("");
       setOpaySecretKey("");
+      setDojahSecretKey("");
       Alert.alert("Saved", "Payment gateway settings updated.");
     },
     onError: (error: any) => {
@@ -291,6 +302,67 @@ export function PaymentSettingsScreen() {
             secureTextEntry
             placeholder="Leave blank to keep unchanged"
           />
+
+          <Text style={styles.subsectionTitle}>
+            Identity verification (Dojah){" "}
+            <Text
+              style={{
+                fontSize: 12,
+                fontWeight: "700" as const,
+                color: gatewaySettingsQuery.data?.dojahAppId && gatewaySettingsQuery.data?.dojahSecretKey
+                  ? theme.colors.success
+                  : theme.colors.textFaint,
+              }}
+            >
+              {gatewaySettingsQuery.data?.dojahAppId && gatewaySettingsQuery.data?.dojahSecretKey
+                ? "● Active"
+                : "○ Not configured"}
+            </Text>
+          </Text>
+          <Text style={styles.sectionHint}>
+            Powers real-time NIN/BVN lookup and the vendor-onboarding liveness check. Activates
+            automatically as soon as both fields below are saved — no server restart needed.
+          </Text>
+          <FormInput
+            label="App ID"
+            value={dojahAppId}
+            onChangeText={setDojahAppId}
+            autoCapitalize="none"
+          />
+          <FormInput
+            label={`Secret key${gatewaySettingsQuery.data?.dojahSecretKey ? ` (currently ${gatewaySettingsQuery.data.dojahSecretKey})` : ""}`}
+            value={dojahSecretKey}
+            onChangeText={setDojahSecretKey}
+            autoCapitalize="none"
+            secureTextEntry
+            placeholder="Leave blank to keep unchanged"
+          />
+          <View style={{ flexDirection: "row" as const, gap: 8, marginBottom: 12 }}>
+            {(["sandbox", "production"] as const).map((env) => (
+              <Pressable
+                key={env}
+                onPress={() => setDojahEnvironment(env)}
+                style={{
+                  flex: 1,
+                  paddingVertical: 10,
+                  borderRadius: 10,
+                  alignItems: "center" as const,
+                  backgroundColor: dojahEnvironment === env ? theme.primaryColor : theme.colors.surfaceAlt,
+                }}
+              >
+                <Text
+                  style={{
+                    fontWeight: "700" as const,
+                    fontSize: 13,
+                    color: dojahEnvironment === env ? "#fff" : theme.colors.textMuted,
+                    textTransform: "capitalize" as const,
+                  }}
+                >
+                  {env}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
 
           <Text style={styles.subsectionTitle}>Support</Text>
           <FormInput

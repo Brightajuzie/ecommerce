@@ -9,12 +9,14 @@ import type {
   BankDto,
   CartDto,
   CategoryDto,
+  CheckLivenessInput,
   CheckoutInput,
   CreateProductInput,
   CreateSlideInput,
   GatewaySettingsDto,
   IdentityVerificationResultDto,
   InitiatePaymentInput,
+  LivenessCheckResultDto,
   LoginInput,
   OrderDto,
   PaginatedResult,
@@ -60,6 +62,7 @@ export const UsersApi = {
           referralCode: string | null;
           referralCount: number;
           identityVerified: boolean;
+          livenessVerified: boolean;
         }
       >("/users/me")
       .then((r) => r.data),
@@ -164,6 +167,10 @@ export const KycApi = {
   verifyIdNumber: (input: VerifyIdNumberInput) =>
     apiClient
       .post<IdentityVerificationResultDto>("/kyc/verify-id-number", input)
+      .then((r) => r.data),
+  checkLiveness: (input: CheckLivenessInput) =>
+    apiClient
+      .post<LivenessCheckResultDto>("/kyc/check-liveness", input)
       .then((r) => r.data),
 };
 

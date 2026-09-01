@@ -11,15 +11,15 @@ import { ApplyVendorDto } from "./dto/apply-vendor.dto";
 import { SetPayoutAccountDto } from "./dto/set-payout-account.dto";
 import { SetVendorDocumentsDto } from "./dto/set-vendor-documents.dto";
 
-// Flattens the joined `user.identityVerified` onto the VendorProfile shape
-// so the mobile client doesn't need a separate nested lookup — used
-// wherever admin reviews an application (identity check + documents
-// together) or a vendor checks their own review status.
-function withIdentityVerified<T extends { user: { identityVerified: boolean } }>(
-  vendor: T,
-) {
+// Flattens the joined `user.identityVerified`/`livenessVerified` onto the
+// VendorProfile shape so the mobile client doesn't need a separate nested
+// lookup — used wherever admin reviews an application (identity + liveness
+// + documents together) or a vendor checks their own review status.
+function withIdentityVerified<
+  T extends { user: { identityVerified: boolean; livenessVerified: boolean } },
+>(vendor: T) {
   const { user, ...rest } = vendor;
-  return { ...rest, identityVerified: user.identityVerified };
+  return { ...rest, identityVerified: user.identityVerified, livenessVerified: user.livenessVerified };
 }
 
 @Injectable()
@@ -60,7 +60,7 @@ export class VendorsService {
   async listPending() {
     const vendors = await this.prisma.vendorProfile.findMany({
       where: { status: VendorStatus.PENDING },
-      include: { user: { select: { identityVerified: true } } },
+      include: { user: { select: { identityVerified: true, livenessVerified: true } } },
     });
     return vendors.map(withIdentityVerified);
   }
@@ -81,7 +81,7 @@ export class VendorsService {
   async getMyVendorProfile(userId: string) {
     const vendor = await this.prisma.vendorProfile.findUnique({
       where: { userId },
-      include: { user: { select: { identityVerified: true } } },
+      include: { user: { select: { identityVerified: true, livenessVerified: true } } },
     });
     if (!vendor) {
       throw new NotFoundException("No vendor profile found for this account");

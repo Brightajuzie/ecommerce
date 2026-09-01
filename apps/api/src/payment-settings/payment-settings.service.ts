@@ -72,6 +72,9 @@ export class PaymentSettingsService {
       opayPublicKey: settings.opayPublicKey,
       opaySecretKey: maskSecret(settings.opaySecretKey),
       supportEmail: settings.supportEmail,
+      dojahAppId: settings.dojahAppId,
+      dojahSecretKey: maskSecret(settings.dojahSecretKey),
+      dojahEnvironment: settings.dojahEnvironment,
     };
   }
 
@@ -91,6 +94,9 @@ export class PaymentSettingsService {
         opayPublicKey: dto.opayPublicKey || undefined,
         opaySecretKey: dto.opaySecretKey || undefined,
         supportEmail: dto.supportEmail || undefined,
+        dojahAppId: dto.dojahAppId || undefined,
+        dojahSecretKey: dto.dojahSecretKey || undefined,
+        dojahEnvironment: dto.dojahEnvironment || undefined,
       },
     });
     return this.getGatewaySettings();

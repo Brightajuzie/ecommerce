@@ -48,6 +48,38 @@ async function assetToFormFile(asset: ImagePicker.ImagePickerAsset): Promise<Blo
 }
 
 /**
+ * Opens the front camera for a liveness-check selfie and returns it as a
+ * base64 string (no data-URI prefix) — sent straight to
+ * POST /kyc/check-liveness, never uploaded to Cloudinary or stored, unlike
+ * pickAndUploadImage below. Throws ImagePickerCancelledError if the user
+ * backs out without taking a photo.
+ */
+export async function captureSelfieBase64(): Promise<string> {
+  const permission = await ImagePicker.requestCameraPermissionsAsync();
+  if (!permission.granted) {
+    throw new Error("Camera permission is required for the liveness check.");
+  }
+
+  const result = await ImagePicker.launchCameraAsync({
+    mediaTypes: ["images"],
+    cameraType: ImagePicker.CameraType.front,
+    quality: 0.7,
+    base64: true,
+    allowsEditing: false,
+  });
+
+  if (result.canceled || result.assets.length === 0) {
+    throw new ImagePickerCancelledError();
+  }
+
+  const asset = result.assets[0];
+  if (!asset.base64) {
+    throw new Error("Couldn't read that photo. Please try again.");
+  }
+  return asset.base64;
+}
+
+/**
  * Opens the system image picker and uploads the selected photo, returning
  * the hosted (enhanced) image URL. Throws ImagePickerCancelledError if the
  * user backs out without picking anything.
