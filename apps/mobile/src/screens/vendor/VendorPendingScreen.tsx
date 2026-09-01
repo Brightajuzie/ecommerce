@@ -4,8 +4,9 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
-import { UsersApi, VendorsApi } from "../../api/endpoints";
-import { pickAndUploadImage, ImagePickerCancelledError } from "../../api/upload";
+import { KycApi, UsersApi, VendorsApi } from "../../api/endpoints";
+import { captureSelfieBase64, pickAndUploadImage, ImagePickerCancelledError } from "../../api/upload";
+import { getErrorMessage } from "../../api/errorMessage";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { useAuthStore } from "../../store/authStore";
 import { useTheme } from "../../theme/ThemeContext";
@@ -21,6 +22,7 @@ export function VendorPendingScreen() {
   const queryClient = useQueryClient();
   const theme = useTheme();
   const [uploadingField, setUploadingField] = useState<DocumentField | null>(null);
+  const [livenessError, setLivenessError] = useState<string | null>(null);
   const styles = useThemedStyles((colors) => ({
     container: { flex: 1, backgroundColor: colors.background },
     content: { padding: 24, paddingTop: 80 },
@@ -40,6 +42,7 @@ export function VendorPendingScreen() {
     cardHeader: { flexDirection: "row" as const, alignItems: "center" as const, gap: 8, marginBottom: 6 },
     cardLabel: { fontSize: 15, fontWeight: "700" as const, color: colors.text },
     cardHint: { color: colors.textMuted, fontSize: 13, marginBottom: 12, lineHeight: 18 },
+    livenessError: { color: colors.danger, fontSize: 13, marginBottom: 12, lineHeight: 18 },
     docRow: {
       flexDirection: "row" as const,
       alignItems: "center" as const,
@@ -87,7 +90,37 @@ export function VendorPendingScreen() {
     }
   };
 
+  const livenessMutation = useMutation({
+    mutationFn: (imageBase64: string) => KycApi.checkLiveness({ imageBase64 }),
+    onSuccess: (result) => {
+      if (result.live) {
+        setLivenessError(null);
+        queryClient.invalidateQueries({ queryKey: ["me"] });
+      } else {
+        setLivenessError(result.message);
+      }
+    },
+    onError: (error) => {
+      setLivenessError(getErrorMessage(error, "Couldn't run the liveness check. Please try again."));
+    },
+  });
+
+  const handleLivenessCheck = async () => {
+    setLivenessError(null);
+    try {
+      const imageBase64 = await captureSelfieBase64();
+      livenessMutation.mutate(imageBase64);
+    } catch (error) {
+      if (!(error instanceof ImagePickerCancelledError)) {
+        setLivenessError(
+          error instanceof Error ? error.message : "Couldn't take that photo. Please try again.",
+        );
+      }
+    }
+  };
+
   const identityVerified = meQuery.data?.identityVerified ?? false;
+  const livenessVerified = meQuery.data?.livenessVerified ?? false;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -115,6 +148,30 @@ export function VendorPendingScreen() {
           <PrimaryButton
             title="Verify your identity"
             onPress={() => navigation.navigate("IdentityVerification")}
+          />
+        )}
+      </View>
+
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Ionicons
+            name={livenessVerified ? "shield-checkmark" : "shield-outline"}
+            size={20}
+            color={livenessVerified ? theme.colors.success : theme.colors.textMuted}
+          />
+          <Text style={styles.cardLabel}>Liveness check</Text>
+        </View>
+        <Text style={styles.cardHint}>
+          {livenessVerified
+            ? "We've confirmed you're a real, live person."
+            : "Take a quick selfie to confirm you're a real, live person — a live-person check, separate from the NIN/BVN lookup above."}
+        </Text>
+        {livenessError && <Text style={styles.livenessError}>{livenessError}</Text>}
+        {!livenessVerified && (
+          <PrimaryButton
+            title="Take a selfie"
+            onPress={handleLivenessCheck}
+            loading={livenessMutation.isPending}
           />
         )}
       </View>

@@ -34,6 +34,7 @@ export function PendingVendorsScreen() {
       elevation: 1,
     },
     headerRow: { flexDirection: "row" as const, justifyContent: "space-between" as const, alignItems: "flex-start" as const, gap: 8 },
+    badgeRow: { flexDirection: "row" as const, marginTop: 8 },
     businessName: { fontWeight: "700" as const, fontSize: 16, color: colors.text, flex: 1 },
     badge: {
       flexDirection: "row" as const,
@@ -105,6 +106,23 @@ export function PendingVendorsScreen() {
                   />
                   <Text style={styles.badgeText}>
                     {item.identityVerified ? "Identity verified" : "Not verified"}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.badgeRow}>
+                <View
+                  style={[
+                    styles.badge,
+                    { backgroundColor: item.livenessVerified ? theme.colors.success : theme.colors.textFaint },
+                  ]}
+                >
+                  <Ionicons
+                    name={item.livenessVerified ? "person-circle" : "person-circle-outline"}
+                    size={12}
+                    color="#fff"
+                  />
+                  <Text style={styles.badgeText}>
+                    {item.livenessVerified ? "Liveness verified" : "Liveness not checked"}
                   </Text>
                 </View>
               </View>

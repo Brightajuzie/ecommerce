@@ -17,6 +17,11 @@ async function bootstrap() {
 
   const configService = app.get(ConfigService);
 
+  // Express's default JSON body limit (100kb) is fine for everything else,
+  // but too small for POST /kyc/check-liveness, which carries a
+  // base64-encoded selfie (a few hundred KB to ~2-3MB once encoded).
+  app.useBodyParser("json", { limit: "10mb" });
+
   app.useLogger(app.get(Logger));
   app.use(helmet());
   // Every JSON response was shipping uncompressed — gzip cuts a typical

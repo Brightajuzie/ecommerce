@@ -20,9 +20,9 @@ run through Flutterwave and Opay. Built as an MVP scaffold — solid foundations
   auto-format/quality and a 2000px size cap).
 - **Biometric login**: `expo-local-authentication` — after one password login, Face ID/Touch
   ID/fingerprint can unlock the app on return instead of retyping credentials.
-- **Identity verification**: Smile ID (`smile-identity-core`) — real-time NIN/BVN lookup, no
-  selfie, available to any user. Vendor onboarding reuses it alongside document uploads,
-  reviewed by an admin alongside the existing approval flow.
+- **Identity verification**: Dojah — real-time NIN/BVN lookup, no selfie, available to any user.
+  Vendor onboarding reuses it alongside document uploads, reviewed by an admin alongside the
+  existing approval flow.
 
 ## Repo layout
 
@@ -50,8 +50,7 @@ ikaystores/
 - Flutterwave and Opay **sandbox/test** API keys, for exercising payments (see below).
 - A free [Cloudinary](https://cloudinary.com) account, for exercising image uploads (logo,
   slides, product photos) — see below.
-- A [Smile ID](https://usesmileid.com) partner account, for exercising vendor identity
-  verification — see below.
+- A [Dojah](https://dojah.io) account, for exercising vendor identity verification — see below.
 
 ## Setup
 
@@ -145,33 +144,40 @@ is). Sign-in/registration is only required at checkout: tapping "Checkout" on a 
 to Login/Register first, and on success the local cart is pushed to the now-authenticated user's
 server-side cart (`syncGuestCartToServer`) before continuing straight to Checkout.
 
-## Identity verification (real-time NIN/BVN)
+## Identity verification (real-time NIN/BVN + liveness)
 
 Any authenticated user — buyer or vendor — can verify their NIN or BVN in real time via
-`POST /kyc/verify-id-number`, which queries Smile ID's synchronous ID-number lookup
-(`IDApi.submit_job`, Basic KYC job type) and gets the identity record back in the same response —
-no selfie, no async webhook. Set `SMILE_ID_PARTNER_ID`, `SMILE_ID_API_KEY`,
-`SMILE_ID_ENVIRONMENT` (`sandbox`/`production`) in `apps/api/.env` (from your Smile ID partner
-portal) to exercise it; without them the endpoint returns a clear `502`, same pattern as the
-other third-party integrations. Only a minimal audit row is persisted (masked last-4 of the ID
-number, name on record, result code) — full ID numbers, DOB, phone, and address from the
-provider response are never stored.
+`POST /kyc/verify-id-number`, which queries Dojah's NIN/BVN lookup endpoints
+(`GET /api/v1/kyc/nin`, `GET /api/v1/kyc/bvn/full`) and gets the identity record back in the same
+response — no selfie, no async webhook. During vendor onboarding a second, independent check is
+also available — `POST /kyc/check-liveness` — which sends a front-camera selfie to Dojah's
+liveness/anti-spoofing endpoint (`POST /api/v1/ml/liveness`) to confirm a real person took the
+photo; the selfie itself is never stored, only the pass/fail result and confidence score
+(`User.livenessVerified`).
 
-**Before going live**, confirm the response field casing against a real Smile ID sandbox call —
-this was built from Smile ID's documented ID-coverage contract
-(`docs.usesmileid.com/id-coverage/verify-with-id-number/nigeria`), not a live test. The code
-reads defensively (tries a couple of likely key casings), so an unexpected shape degrades to
-"not verified" rather than throwing, but that's not a substitute for testing against a real
-response. Plain NIN lookups (`NIN_V2`) additionally require an `enterprise_id` from NIMC,
-registered through the Smile ID Dashboard, before they work in production — BVN has no such
-requirement.
+Set `DOJAH_APP_ID`, `DOJAH_SECRET_KEY`, `DOJAH_ENVIRONMENT` (`sandbox`/`production`) in
+`apps/api/.env` (from your Dojah dashboard at app.dojah.io) to exercise either check — or, once
+the app is running, a SUPER_ADMIN can paste the same three values into Payments → "Identity
+verification (Dojah)" in the admin app instead, which takes priority over the env vars and
+activates immediately, no redeploy needed (same override pattern as the Flutterwave/Opay keys
+above it on that screen). Without either configured, both endpoints return a clear `502`, same
+pattern as the other third-party integrations. Only a minimal audit row is persisted for the
+NIN/BVN check (masked last-4 of the ID number, name on record, result code) — full ID numbers,
+DOB, phone, and address from the provider response are never stored.
 
-Vendor application review reuses this same real-time check (from the "pending approval" screen)
-alongside two document photo uploads (business registration document, government-issued ID —
+**Before going live**, confirm the response field casing and the "not found" HTTP status against
+a real Dojah sandbox call — this was built from Dojah's published API docs
+(`docs.dojah.io/reference/nin-lookup`, `docs.dojah.io/reference/bvn-lookup`), not a live test.
+A 4xx response is treated as "ID number not on record" (a normal unverified result, not a system
+error); only genuine transport/auth/server failures surface as a `502`. That's an assumption
+about Dojah's actual behavior, not something verified against a live call.
+
+Vendor application review reuses both checks (from the "pending approval" screen) alongside two
+document photo uploads (business registration document, government-issued ID —
 `PATCH /vendors/me/documents`, via the same `/uploads/image` endpoint products use). Verification
 is **informational, not a hard gate** — admins still approve/reject vendors manually via the
-existing `PATCH /vendors/:id/approve` flow, with the identity-verified status and both document
-thumbnails shown next to each pending application so a human stays in the loop.
+existing `PATCH /vendors/:id/approve` flow, with the identity-verified status, liveness status,
+and both document thumbnails shown next to each pending application so a human stays in the loop.
 
 ## Biometric login
 
@@ -204,7 +210,7 @@ pnpm --filter api exec prisma migrate deploy   # applies migrations without prom
 node apps/api/dist/main.js    # or: pnpm --filter api start:prod
 ```
 
-Beyond the gateway/Cloudinary/Smile ID keys already covered above, set these before running in
+Beyond the gateway/Cloudinary/Dojah keys already covered above, set these before running in
 production:
 
 | Var              | Purpose                                                                 |
@@ -296,7 +302,7 @@ happens to be using — belt-and-suspenders after hitting the gotcha below.
    `render.yaml` and propose the `ikaystores-api` service automatically.
 3. Before the first deploy, Render will prompt for the env vars marked `sync: false` in
    `render.yaml` — at minimum you need `DATABASE_URL` (your Supabase connection string from
-   above). The rest (`CORS_ORIGIN`, payment/Cloudinary/Smile ID keys) can be left blank and filled
+   above). The rest (`CORS_ORIGIN`, payment/Cloudinary/Dojah keys) can be left blank and filled
    in later; those integrations return a clear `502` when unconfigured rather than crashing, per
    the existing pattern in this README.
 4. `JWT_SECRET` and `JWT_REFRESH_SECRET` are marked `generateValue: true`, so Render generates

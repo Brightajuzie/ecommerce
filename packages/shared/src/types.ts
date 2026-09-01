@@ -61,6 +61,7 @@ export interface VendorProfileDto {
   // that need it (getMyVendorProfile, admin's listPending); absent (not
   // just false) on the public listApproved() and apply() responses.
   identityVerified?: boolean;
+  livenessVerified?: boolean;
 }
 
 export interface CategoryDto {
@@ -191,6 +192,12 @@ export interface IdentityVerificationResultDto {
   message: string;
 }
 
+export interface LivenessCheckResultDto {
+  live: boolean;
+  confidence: number | null;
+  message: string;
+}
+
 export interface WalletDto {
   id: string;
   vendorId: string | null;
@@ -236,6 +243,9 @@ export interface GatewaySettingsDto {
   opayPublicKey: string | null;
   opaySecretKey: string | null;
   supportEmail: string | null;
+  dojahAppId: string | null;
+  dojahSecretKey: string | null;
+  dojahEnvironment: string | null;
 }
 
 // Admin-facing user record — scoped to BUYER/VENDOR accounts only, see

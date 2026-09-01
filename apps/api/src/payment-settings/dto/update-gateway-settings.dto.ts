@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
-import { IsEmail, IsOptional, IsString, MaxLength } from "class-validator";
+import { IsEmail, IsIn, IsOptional, IsString, MaxLength } from "class-validator";
 
 export class UpdateGatewaySettingsDto {
   @ApiPropertyOptional()
@@ -42,4 +42,21 @@ export class UpdateGatewaySettingsDto {
   @IsOptional()
   @IsEmail()
   supportEmail?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  dojahAppId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  dojahSecretKey?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsIn(["sandbox", "production"])
+  dojahEnvironment?: string;
 }

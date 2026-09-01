@@ -113,6 +113,12 @@ model User {
   // approval. Any user can verify; result isn't tied to vendor status.
   identityVerified   Boolean   @default(false)
   identityVerifiedAt DateTime?
+  // Dojah liveness check (selfie-based anti-spoofing) — distinct from and
+  // independent of identityVerified above. Currently only surfaced during
+  // vendor onboarding, but modeled on User (not VendorProfile) since any
+  // account type could reasonably need it later.
+  livenessVerified   Boolean   @default(false)
+  livenessVerifiedAt DateTime?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
@@ -396,6 +402,15 @@ model PlatformPaymentSettings {
   opayPublicKey            String?
   opaySecretKey            String?
   supportEmail             String?
+  // Dojah identity-verification credentials — DojahService reads these
+  // first and falls back to DOJAH_APP_ID/DOJAH_SECRET_KEY/DOJAH_ENVIRONMENT
+  // env vars when null, same override pattern as the payment keys above.
+  // Lets a SUPER_ADMIN activate real-time NIN/BVN + liveness checks by
+  // pasting a key into the app instead of touching server env vars.
+  dojahAppId               String?
+  dojahSecretKey           String?
+  // "sandbox" (default) or "production" — selects Dojah's base URL.
+  dojahEnvironment         String?
   updatedAt                DateTime @updatedAt
 
   @@map("platform_payment_settings")

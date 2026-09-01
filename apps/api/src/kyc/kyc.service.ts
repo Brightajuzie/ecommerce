@@ -1,20 +1,20 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { IdentityVerificationStatus, IdentityVerificationType } from "@prisma/client";
-import type { IdentityVerificationResultDto } from "@ikaystores/shared";
+import type { IdentityVerificationResultDto, LivenessCheckResultDto } from "@ikaystores/shared";
 import { PrismaService } from "../prisma/prisma.service";
-import { SmileIdService } from "./smile-id/smile-id.service";
+import { DojahService } from "./dojah/dojah.service";
 import { VerifyIdNumberDto } from "./dto/verify-id-number.dto";
+import { CheckLivenessDto } from "./dto/check-liveness.dto";
 
-// Smile ID's synchronous ID-verification response isn't strongly typed by
-// their SDK (returns Record<string, unknown>) and the exact key casing for
-// this endpoint hasn't been confirmed against a live sandbox call — these
-// are the field names documented at
-// https://docs.usesmileid.com/id-coverage/verify-with-id-number/nigeria.
-// Read defensively so an unexpected casing degrades to "not verified"
-// rather than throwing.
-function readField(response: Record<string, unknown>, ...keys: string[]): string | null {
+function composeFullName(entity: Record<string, unknown>): string | null {
+  const parts = [entity["first_name"], entity["middle_name"], entity["last_name"]]
+    .filter((p): p is string => typeof p === "string" && p.trim().length > 0);
+  return parts.length > 0 ? parts.join(" ") : null;
+}
+
+function readString(entity: Record<string, unknown>, ...keys: string[]): string | null {
   for (const key of keys) {
-    const value = response[key];
+    const value = entity[key];
     if (typeof value === "string" && value.trim().length > 0) {
       return value;
     }
@@ -26,7 +26,7 @@ function readField(response: Record<string, unknown>, ...keys: string[]): string
 export class KycService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly smileId: SmileIdService,
+    private readonly dojah: DojahService,
   ) {}
 
   /**
@@ -44,9 +44,9 @@ export class KycService {
     const idNumberLast4 = dto.idNumber.slice(-4);
     const idType = dto.idType as IdentityVerificationType;
 
-    let response: Record<string, unknown>;
+    let result: { found: boolean; entity: Record<string, unknown>; message?: string };
     try {
-      response = await this.smileId.verifyIdNumber({
+      result = await this.dojah.verifyIdNumber({
         userId,
         idType: dto.idType,
         idNumber: dto.idNumber,
@@ -63,16 +63,13 @@ export class KycService {
       throw error;
     }
 
-    const resultCode = readField(response, "ResultCode", "result_code");
-    const resultText = readField(response, "ResultText", "result_text");
-    const fullName = readField(response, "FullName", "full_name");
-    const dateOfBirth = readField(response, "DOB", "date_of_birth", "DateOfBirth");
-    const gender = readField(response, "Gender", "gender");
-    const actions = response["Actions"] as Record<string, unknown> | undefined;
-    const verified =
-      resultCode === "1012" ||
-      (typeof actions?.["Verify_ID_Number"] === "string" &&
-        actions["Verify_ID_Number"] === "Verified");
+    const fullName = composeFullName(result.entity);
+    const dateOfBirth = readString(result.entity, "date_of_birth", "dob");
+    const gender = readString(result.entity, "gender");
+    const verified = result.found && !!fullName;
+    const resultText = verified
+      ? "ID number verified"
+      : (result.message ?? "We couldn't verify that ID number. Please check it and try again.");
 
     await this.prisma.identityVerification.create({
       data: {
@@ -82,16 +79,14 @@ export class KycService {
         status: verified
           ? IdentityVerificationStatus.VERIFIED
           : IdentityVerificationStatus.FAILED,
-        resultCode,
+        resultCode: verified ? "FOUND" : "NOT_FOUND",
         resultText,
         fullName,
       },
     });
 
     if (!verified) {
-      throw new BadRequestException(
-        resultText ?? "We couldn't verify that ID number. Please check it and try again.",
-      );
+      throw new BadRequestException(resultText);
     }
 
     await this.prisma.user.update({
@@ -105,7 +100,37 @@ export class KycService {
       fullName,
       dateOfBirth,
       gender,
-      message: resultText ?? "ID number verified",
+      message: resultText,
+    };
+  }
+
+  /**
+   * Selfie-based liveness check via Dojah — confirms a real, live person
+   * submitted the photo (anti-spoofing), separate from the NIN/BVN identity
+   * lookup above. Currently only surfaced during vendor onboarding. Only
+   * the pass/fail result and confidence score are persisted; the selfie
+   * image itself is never stored (sent straight through to Dojah, not
+   * saved to our own DB or Cloudinary).
+   */
+  async checkLiveness(
+    userId: string,
+    dto: CheckLivenessDto,
+  ): Promise<LivenessCheckResultDto> {
+    const result = await this.dojah.checkLiveness({ userId, imageBase64: dto.imageBase64 });
+
+    if (result.live) {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { livenessVerified: true, livenessVerifiedAt: new Date() },
+      });
+    }
+
+    return {
+      live: result.live,
+      confidence: result.confidence,
+      message: result.live
+        ? "Liveness check passed"
+        : "We couldn't confirm liveness from that photo. Make sure you're in good lighting and try again.",
     };
   }
 }
