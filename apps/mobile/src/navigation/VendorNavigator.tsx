@@ -6,6 +6,7 @@ import { VendorsApi } from "../api/endpoints";
 import { VendorTabNavigator } from "./VendorTabNavigator";
 import { ProductFormScreen } from "../screens/vendor/ProductFormScreen";
 import { VendorPendingScreen } from "../screens/vendor/VendorPendingScreen";
+import { LivenessCheckScreen } from "../screens/vendor/LivenessCheckScreen";
 import { IdentityVerificationScreen } from "../screens/buyer/IdentityVerificationScreen";
 import type { VendorStackParamList } from "./types";
 
@@ -26,8 +27,12 @@ export function VendorNavigator() {
 
   // VendorPendingScreen is a real Stack.Screen (not rendered as a bare
   // component outside the navigator) so it can call navigation.navigate
-  // to reach IdentityVerification — same navigator either way, just a
-  // different set of screens depending on approval status.
+  // to reach IdentityVerification/LivenessCheck — same navigator either
+  // way, just a different set of screens depending on approval status.
+  // Both verification screens sit outside the isApproved branch so an
+  // already-approved vendor can still reach them later (e.g. from the
+  // dashboard's post-5-products reminder banner), not just during
+  // onboarding.
   return (
     <Stack.Navigator>
       {isApproved ? (
@@ -49,6 +54,11 @@ export function VendorNavigator() {
       <Stack.Screen
         name="IdentityVerification"
         component={IdentityVerificationScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="LivenessCheck"
+        component={LivenessCheckScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>
