@@ -137,6 +137,7 @@ export const VendorsApi = {
     apiClient.post<VendorProfileDto>("/vendors/apply", input).then((r) => r.data),
   me: () => apiClient.get<VendorProfileDto>("/vendors/me").then((r) => r.data),
   pending: () => apiClient.get<VendorProfileDto[]>("/vendors/pending").then((r) => r.data),
+  listAll: () => apiClient.get<VendorProfileDto[]>("/vendors/all").then((r) => r.data),
   approve: (id: string) => apiClient.patch<VendorProfileDto>(`/vendors/${id}/approve`).then((r) => r.data),
   suspend: (id: string) => apiClient.patch<VendorProfileDto>(`/vendors/${id}/suspend`).then((r) => r.data),
   setPayoutAccount: (input: SetPayoutAccountInput) =>

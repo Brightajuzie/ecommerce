@@ -1,7 +1,7 @@
 import { ActivityIndicator, FlatList, Image, Linking, Pressable, Text, View } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
-import type { VendorProfileDto } from "@ikaystores/shared";
+import { VendorStatus, type VendorProfileDto } from "@ikaystores/shared";
 import { VendorsApi } from "../../api/endpoints";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { useTheme } from "../../theme/ThemeContext";
@@ -13,7 +13,11 @@ const MAX_CONTENT_WIDTH = 800;
 export function PendingVendorsScreen() {
   const theme = useTheme();
   const queryClient = useQueryClient();
-  const pendingQuery = useQuery({ queryKey: ["pendingVendors"], queryFn: VendorsApi.pending });
+  // Vendors are auto-approved on signup (see AuthService.register) — there's
+  // no real review queue to gate on anymore, so this lists every vendor
+  // regardless of status. That's what keeps admin oversight meaningful:
+  // suspend/reactivate remain available for any vendor at any time.
+  const vendorsQuery = useQuery({ queryKey: ["allVendors"], queryFn: VendorsApi.listAll });
   const styles = useThemedStyles((colors) => ({
     container: { flex: 1, backgroundColor: colors.background, paddingTop: 60 },
     centeredColumn: { width: "100%" as const, maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" as const, paddingHorizontal: 16 },
@@ -34,7 +38,7 @@ export function PendingVendorsScreen() {
       elevation: 1,
     },
     headerRow: { flexDirection: "row" as const, justifyContent: "space-between" as const, alignItems: "flex-start" as const, gap: 8 },
-    badgeRow: { flexDirection: "row" as const, marginTop: 8 },
+    badgeRow: { flexDirection: "row" as const, gap: 6, marginTop: 8, flexWrap: "wrap" as const },
     businessName: { fontWeight: "700" as const, fontSize: 16, color: colors.text, flex: 1 },
     badge: {
       flexDirection: "row" as const,
@@ -56,14 +60,20 @@ export function PendingVendorsScreen() {
 
   const approve = useMutation({
     mutationFn: (id: string) => VendorsApi.approve(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["pendingVendors"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["allVendors"] }),
   });
   const suspend = useMutation({
     mutationFn: (id: string) => VendorsApi.suspend(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["pendingVendors"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["allVendors"] }),
   });
 
-  if (pendingQuery.isLoading) {
+  const statusColors: Record<VendorStatus, string> = {
+    [VendorStatus.PENDING]: theme.colors.textFaint,
+    [VendorStatus.APPROVED]: theme.colors.success,
+    [VendorStatus.SUSPENDED]: theme.colors.danger,
+  };
+
+  if (vendorsQuery.isLoading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator color={theme.primaryColor} />
@@ -74,17 +84,17 @@ export function PendingVendorsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.centeredColumn}>
-        <Text style={styles.title}>Pending vendors</Text>
+        <Text style={styles.title}>Vendors</Text>
       </View>
       <FlatList
-        data={pendingQuery.data ?? []}
+        data={vendorsQuery.data ?? []}
         keyExtractor={(item: VendorProfileDto) => item.id}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <View style={styles.centeredColumn}>
             <View style={styles.empty}>
               <Ionicons name="storefront-outline" size={32} color={theme.colors.textFaint} />
-              <Text style={styles.emptyText}>No pending applications.</Text>
+              <Text style={styles.emptyText}>No vendors yet.</Text>
             </View>
           </View>
         }
@@ -93,6 +103,11 @@ export function PendingVendorsScreen() {
             <View style={styles.card}>
               <View style={styles.headerRow}>
                 <Text style={styles.businessName}>{item.businessName}</Text>
+                <View style={[styles.badge, { backgroundColor: statusColors[item.status] }]}>
+                  <Text style={styles.badgeText}>{item.status}</Text>
+                </View>
+              </View>
+              <View style={styles.badgeRow}>
                 <View
                   style={[
                     styles.badge,
@@ -108,8 +123,6 @@ export function PendingVendorsScreen() {
                     {item.identityVerified ? "Identity verified" : "Not verified"}
                   </Text>
                 </View>
-              </View>
-              <View style={styles.badgeRow}>
                 <View
                   style={[
                     styles.badge,
@@ -134,12 +147,18 @@ export function PendingVendorsScreen() {
               </View>
 
               <View style={styles.actions}>
-                <PrimaryButton title="Approve" onPress={() => approve.mutate(item.id)} />
-                <PrimaryButton
-                  title="Reject"
-                  variant="danger"
-                  onPress={() => suspend.mutate(item.id)}
-                />
+                {item.status === VendorStatus.PENDING && (
+                  <>
+                    <PrimaryButton title="Approve" onPress={() => approve.mutate(item.id)} />
+                    <PrimaryButton title="Reject" variant="danger" onPress={() => suspend.mutate(item.id)} />
+                  </>
+                )}
+                {item.status === VendorStatus.APPROVED && (
+                  <PrimaryButton title="Suspend" variant="danger" onPress={() => suspend.mutate(item.id)} />
+                )}
+                {item.status === VendorStatus.SUSPENDED && (
+                  <PrimaryButton title="Reactivate" onPress={() => approve.mutate(item.id)} />
+                )}
               </View>
             </View>
           </View>

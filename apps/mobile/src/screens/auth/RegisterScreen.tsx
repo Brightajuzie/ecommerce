@@ -112,9 +112,9 @@ export function RegisterScreen() {
         referralCode: referralCode.trim() || undefined,
       });
       // Setting a VENDOR session flips RootNavigator to VendorNavigator on the next
-      // render (unmounting this screen), which is what carries a new vendor straight
-      // into VendorPendingScreen's identity-verification step — see that screen for
-      // the "live check" continuation of registration.
+      // render (unmounting this screen) — vendors are auto-approved on signup (see
+      // AuthService.register), so this carries a new vendor straight into
+      // VendorTabs, not a pending-review screen.
       await setSession(result.accessToken, result.refreshToken, result.user);
       await syncGuestCartToServer();
       if (route.params?.pendingCartItem) {
@@ -140,7 +140,7 @@ export function RegisterScreen() {
       Alert.alert(
         "Account created",
         asVendor
-          ? "Welcome to Ikaystores! Next, verify your identity to start selling."
+          ? "Welcome to Ikaystores! You can start listing products right away — verifying your identity is optional and just helps build buyer trust."
           : "Welcome to Ikaystores!",
       );
     } catch (error) {
