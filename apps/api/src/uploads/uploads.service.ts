@@ -41,6 +41,21 @@ export class UploadsService {
     if (this.isCloudinaryConfigured()) {
       return this.uploadToCloudinary(buffer);
     }
+
+    // Local-disk fallback is dev-only. Most hosts (this app runs on Render)
+    // give the app an EPHEMERAL filesystem — anything saved here is wiped on
+    // the next deploy, so a vendor's product photo would "succeed" today and
+    // 404 for every buyer after the next release. In production, fail loudly
+    // instead: same BadGatewayException pattern as Dojah/Flutterwave/Opay
+    // when their credentials are missing, so a broken upload is visible
+    // immediately rather than silently corrupting data later.
+    if (this.configService.get<string>("NODE_ENV") === "production") {
+      this.logger.error(
+        "Image upload attempted with no Cloudinary credentials configured in production",
+      );
+      throw new BadGatewayException("Image upload is not configured on this server");
+    }
+
     // No Cloudinary credentials configured (common in local/dev environments) —
     // fall back to serving the file straight off this server's own disk
     // rather than leaving uploads (and anything that depends on them, like

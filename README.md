@@ -126,8 +126,15 @@ misleading crash — useful for developing the rest of the app before you have s
 through Cloudinary and applies an enhancement + optimization transform on every upload — this is
 shared by three flows: vendors adding product photos, and admins uploading a store logo or
 home-page slide images. Set `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
-in `apps/api/.env` (from your Cloudinary console) to exercise it; without them the endpoint
-returns a clear `502`, same pattern as the payment gateways.
+in `apps/api/.env` (from your Cloudinary console) to exercise it.
+
+**Without Cloudinary configured**: in development, uploads fall back to serving the file off
+this server's own disk (`apps/api/uploads/`, via `GET /uploads/local/:filename`) so the rest of
+the app still works from a bare `.env`. **In production** (`NODE_ENV=production`) this fallback
+is disabled and the endpoint returns a clear `502` instead — most hosts, including the Render
+deployment this app ships to, give the app an ephemeral filesystem, so anything saved there gets
+silently wiped on the next deploy and turns into a 404 for every buyer. Set the three Cloudinary
+env vars on Render before shipping any build that lets vendors upload product photos.
 
 Admins manage the storefront from the **Store Settings** and **Slides** tabs (mobile app, admin
 role): brand colors (preset swatches + hex input) and logo apply live via `GET/PATCH /settings`;
