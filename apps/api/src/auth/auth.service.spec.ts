@@ -96,7 +96,7 @@ describe("AuthService", () => {
             vendorProfile: {
               create: expect.objectContaining({
                 businessName: "Vendor Biz",
-                status: VendorStatus.PENDING,
+                status: VendorStatus.APPROVED,
               }),
             },
           }),

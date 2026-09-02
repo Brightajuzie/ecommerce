@@ -81,6 +81,14 @@ export class VendorsController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Get("all")
+  listAll() {
+    return this.vendorsService.listAll();
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @Patch(":id/approve")
   approve(@Param("id") id: string) {
     return this.vendorsService.setStatus(id, VendorStatus.APPROVED);

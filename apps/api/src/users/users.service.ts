@@ -208,7 +208,10 @@ export class UsersService {
               vendorProfile: {
                 create: {
                   businessName: dto.businessName as string,
-                  status: VendorStatus.PENDING,
+                  // Same auto-approve policy as self-serve signup (see
+                  // AuthService.register) — an admin creating/upgrading the
+                  // account directly already is the approval step.
+                  status: VendorStatus.APPROVED,
                 },
               },
             }
@@ -265,7 +268,10 @@ export class UsersService {
               vendorProfile: {
                 create: {
                   businessName: dto.businessName as string,
-                  status: VendorStatus.PENDING,
+                  // Same auto-approve policy as self-serve signup (see
+                  // AuthService.register) — an admin creating/upgrading the
+                  // account directly already is the approval step.
+                  status: VendorStatus.APPROVED,
                 },
               },
             }

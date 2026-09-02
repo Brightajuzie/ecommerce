@@ -29,6 +29,11 @@ export class VendorsService {
     private readonly flutterwaveService: FlutterwaveService,
   ) {}
 
+  // Auto-approved on application — no admin review gate before a vendor can
+  // start listing products (identity/liveness verification stay separately
+  // optional too, see DojahService/KycService). Admins retain a real check:
+  // suspend() works on any vendor regardless of status, and listAll() below
+  // powers an admin screen to find and suspend a vendor after the fact.
   async apply(userId: string, dto: ApplyVendorDto) {
     const existing = await this.prisma.vendorProfile.findUnique({
       where: { userId },
@@ -40,7 +45,7 @@ export class VendorsService {
     }
 
     return this.prisma.vendorProfile.create({
-      data: { ...dto, userId, status: VendorStatus.PENDING },
+      data: { ...dto, userId, status: VendorStatus.APPROVED },
     });
   }
 
@@ -63,6 +68,26 @@ export class VendorsService {
       include: { user: { select: { identityVerified: true, livenessVerified: true } } },
     });
     return vendors.map(withIdentityVerified);
+  }
+
+  // Every vendor regardless of status, PENDING first (near-empty in
+  // practice now that apply() auto-approves, but still surfaced in case a
+  // status ever gets reverted) then APPROVED then SUSPENDED — powers the
+  // admin "Vendors" screen's ability to find and suspend/reactivate a
+  // vendor after the fact, since apply() no longer requires review first.
+  async listAll() {
+    const statusOrder: Record<VendorStatus, number> = {
+      [VendorStatus.PENDING]: 0,
+      [VendorStatus.APPROVED]: 1,
+      [VendorStatus.SUSPENDED]: 2,
+    };
+    const vendors = await this.prisma.vendorProfile.findMany({
+      include: { user: { select: { identityVerified: true, livenessVerified: true } } },
+      orderBy: { createdAt: "desc" },
+    });
+    return vendors
+      .map(withIdentityVerified)
+      .sort((a, b) => statusOrder[a.status] - statusOrder[b.status]);
   }
 
   async setStatus(vendorId: string, status: VendorStatus) {

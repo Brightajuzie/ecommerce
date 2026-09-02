@@ -32,7 +32,10 @@ export function AdminDashboardScreen() {
     queryKey: ["adminDashboardUsers"],
     queryFn: () => AdminUsersApi.list({ pageSize: 1 }),
   });
-  const pendingVendorsQuery = useQuery({ queryKey: ["pendingVendors"], queryFn: VendorsApi.pending });
+  // Vendors are auto-approved on signup (see AuthService.register), so a raw
+  // vendor count is more useful here than a "pending review" count, which
+  // would now sit at 0 through every normal app flow.
+  const vendorsQuery = useQuery({ queryKey: ["allVendors"], queryFn: VendorsApi.listAll });
   const pendingWithdrawalsQuery = useQuery({
     queryKey: ["pendingWithdrawals"],
     queryFn: WalletApi.pendingWithdrawals,
@@ -44,7 +47,7 @@ export function AdminDashboardScreen() {
   });
 
   const isLoading =
-    productsQuery.isLoading || usersQuery.isLoading || pendingVendorsQuery.isLoading || pendingWithdrawalsQuery.isLoading;
+    productsQuery.isLoading || usersQuery.isLoading || vendorsQuery.isLoading || pendingWithdrawalsQuery.isLoading;
 
   const styles = useThemedStyles((colors) => ({
     container: { flex: 1, backgroundColor: colors.background },
@@ -130,7 +133,7 @@ export function AdminDashboardScreen() {
     );
   }
 
-  const pendingVendorCount = pendingVendorsQuery.data?.length ?? 0;
+  const vendorCount = vendorsQuery.data?.length ?? 0;
   const pendingWithdrawalCount = pendingWithdrawalsQuery.data?.length ?? 0;
 
   return (
@@ -157,10 +160,8 @@ export function AdminDashboardScreen() {
             <View style={[styles.statIconWrap, { backgroundColor: "#EDE9FE" }]}>
               <Ionicons name="storefront" size={18} color="#6D28D9" />
             </View>
-            <Text style={[styles.statValue, pendingVendorCount > 0 && styles.statAlertValue]}>
-              {pendingVendorCount}
-            </Text>
-            <Text style={styles.statLabel}>Vendors awaiting review</Text>
+            <Text style={styles.statValue}>{vendorCount}</Text>
+            <Text style={styles.statLabel}>Total vendors</Text>
           </Pressable>
 
           <Pressable style={styles.statCard} onPress={() => navigation.navigate("Users")}>
@@ -196,7 +197,7 @@ export function AdminDashboardScreen() {
             <View style={styles.quickActionIconWrap}>
               <Ionicons name="checkmark-done" size={18} color={theme.primaryColor} />
             </View>
-            <Text style={styles.quickActionText}>Review vendors</Text>
+            <Text style={styles.quickActionText}>Manage vendors</Text>
           </Pressable>
           <Pressable style={styles.quickAction} onPress={() => navigation.navigate("UserForm", undefined)}>
             <View style={styles.quickActionIconWrap}>

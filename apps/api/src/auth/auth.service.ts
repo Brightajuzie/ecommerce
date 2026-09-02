@@ -56,12 +56,17 @@ export class AuthService {
         referralCode,
         referredById: referrer?.id,
         cart: { create: {} },
+        // Auto-approved — no admin review gate before a new vendor can start
+        // listing products. Admins retain a real check afterward: any vendor
+        // can be suspended regardless of status (see VendorsService.suspend/
+        // listAll), so this trades a pre-listing checkpoint for zero signup
+        // friction rather than removing oversight entirely.
         ...(role === UserRole.VENDOR
           ? {
               vendorProfile: {
                 create: {
                   businessName: dto.businessName as string,
-                  status: VendorStatus.PENDING,
+                  status: VendorStatus.APPROVED,
                 },
               },
             }

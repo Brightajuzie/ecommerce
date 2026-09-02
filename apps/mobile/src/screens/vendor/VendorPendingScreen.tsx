@@ -4,6 +4,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
+import { VendorStatus } from "@ikaystores/shared";
 import { UsersApi, VendorsApi } from "../../api/endpoints";
 import { pickAndUploadImage, ImagePickerCancelledError } from "../../api/upload";
 import { PrimaryButton } from "../../components/PrimaryButton";
@@ -132,13 +133,21 @@ export function VendorPendingScreen() {
 
   const identityVerified = meQuery.data?.identityVerified ?? false;
   const livenessVerified = meQuery.data?.livenessVerified ?? false;
+  // Vendors are auto-approved on signup (see AuthService.register), so this
+  // screen is now mostly reached in the SUSPENDED case rather than a genuine
+  // pending-review wait — branch the messaging so a suspended vendor doesn't
+  // see "under review" text that no longer applies to them.
+  const isSuspended = vendorQuery.data?.status === VendorStatus.SUSPENDED;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Application under review</Text>
+      <Text style={styles.title}>
+        {isSuspended ? "Account suspended" : "Application under review"}
+      </Text>
       <Text style={styles.body}>
-        Your vendor account is pending approval. You'll be able to list products and manage
-        orders once an admin approves your application.
+        {isSuspended
+          ? "Your vendor account has been suspended by an admin. Contact support if you believe this is a mistake."
+          : "Your vendor account is pending approval. You'll be able to list products and manage orders once an admin approves your application."}
       </Text>
 
       <View style={styles.card}>
