@@ -71,6 +71,10 @@ export class UploadsService {
           resource_type: "image",
           transformation: [
             { effect: "improve" },
+            // Product/document photos are usually phone-camera shots viewed
+            // at a fraction of their native size — a mild sharpen keeps
+            // edges/text crisp after that downscale instead of looking soft.
+            { effect: "sharpen" },
             { quality: "auto:best", fetch_format: "auto" },
             { width: 2000, height: 2000, crop: "limit" },
           ],

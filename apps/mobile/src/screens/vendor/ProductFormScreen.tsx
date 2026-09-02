@@ -14,6 +14,11 @@ import { useThemedStyles } from "../../theme/useThemedStyles";
 import { optimizedImageUrl } from "../../utils/image";
 
 const MAX_CONTENT_WIDTH = 700;
+// At least 1 so a listing is never imageless, capped at 4 to keep listings
+// quick to browse/upload — matches createProductSchema in
+// packages/shared/src/schemas/product.ts and CreateProductDto on the API.
+const MIN_PRODUCT_IMAGES = 1;
+const MAX_PRODUCT_IMAGES = 4;
 
 // Reused from both VendorStackParamList and AdminStackParamList (identical
 // "ProductForm" route shape in both) — admin can fully edit any vendor's
@@ -76,6 +81,14 @@ export function ProductFormScreen() {
     twoColItem: { flex: 1 },
     sectionLabel: { fontSize: 14, fontWeight: "700" as const, color: colors.text, marginBottom: 10 },
     sectionLabelSpaced: { marginTop: 16 },
+    photosHeaderRow: {
+      flexDirection: "row" as const,
+      justifyContent: "space-between" as const,
+      alignItems: "center" as const,
+      marginBottom: 4,
+    },
+    photoCount: { fontSize: 13, fontWeight: "700" as const, color: colors.textMuted },
+    photoHint: { fontSize: 12, color: colors.textFaint, marginBottom: 10 },
     photoRow: { flexDirection: "row" as const, flexWrap: "wrap" as const, gap: 10 },
     thumbnailWrap: { position: "relative" as const },
     thumbnail: { width: 76, height: 76, borderRadius: 10, backgroundColor: colors.placeholderBg },
@@ -129,6 +142,7 @@ export function ProductFormScreen() {
   }, [productQuery.data]);
 
   const handleAddPhoto = async () => {
+    if (images.length >= MAX_PRODUCT_IMAGES) return;
     setUploading(true);
     try {
       const url = await pickAndUploadImage();
@@ -223,7 +237,16 @@ export function ProductFormScreen() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionLabel}>Photos</Text>
+          <View style={styles.photosHeaderRow}>
+            <Text style={styles.sectionLabel}>Photos</Text>
+            <Text style={styles.photoCount}>
+              {images.length}/{MAX_PRODUCT_IMAGES}
+            </Text>
+          </View>
+          <Text style={styles.photoHint}>
+            {MIN_PRODUCT_IMAGES}–{MAX_PRODUCT_IMAGES} photos required — the first one is used as
+            the main listing image.
+          </Text>
           <View style={styles.photoRow}>
             {images.map((uri) => (
               <View key={uri} style={styles.thumbnailWrap}>
@@ -236,14 +259,16 @@ export function ProductFormScreen() {
                 </Pressable>
               </View>
             ))}
-            <Pressable
-              style={[styles.addPhotoButton, uploading && styles.disabled]}
-              onPress={handleAddPhoto}
-              disabled={uploading}
-            >
-              <Ionicons name="camera" size={20} color={theme.colors.textMuted} />
-              <Text style={styles.addPhotoText}>{uploading ? "Uploading…" : "Add photo"}</Text>
-            </Pressable>
+            {images.length < MAX_PRODUCT_IMAGES && (
+              <Pressable
+                style={[styles.addPhotoButton, uploading && styles.disabled]}
+                onPress={handleAddPhoto}
+                disabled={uploading}
+              >
+                <Ionicons name="camera" size={20} color={theme.colors.textMuted} />
+                <Text style={styles.addPhotoText}>{uploading ? "Uploading…" : "Add photo"}</Text>
+              </Pressable>
+            )}
           </View>
         </View>
 
@@ -284,7 +309,14 @@ export function ProductFormScreen() {
           title="Save product"
           onPress={() => saveMutation.mutate()}
           loading={saveMutation.isPending}
-          disabled={!title || !description || !price || !stock || !categoryId || images.length === 0}
+          disabled={
+            !title ||
+            !description ||
+            !price ||
+            !stock ||
+            !categoryId ||
+            images.length < MIN_PRODUCT_IMAGES
+          }
         />
 
         {productId && (
