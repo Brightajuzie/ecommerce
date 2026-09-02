@@ -53,11 +53,24 @@ async function assetToFormFile(asset: ImagePicker.ImagePickerAsset): Promise<Blo
  * POST /kyc/check-liveness, never uploaded to Cloudinary or stored, unlike
  * pickAndUploadImage below. Throws ImagePickerCancelledError if the user
  * backs out without taking a photo.
+ *
+ * Per https://docs.expo.dev/versions/v57.0.0/sdk/imagepicker/, on web
+ * launchCameraAsync "must be called immediately in a user interaction like
+ * a button press, otherwise the browser will block the request without a
+ * warning" — and requestCameraPermissionsAsync "does nothing on web"
+ * anyway, since it's the browser's own getUserMedia permission prompt that
+ * gates access there, not Expo's. Awaiting that no-op call first (as this
+ * used to) burns the click's transient user-activation window, so the
+ * camera silently never opens. Native platforms don't have that
+ * restriction, and there the explicit request still surfaces a clearer
+ * error than a bare camera-launch failure would.
  */
 export async function captureSelfieBase64(): Promise<string> {
-  const permission = await ImagePicker.requestCameraPermissionsAsync();
-  if (!permission.granted) {
-    throw new Error("Camera permission is required for the liveness check.");
+  if (Platform.OS !== "web") {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      throw new Error("Camera permission is required for the liveness check.");
+    }
   }
 
   const result = await ImagePicker.launchCameraAsync({
