@@ -46,10 +46,13 @@ export class CreateProductDto {
   @IsUUID()
   categoryId: string;
 
+  // At least 1 so a listing is never imageless, capped at 4 to keep
+  // listings quick to browse/upload — matches createProductSchema in
+  // packages/shared/src/schemas/product.ts.
   @ApiProperty({ type: [String] })
   @IsArray()
   @ArrayMinSize(1)
-  @ArrayMaxSize(10)
+  @ArrayMaxSize(4)
   // require_tld: false so http://localhost:PORT/... (the local-disk upload
   // fallback used when Cloudinary isn't configured, e.g. in dev) validates —
   // a bare "localhost" host has no TLD and would otherwise be rejected.

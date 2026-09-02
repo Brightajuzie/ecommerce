@@ -16,8 +16,9 @@ run through Flutterwave and Opay. Built as an MVP scaffold — solid foundations
 - **Payments**: Flutterwave (Standard Checkout, primary) and Opay (Cashier Checkout, secondary),
   both as hosted checkout links opened in an in-app WebView.
 - **Images**: Cloudinary — uploads (product photos, logo, home-page slides) are enhanced
-  automatically on upload (auto contrast/brightness via Cloudinary's `e_improve`, plus
-  auto-format/quality and a 2000px size cap).
+  automatically on upload (auto contrast/brightness via Cloudinary's `e_improve`, a mild
+  `e_sharpen` to counter the softening from downscaling a phone-camera photo, plus
+  auto-format/quality and a 2000px size cap). Product photos specifically require 1–4 images.
 - **Biometric login**: `expo-local-authentication` — after one password login, Face ID/Touch
   ID/fingerprint can unlock the app on return instead of retyping credentials.
 - **Identity verification**: Dojah — real-time NIN/BVN lookup, no selfie, available to any user.

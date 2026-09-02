@@ -8,7 +8,10 @@ export const createProductSchema = z.object({
   currency: z.string().length(3).default("NGN"),
   stock: z.number().int().min(0),
   categoryId: z.string().uuid(),
-  images: z.array(z.string().url()).min(1).max(10),
+  // Vendor product photos: at least 1 so a listing is never imageless, capped
+  // at 4 to keep listings quick to browse/upload — see CreateProductDto for
+  // the matching API-side check.
+  images: z.array(z.string().url()).min(1).max(4),
   status: z
     .enum([ProductStatus.DRAFT, ProductStatus.ACTIVE, ProductStatus.ARCHIVED])
     .default(ProductStatus.DRAFT),
