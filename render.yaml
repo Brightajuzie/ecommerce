@@ -4,7 +4,14 @@ services:
     runtime: node
     plan: free
     region: oregon
-    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @ikaystores/shared build && pnpm --filter api exec prisma generate && pnpm --filter api build
+    # `corepack enable && corepack prepare pnpm@<version> --activate` runs first
+    # so Corepack activates the exact pnpm version pinned in package.json's
+    # "packageManager" field before anything else executes. Without this,
+    # Render's build image falls through to its preinstalled Yarn 1.x, and a
+    # long-standing Corepack bug (nodejs/corepack#706) then reports a garbled
+    # "packageManager": "yarn@pnpm@11.9.0" mismatch error instead of the real
+    # "pnpm isn't active yet" cause.
+    buildCommand: corepack enable && corepack prepare pnpm@11.9.0 --activate && pnpm install --frozen-lockfile && pnpm --filter @ikaystores/shared build && pnpm --filter api exec prisma generate && pnpm --filter api build
     startCommand: node apps/api/dist/main.js
     healthCheckPath: /api/v1/health
     envVars:
@@ -48,9 +55,9 @@ services:
         sync: false
       - key: CLOUDINARY_API_SECRET
         sync: false
-      - key: SMILE_ID_PARTNER_ID
+      - key: DOJAH_APP_ID
         sync: false
-      - key: SMILE_ID_API_KEY
+      - key: DOJAH_SECRET_KEY
         sync: false
-      - key: SMILE_ID_ENVIRONMENT
+      - key: DOJAH_ENVIRONMENT
         value: production
