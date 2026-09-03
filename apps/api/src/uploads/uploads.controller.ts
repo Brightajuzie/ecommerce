@@ -18,12 +18,11 @@ import type { Response } from "express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { UploadsService, LOCAL_UPLOAD_DIR } from "./uploads.service";
 
-const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_FILE_SIZE_BYTES = 150 * 1024;
 const ALLOWED_MIME_TYPES = new Set([
   "image/jpeg",
   "image/png",
-  "image/webp",
-  "image/gif",
+  "application/pdf",
 ]);
 
 @ApiTags("uploads")
@@ -46,7 +45,7 @@ export class UploadsController {
     }
     if (!ALLOWED_MIME_TYPES.has(file.mimetype)) {
       throw new BadRequestException(
-        "Only JPEG, PNG, WEBP, and GIF images are allowed",
+        "Only JPEG, PNG, or PDF files are allowed",
       );
     }
     return this.uploadsService.uploadImage(file.buffer, file.mimetype);

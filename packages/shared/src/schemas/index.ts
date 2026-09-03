@@ -8,3 +8,4 @@ export * from "./slide";
 export * from "./kyc";
 export * from "./wallet";
 export * from "./admin-users";
+export * from "./vendor";

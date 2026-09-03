@@ -21,6 +21,8 @@ import { ApplyVendorDto } from "./dto/apply-vendor.dto";
 import { SetPayoutAccountDto } from "./dto/set-payout-account.dto";
 import { SetVendorDocumentsDto } from "./dto/set-vendor-documents.dto";
 import { UpdateVendorDto } from "./dto/update-vendor.dto";
+import { SendVendorMessageDto } from "./dto/send-vendor-message.dto";
+import { BroadcastMessageDto } from "./dto/broadcast-message.dto";
 
 @ApiTags("vendors")
 @Controller("vendors")
@@ -73,6 +75,24 @@ export class VendorsController {
     return this.vendorsService.listBanks();
   }
 
+  // Vendor's own side of their support/announcements thread with the admin
+  // team — declared alongside the other "me/*" routes (before any ":id"
+  // route) so Nest never tries to match the literal "me" segment as an :id.
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get("me/messages")
+  async getMyMessages(@CurrentUser() user: AuthenticatedUser) {
+    const vendor = await this.vendorsService.getMyVendorProfile(user.userId);
+    return this.vendorsService.listMessages(vendor.id, "vendor");
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post("me/messages")
+  sendMyMessage(@CurrentUser() user: AuthenticatedUser, @Body() dto: SendVendorMessageDto) {
+    return this.vendorsService.sendMyMessage(user.userId, dto.body);
+  }
+
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
@@ -92,6 +112,14 @@ export class VendorsController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Post("broadcast")
+  broadcast(@CurrentUser() user: AuthenticatedUser, @Body() dto: BroadcastMessageDto) {
+    return this.vendorsService.broadcast(user.userId, dto.body);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @Patch(":id/approve")
   approve(@Param("id") id: string) {
     return this.vendorsService.setStatus(id, VendorStatus.APPROVED);
@@ -103,6 +131,26 @@ export class VendorsController {
   @Patch(":id/suspend")
   suspend(@Param("id") id: string) {
     return this.vendorsService.setStatus(id, VendorStatus.SUSPENDED);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Get(":id/messages")
+  getMessages(@Param("id") id: string) {
+    return this.vendorsService.listMessages(id, "admin");
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Post(":id/messages")
+  sendMessageToVendor(
+    @Param("id") id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: SendVendorMessageDto,
+  ) {
+    return this.vendorsService.sendMessage(id, user.userId, dto.body);
   }
 
   @ApiBearerAuth()

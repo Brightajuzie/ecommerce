@@ -7,6 +7,7 @@ import type {
   AuthTokensDto,
   AddCartItemInput,
   BankDto,
+  BroadcastMessageInput,
   CartDto,
   CategoryDto,
   CheckLivenessInput,
@@ -27,6 +28,7 @@ import type {
   RejectWithdrawalInput,
   ReorderSlidesInput,
   RequestWithdrawalInput,
+  SendVendorMessageInput,
   SetPayoutAccountInput,
   SettingsDto,
   SlideDto,
@@ -36,8 +38,10 @@ import type {
   UpdateProductInput,
   UpdateSettingsInput,
   UpdateSlideInput,
+  UpdateVendorInput,
   UpdateVendorOrderStatusInput,
   UserDto,
+  VendorMessageDto,
   VendorOrderDto,
   VendorProfileDto,
   VerifyIdNumberInput,
@@ -140,15 +144,28 @@ export const VendorsApi = {
   listAll: () => apiClient.get<VendorProfileDto[]>("/vendors/all").then((r) => r.data),
   approve: (id: string) => apiClient.patch<VendorProfileDto>(`/vendors/${id}/approve`).then((r) => r.data),
   suspend: (id: string) => apiClient.patch<VendorProfileDto>(`/vendors/${id}/suspend`).then((r) => r.data),
-  update: (
-    id: string,
-    input: { businessName?: string; description?: string; commissionRate?: number },
-  ) => apiClient.patch<VendorProfileDto>(`/vendors/${id}`, input).then((r) => r.data),
+  update: (id: string, input: UpdateVendorInput) =>
+    apiClient.patch<VendorProfileDto>(`/vendors/${id}`, input).then((r) => r.data),
   remove: (id: string) => apiClient.delete(`/vendors/${id}`).then((r) => r.data),
   setPayoutAccount: (input: SetPayoutAccountInput) =>
     apiClient.patch<VendorProfileDto>("/vendors/me/payout-account", input).then((r) => r.data),
   setDocuments: (input: { businessRegistrationDocUrl?: string; governmentIdDocUrl?: string }) =>
     apiClient.patch<VendorProfileDto>("/vendors/me/documents", input).then((r) => r.data),
+  // Admin side of a vendor's chat thread — see VendorMessage in
+  // schema.prisma for the shared-thread/read-tracking design.
+  getMessages: (id: string) =>
+    apiClient.get<VendorMessageDto[]>(`/vendors/${id}/messages`).then((r) => r.data),
+  sendMessage: (id: string, input: SendVendorMessageInput) =>
+    apiClient.post<VendorMessageDto>(`/vendors/${id}/messages`, input).then((r) => r.data),
+  // Vendor's own side of the same thread.
+  getMyMessages: () =>
+    apiClient.get<VendorMessageDto[]>("/vendors/me/messages").then((r) => r.data),
+  sendMyMessage: (input: SendVendorMessageInput) =>
+    apiClient.post<VendorMessageDto>("/vendors/me/messages", input).then((r) => r.data),
+  // Admin-only: fans one message out to every vendor's thread at once,
+  // flagged so the vendor's UI can label it a platform announcement.
+  broadcast: (input: BroadcastMessageInput) =>
+    apiClient.post<{ count: number }>("/vendors/broadcast", input).then((r) => r.data),
   listBanks: () => apiClient.get<BankDto[]>("/vendors/banks").then((r) => r.data),
 };
 

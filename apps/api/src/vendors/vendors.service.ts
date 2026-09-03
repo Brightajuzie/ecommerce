@@ -12,6 +12,13 @@ import { SetPayoutAccountDto } from "./dto/set-payout-account.dto";
 import { SetVendorDocumentsDto } from "./dto/set-vendor-documents.dto";
 import { UpdateVendorDto } from "./dto/update-vendor.dto";
 
+const MESSAGE_SENDER_SELECT = {
+  id: true,
+  firstName: true,
+  lastName: true,
+  role: true,
+} as const;
+
 // Flattens the joined `user.identityVerified`/`livenessVerified` onto the
 // VendorProfile shape so the mobile client doesn't need a separate nested
 // lookup — used wherever admin reviews an application (identity + liveness
@@ -82,12 +89,25 @@ export class VendorsService {
       [VendorStatus.APPROVED]: 1,
       [VendorStatus.SUSPENDED]: 2,
     };
-    const vendors = await this.prisma.vendorProfile.findMany({
-      include: { user: { select: { identityVerified: true, livenessVerified: true } } },
-      orderBy: { createdAt: "desc" },
-    });
+    const [vendors, unreadGroups] = await Promise.all([
+      this.prisma.vendorProfile.findMany({
+        include: { user: { select: { identityVerified: true, livenessVerified: true } } },
+        orderBy: { createdAt: "desc" },
+      }),
+      // Messages the vendor sent that no admin has read yet — a message's
+      // sender being VENDOR-role always means it was authored by that
+      // thread's own vendor, since a vendor can only post into their own
+      // thread (see sendMyMessage below).
+      this.prisma.vendorMessage.groupBy({
+        by: ["vendorId"],
+        where: { readByAdminAt: null, sender: { role: UserRole.VENDOR } },
+        _count: { _all: true },
+      }),
+    ]);
+    const unreadByVendorId = new Map(unreadGroups.map((g) => [g.vendorId, g._count._all]));
     return vendors
       .map(withIdentityVerified)
+      .map((vendor) => ({ ...vendor, unreadMessageCount: unreadByVendorId.get(vendor.id) ?? 0 }))
       .sort((a, b) => statusOrder[a.status] - statusOrder[b.status]);
   }
 
@@ -184,7 +204,87 @@ export class VendorsService {
     if (!vendor) {
       throw new NotFoundException("No vendor profile found for this account");
     }
-    return withIdentityVerified(vendor);
+    const unreadMessageCount = await this.prisma.vendorMessage.count({
+      where: { vendorId: vendor.id, readByVendorAt: null, senderId: { not: userId } },
+    });
+    return { ...withIdentityVerified(vendor), unreadMessageCount };
+  }
+
+  /**
+   * Shared by both the admin (`GET /vendors/:id/messages`) and vendor
+   * (`GET /vendors/me/messages`) endpoints — `viewerRole` only changes
+   * which side's read marker gets stamped, since loading the thread is
+   * what "reading" it means here (no separate mark-as-read call).
+   */
+  async listMessages(vendorId: string, viewerRole: "admin" | "vendor") {
+    const vendor = await this.prisma.vendorProfile.findUnique({
+      where: { id: vendorId },
+    });
+    if (!vendor) {
+      throw new NotFoundException("Vendor not found");
+    }
+
+    const messages = await this.prisma.vendorMessage.findMany({
+      where: { vendorId },
+      orderBy: { createdAt: "asc" },
+      include: { sender: { select: MESSAGE_SENDER_SELECT } },
+    });
+
+    if (viewerRole === "admin") {
+      await this.prisma.vendorMessage.updateMany({
+        where: { vendorId, readByAdminAt: null, senderId: vendor.userId },
+        data: { readByAdminAt: new Date() },
+      });
+    } else {
+      await this.prisma.vendorMessage.updateMany({
+        where: { vendorId, readByVendorAt: null, NOT: { senderId: vendor.userId } },
+        data: { readByVendorAt: new Date() },
+      });
+    }
+
+    return messages;
+  }
+
+  async sendMessage(vendorId: string, senderId: string, body: string) {
+    const vendor = await this.prisma.vendorProfile.findUnique({
+      where: { id: vendorId },
+    });
+    if (!vendor) {
+      throw new NotFoundException("Vendor not found");
+    }
+    return this.prisma.vendorMessage.create({
+      data: { vendorId, senderId, body },
+      include: { sender: { select: MESSAGE_SENDER_SELECT } },
+    });
+  }
+
+  /** Vendor sending into their own thread — resolves vendorId from userId first. */
+  async sendMyMessage(userId: string, body: string) {
+    const vendor = await this.getMyVendorProfile(userId);
+    return this.sendMessage(vendor.id, userId, body);
+  }
+
+  /**
+   * Fans one message out to every vendor's thread at once, flagged
+   * isBroadcast so their UI can label it a platform announcement rather
+   * than a personal reply. createMany can't `include` back the created
+   * rows, so this returns just a count — the mobile client re-fetches
+   * whichever vendor thread it's viewing, same as after any other send.
+   */
+  async broadcast(senderId: string, body: string) {
+    const vendors = await this.prisma.vendorProfile.findMany({ select: { id: true } });
+    if (vendors.length === 0) {
+      return { count: 0 };
+    }
+    await this.prisma.vendorMessage.createMany({
+      data: vendors.map((vendor) => ({
+        vendorId: vendor.id,
+        senderId,
+        body,
+        isBroadcast: true,
+      })),
+    });
+    return { count: vendors.length };
   }
 
   /**

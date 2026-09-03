@@ -8,8 +8,7 @@ import { v2 as cloudinary } from "cloudinary";
 const MIME_EXTENSIONS: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",
-  "image/webp": "webp",
-  "image/gif": "gif",
+  "application/pdf": "pdf",
 };
 
 export const LOCAL_UPLOAD_DIR = join(process.cwd(), "uploads");
@@ -39,7 +38,7 @@ export class UploadsService {
 
   async uploadImage(buffer: Buffer, mimetype: string): Promise<{ url: string }> {
     if (this.isCloudinaryConfigured()) {
-      return this.uploadToCloudinary(buffer);
+      return this.uploadToCloudinary(buffer, mimetype);
     }
 
     // Local-disk fallback is dev-only. Most hosts (this app runs on Render)
@@ -63,21 +62,28 @@ export class UploadsService {
     return this.saveLocally(buffer, mimetype);
   }
 
-  private uploadToCloudinary(buffer: Buffer): Promise<{ url: string }> {
+  private uploadToCloudinary(buffer: Buffer, mimetype: string): Promise<{ url: string }> {
+    // A PDF (business registration certs, government IDs sometimes come as
+    // one) isn't a photo — the improve/sharpen/quality effects below are
+    // meaningless for it, and resource_type "image" would try to rasterize
+    // just its first page. "raw" stores it byte-for-byte instead.
+    const isPdf = mimetype === "application/pdf";
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder: "ikaystores",
-          resource_type: "image",
-          transformation: [
-            { effect: "improve" },
-            // Product/document photos are usually phone-camera shots viewed
-            // at a fraction of their native size — a mild sharpen keeps
-            // edges/text crisp after that downscale instead of looking soft.
-            { effect: "sharpen" },
-            { quality: "auto:best", fetch_format: "auto" },
-            { width: 2000, height: 2000, crop: "limit" },
-          ],
+          resource_type: isPdf ? "raw" : "image",
+          ...(!isPdf && {
+            transformation: [
+              { effect: "improve" },
+              // Product/document photos are usually phone-camera shots viewed
+              // at a fraction of their native size — a mild sharpen keeps
+              // edges/text crisp after that downscale instead of looking soft.
+              { effect: "sharpen" },
+              { quality: "auto:best", fetch_format: "auto" },
+              { width: 2000, height: 2000, crop: "limit" },
+            ],
+          }),
         },
         (error, result) => {
           if (error || !result) {
