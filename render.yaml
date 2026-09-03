@@ -4,14 +4,18 @@ services:
     runtime: node
     plan: free
     region: oregon
-    # `corepack enable && corepack prepare pnpm@<version> --activate` runs first
-    # so Corepack activates the exact pnpm version pinned in package.json's
-    # "packageManager" field before anything else executes. Without this,
-    # Render's build image falls through to its preinstalled Yarn 1.x, and a
-    # long-standing Corepack bug (nodejs/corepack#706) then reports a garbled
-    # "packageManager": "yarn@pnpm@11.9.0" mismatch error instead of the real
-    # "pnpm isn't active yet" cause.
-    buildCommand: corepack enable && corepack prepare pnpm@11.9.0 --activate && pnpm install --frozen-lockfile && pnpm --filter @ikaystores/shared build && pnpm --filter api exec prisma generate && pnpm --filter api build
+    # Every step is invoked as `corepack pnpm@<version> ...` rather than a
+    # bare `pnpm ...` — this meta-command form runs the pinned version
+    # directly out of Corepack's own cache and never touches a bare `pnpm`
+    # command, so it needs no shim installed anywhere. `corepack enable` /
+    # `corepack prepare --activate` (an earlier attempt at this fix) install
+    # shims into the global bin dir instead, which fails with
+    # `EROFS: read-only file system, unlink '/usr/bin/pnpm'` on Render's
+    # build image. Without pinning the version this way, the build image's
+    # preinstalled Yarn 1.x runs instead, and a long-standing Corepack bug
+    # (nodejs/corepack#706) garbles the resulting error into a nonsensical
+    # "packageManager": "yarn@pnpm@11.9.0" mismatch report.
+    buildCommand: corepack pnpm@11.9.0 install --frozen-lockfile && corepack pnpm@11.9.0 --filter @ikaystores/shared build && corepack pnpm@11.9.0 --filter api exec prisma generate && corepack pnpm@11.9.0 --filter api build
     startCommand: node apps/api/dist/main.js
     healthCheckPath: /api/v1/health
     envVars:
