@@ -97,11 +97,11 @@ export function CheckoutScreen() {
   }));
 
   // Defends this screen directly rather than relying solely on CartScreen's
-  // button routing guests to Login first — e.g. a stale deep link or a
-  // future caller that navigates here without going through the cart.
+  // button routing guests to GuestCheckout first — e.g. a stale deep link
+  // or a future caller that navigates here without going through the cart.
   useEffect(() => {
     if (!user) {
-      navigation.replace("Login", { redirectTo: "Checkout" });
+      navigation.replace("GuestCheckout", { redirectTo: "Checkout" });
     }
   }, [user, navigation]);
 

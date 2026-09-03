@@ -96,6 +96,13 @@ model User {
   email              String    @unique
   phone              String?
   passwordHash       String
+  // False only for a guest-checkout account (AuthService.guestCheckout) —
+  // passwordHash there is a random, never-revealed value so the account
+  // can't actually be logged into until AuthService.setPassword flips this
+  // to true. Every other creation path (register, admin-created) sets a
+  // real password up front, so this defaults true rather than needing a
+  // backfill.
+  hasPassword        Boolean   @default(true)
   firstName          String
   lastName           String
   role               UserRole  @default(BUYER)

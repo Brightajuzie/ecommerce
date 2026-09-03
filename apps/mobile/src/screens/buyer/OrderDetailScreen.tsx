@@ -1,4 +1,4 @@
-import { ActivityIndicator, FlatList, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, Pressable, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -8,6 +8,7 @@ import { PaymentProvider } from "@ikaystores/shared";
 import { OrdersApi, PaymentsApi } from "../../api/endpoints";
 import { getErrorMessage } from "../../api/errorMessage";
 import { PrimaryButton } from "../../components/PrimaryButton";
+import { useAuthStore } from "../../store/authStore";
 import { useTheme } from "../../theme/ThemeContext";
 import { useThemedStyles } from "../../theme/useThemedStyles";
 import type { BuyerStackParamList } from "../../navigation/types";
@@ -24,6 +25,7 @@ export function OrderDetailScreen() {
   const route = useRoute<RouteProp<BuyerStackParamList, "OrderDetail">>();
   const navigation = useNavigation<NativeStackNavigationProp<BuyerStackParamList>>();
   const theme = useTheme();
+  const user = useAuthStore((s) => s.user);
   const styles = useThemedStyles((colors) => ({
     container: { flex: 1, backgroundColor: colors.background },
     center: { flex: 1, alignItems: "center" as const, justifyContent: "center" as const },
@@ -47,6 +49,17 @@ export function OrderDetailScreen() {
     statusPill: { marginTop: 14, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16 },
     statusPillText: { fontWeight: "800" as const, fontSize: 13 },
     retryBlock: { width: "100%" as const, marginTop: 16 },
+    passwordCard: {
+      width: "100%" as const,
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 10,
+      backgroundColor: theme.accentColor ?? colors.placeholderBg,
+      borderRadius: 12,
+      padding: 12,
+      marginTop: 16,
+    },
+    passwordCardText: { flex: 1, color: colors.text, fontSize: 13, fontWeight: "700" as const },
     errorBanner: {
       flexDirection: "row" as const,
       alignItems: "center" as const,
@@ -141,6 +154,16 @@ export function OrderDetailScreen() {
                 {STATUS_LABELS[order.status] ?? order.status}
               </Text>
             </View>
+
+            {isPaid && user?.hasPassword === false && (
+              <Pressable style={styles.passwordCard} onPress={() => navigation.navigate("SetPassword")}>
+                <Ionicons name="key" size={18} color={theme.primaryColor} />
+                <Text style={styles.passwordCardText}>
+                  Set a password to save your order history for next time
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
+              </Pressable>
+            )}
 
             {order.status === "PENDING_PAYMENT" && (
               <View style={styles.retryBlock}>

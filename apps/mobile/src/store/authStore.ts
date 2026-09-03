@@ -21,6 +21,9 @@ interface AuthState {
   hydrate: () => Promise<void>;
   setSession: (accessToken: string, refreshToken: string, user: UserDto) => Promise<void>;
   updateTokens: (accessToken: string, refreshToken: string) => Promise<void>;
+  // Patches the cached user snapshot in place — e.g. after setPassword()
+  // flips hasPassword server-side, without needing a fresh full login.
+  updateUser: (patch: Partial<UserDto>) => Promise<void>;
   logout: () => Promise<void>;
   unlock: () => void;
   setBiometricEnabled: (enabled: boolean) => Promise<void>;
@@ -70,6 +73,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       secureStorage.setItem(REFRESH_TOKEN_KEY, refreshToken),
     ]);
     set({ accessToken, refreshToken });
+  },
+
+  updateUser: async (patch) => {
+    const current = get().user;
+    if (!current) return;
+    const user = { ...current, ...patch };
+    await secureStorage.setItem(USER_KEY, JSON.stringify(user));
+    set({ user });
   },
 
   logout: async () => {

@@ -29,6 +29,9 @@ export interface UserDto {
   firstName: string;
   lastName: string;
   role: UserRole;
+  // False only for a still-unclaimed guest-checkout account — see
+  // AuthService.guestCheckout/setPassword. True for every other account.
+  hasPassword: boolean;
   createdAt: string;
 }
 

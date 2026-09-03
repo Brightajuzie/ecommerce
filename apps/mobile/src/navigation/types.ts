@@ -9,9 +9,16 @@ export type BuyerStackParamList = {
     redirectTo?: "Checkout";
     pendingCartItem?: { productId: string; quantity: number };
   } | undefined;
+  // Default path from a guest's cart — pay first, no account required up
+  // front. Only ever reached with redirectTo: "Checkout" today, but keeps
+  // the same optional shape as Login/Register for consistency.
+  GuestCheckout: {
+    redirectTo?: "Checkout";
+  } | undefined;
   Checkout: undefined;
   PaymentWebView: { checkoutUrl: string; orderId: string };
   OrderDetail: { orderId: string };
+  SetPassword: undefined;
   IdentityVerification: undefined;
 };
 

@@ -50,6 +50,7 @@ export class UsersService {
         referralCode: true,
         identityVerified: true,
         livenessVerified: true,
+        hasPassword: true,
         _count: { select: { referrals: true } },
       },
     });
