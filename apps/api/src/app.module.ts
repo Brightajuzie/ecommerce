@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { APP_GUARD } from "@nestjs/core";
 import { ConfigModule } from "@nestjs/config";
+import { ScheduleModule } from "@nestjs/schedule";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { LoggerModule } from "nestjs-pino";
 import { AppController } from "./app.controller";
@@ -37,6 +38,13 @@ import { WalletsModule } from "./wallets/wallets.module";
       },
     }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
+    // Powers VendorComplianceService's daily suspension-risk-warning job.
+    // Note: this only fires while the process is actually running — on
+    // Render's free tier the service can spin down when idle, so the cron
+    // simply won't fire during a sleep window and picks back up whenever
+    // the next request wakes it. Fine for a "once a day, eventually" check,
+    // not something to rely on for a strict SLA.
+    ScheduleModule.forRoot(),
     PrismaModule,
     AuthModule,
     UsersModule,

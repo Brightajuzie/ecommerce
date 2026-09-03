@@ -62,6 +62,34 @@ export interface VendorProfileDto {
   // just false) on the public listApproved() and apply() responses.
   identityVerified?: boolean;
   livenessVerified?: boolean;
+  // Present on getMyVendorProfile (messages from admin the vendor hasn't
+  // opened yet) and admin's listAll (messages from the vendor no admin has
+  // read yet) — see VendorsService for exactly what each side counts.
+  unreadMessageCount?: number;
+}
+
+// A single message in a vendor's one shared thread with the admin team —
+// see VendorMessage in schema.prisma for the full read-tracking/broadcast
+// design. `sender` is null only for VendorComplianceService's automated
+// suspension-risk warning (isSystemMessage: true).
+export interface VendorMessageSenderDto {
+  id: string;
+  firstName: string;
+  lastName: string;
+  role: UserRole;
+}
+
+export interface VendorMessageDto {
+  id: string;
+  vendorId: string;
+  senderId: string | null;
+  sender: VendorMessageSenderDto | null;
+  isSystemMessage: boolean;
+  body: string;
+  isBroadcast: boolean;
+  readByVendorAt: string | null;
+  readByAdminAt: string | null;
+  createdAt: string;
 }
 
 export interface CategoryDto {

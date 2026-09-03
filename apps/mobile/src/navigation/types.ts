@@ -28,6 +28,7 @@ export type VendorStackParamList = {
   IdentityVerification: undefined;
   LivenessCheck: undefined;
   VendorPending: undefined;
+  VendorChat: undefined;
 };
 
 export type VendorTabParamList = {
@@ -44,6 +45,8 @@ export type AdminStackParamList = {
   ProductForm: { productId?: string } | undefined;
   UserForm: { userId?: string } | undefined;
   IdentityVerification: undefined;
+  VendorChat: { vendorId: string; businessName: string };
+  BroadcastMessage: undefined;
 };
 
 export type AdminTabParamList = {

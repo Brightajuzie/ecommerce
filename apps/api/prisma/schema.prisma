@@ -130,6 +130,7 @@ model User {
   addresses             Address[]
   orders                Order[]
   identityVerifications IdentityVerification[]
+  sentVendorMessages    VendorMessage[]
 
   @@map("users")
 }
@@ -170,16 +171,59 @@ model VendorProfile {
   // approving. Replaces the old selfie-based async Biometric KYC flow.
   businessRegistrationDocUrl String?
   governmentIdDocUrl         String?
-  createdAt                  DateTime     @default(now())
-  updatedAt                  DateTime     @updatedAt
+  // Set once VendorComplianceService's daily job has sent this vendor the
+  // "verify soon or risk suspension" system message (>5 products listed,
+  // still not identity+liveness verified, 2+ weeks since signup) — the
+  // null-check in that job's query is what stops it re-sending the same
+  // warning every day. Never reset back to null: once both checks pass,
+  // the job's own `user: { OR: [identityVerified:false, ...] }` filter
+  // permanently excludes the vendor regardless of this field, and there's
+  // currently no way for a verified user to become unverified again.
+  suspensionWarnedAt DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   products           Product[]
   vendorOrders       VendorOrder[]
   wallet             Wallet?
   withdrawalRequests WithdrawalRequest[]
+  messages           VendorMessage[]
 
   @@map("vendor_profiles")
+}
+
+// One thread per vendor, shared by every admin/super-admin — not
+// per-admin-per-vendor — since a vendor only needs one line to "the
+// platform team", not a separate inbox per admin who happens to reply.
+// senderId (not a bare isFromAdmin flag) keeps a real audit trail of which
+// admin said what, and lets the same schema carry the vendor's own replies
+// (sender.role === VENDOR) without a separate column. A platform-wide
+// broadcast (VendorsService.broadcast) is just this same row fanned out
+// once per vendor, flagged isBroadcast so the vendor's UI can label it an
+// announcement rather than a reply in an ongoing conversation. senderId is
+// nullable + isSystemMessage for the one other source of rows here:
+// VendorComplianceService's automated suspension-risk warning, which isn't
+// authored by any particular human account.
+model VendorMessage {
+  id              String    @id @default(uuid())
+  vendorId        String
+  senderId        String?
+  isSystemMessage Boolean   @default(false)
+  body            String    @db.VarChar(4000)
+  isBroadcast     Boolean   @default(false)
+  // Two separate markers, not one: the vendor and "the admin team" (shared
+  // across every admin) are different readers of the same thread. Set when
+  // that side's messages endpoint is loaded — see VendorsService.listMessages.
+  readByVendorAt DateTime?
+  readByAdminAt  DateTime?
+  createdAt      DateTime  @default(now())
+
+  vendor VendorProfile @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  sender User?         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([vendorId, createdAt])
+  @@map("vendor_messages")
 }
 
 model Category {

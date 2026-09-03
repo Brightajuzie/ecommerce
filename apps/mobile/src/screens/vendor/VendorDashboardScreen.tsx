@@ -85,6 +85,39 @@ export function VendorDashboardScreen() {
       marginTop: 16,
     },
     identityBannerText: { color: "#fff", fontSize: 12, fontWeight: "600" as const, flex: 1 },
+    messageBanner: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 10,
+      backgroundColor: colors.surface,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 14,
+      marginBottom: 18,
+    },
+    messageBannerIconWrap: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      backgroundColor: theme.accentColor ?? colors.placeholderBg,
+    },
+    messageBannerText: { flex: 1, color: colors.text, fontSize: 13, fontWeight: "700" as const },
+    quickActionBadge: {
+      position: "absolute" as const,
+      top: 8,
+      right: 8,
+      minWidth: 18,
+      height: 18,
+      borderRadius: 9,
+      paddingHorizontal: 4,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      backgroundColor: colors.danger,
+    },
+    quickActionBadgeText: { color: "#fff", fontSize: 10, fontWeight: "800" as const },
     statsGrid: { flexDirection: "row" as const, flexWrap: "wrap" as const, gap: 12, marginBottom: 18 },
     statCard: {
       flexGrow: 1,
@@ -113,6 +146,7 @@ export function VendorDashboardScreen() {
     sectionLabel: { fontSize: 15, fontWeight: "700" as const, color: colors.text, marginBottom: 10 },
     quickActionsRow: { flexDirection: "row" as const, flexWrap: "wrap" as const, gap: 10 },
     quickAction: {
+      position: "relative" as const,
       flexGrow: 1,
       flexBasis: 150,
       flexDirection: "row" as const,
@@ -149,6 +183,7 @@ export function VendorDashboardScreen() {
   }
 
   const businessName = vendorQuery.data?.businessName;
+  const unreadMessageCount = vendorQuery.data?.unreadMessageCount ?? 0;
   const identityVerified = meQuery.data?.identityVerified;
   const livenessVerified = meQuery.data?.livenessVerified;
   // Both checks are optional at signup (see VendorPendingScreen's "Skip for
@@ -196,6 +231,20 @@ export function VendorDashboardScreen() {
           )}
         </Pressable>
 
+        {unreadMessageCount > 0 && (
+          <Pressable style={styles.messageBanner} onPress={() => navigation.navigate("VendorChat")}>
+            <View style={styles.messageBannerIconWrap}>
+              <Ionicons name="chatbubble-ellipses" size={18} color={theme.primaryColor} />
+            </View>
+            <Text style={styles.messageBannerText}>
+              {unreadMessageCount === 1
+                ? "You have 1 new message from the admin team"
+                : `You have ${unreadMessageCount} new messages from the admin team`}
+            </Text>
+            <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
+          </Pressable>
+        )}
+
         <View style={styles.statsGrid}>
           <Pressable style={styles.statCard} onPress={() => navigation.navigate("MyProducts")}>
             <View style={[styles.statIconWrap, { backgroundColor: theme.accentColor ?? theme.colors.placeholderBg }]}>
@@ -241,6 +290,19 @@ export function VendorDashboardScreen() {
               <Ionicons name="wallet" size={18} color={theme.primaryColor} />
             </View>
             <Text style={styles.quickActionText}>Wallet</Text>
+          </Pressable>
+          <Pressable style={styles.quickAction} onPress={() => navigation.navigate("VendorChat")}>
+            <View style={styles.quickActionIconWrap}>
+              <Ionicons name="chatbubbles" size={18} color={theme.primaryColor} />
+            </View>
+            <Text style={styles.quickActionText}>Messages</Text>
+            {unreadMessageCount > 0 && (
+              <View style={styles.quickActionBadge}>
+                <Text style={styles.quickActionBadgeText}>
+                  {unreadMessageCount > 9 ? "9+" : unreadMessageCount}
+                </Text>
+              </View>
+            )}
           </Pressable>
         </View>
       </View>

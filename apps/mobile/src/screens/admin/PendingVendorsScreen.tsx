@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { ActivityIndicator, Alert, FlatList, Image, Linking, Pressable, Text, View } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { VendorStatus, type VendorProfileDto } from "@ikaystores/shared";
@@ -10,22 +12,40 @@ import { useTheme } from "../../theme/ThemeContext";
 import { useThemedStyles } from "../../theme/useThemedStyles";
 import type { ThemeColors } from "../../theme/colors";
 import type { Theme } from "../../theme/ThemeContext";
+import type { AdminStackParamList } from "../../navigation/types";
 
 const MAX_CONTENT_WIDTH = 800;
 
 export function PendingVendorsScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<AdminStackParamList>>();
   const theme = useTheme();
   // Vendors are auto-approved on signup (see AuthService.register) — there's
   // no real review queue to gate on anymore, so this lists every vendor
   // regardless of status. That's what keeps admin oversight meaningful:
-  // suspend/reactivate/edit/delete remain available for any vendor at any
-  // time, not just while an application is pending.
+  // suspend/reactivate/edit/delete/message remain available for any vendor
+  // at any time, not just while an application is pending.
   const vendorsQuery = useQuery({ queryKey: ["allVendors"], queryFn: VendorsApi.listAll });
   const styles = useThemedStyles((colors) => ({
     container: { flex: 1, backgroundColor: colors.background, paddingTop: 60 },
     centeredColumn: { width: "100%" as const, maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" as const, paddingHorizontal: 16 },
     center: { flex: 1, alignItems: "center" as const, justifyContent: "center" as const },
-    title: { fontSize: 26, fontWeight: "800" as const, color: colors.text, marginBottom: 16 },
+    titleRow: {
+      flexDirection: "row" as const,
+      justifyContent: "space-between" as const,
+      alignItems: "center" as const,
+      marginBottom: 16,
+    },
+    title: { fontSize: 26, fontWeight: "800" as const, color: colors.text },
+    broadcastButton: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 6,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: 10,
+      backgroundColor: theme.primaryColor,
+    },
+    broadcastButtonText: { color: "#fff", fontWeight: "700" as const, fontSize: 13 },
     list: { paddingBottom: 24 },
     empty: { alignItems: "center" as const, marginTop: 40, gap: 8 },
     emptyText: { color: colors.textMuted },
@@ -48,7 +68,16 @@ export function PendingVendorsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.centeredColumn}>
-        <Text style={styles.title}>Vendors</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>Vendors</Text>
+          <Pressable
+            style={styles.broadcastButton}
+            onPress={() => navigation.navigate("BroadcastMessage")}
+          >
+            <Ionicons name="megaphone-outline" size={15} color="#fff" />
+            <Text style={styles.broadcastButtonText}>Message all</Text>
+          </Pressable>
+        </View>
       </View>
       <FlatList
         data={vendorsQuery.data ?? []}
@@ -81,6 +110,7 @@ function VendorCard({
   theme: Theme;
   statusColors: Record<VendorStatus, string>;
 }) {
+  const navigation = useNavigation<NativeStackNavigationProp<AdminStackParamList>>();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [businessName, setBusinessName] = useState(vendor.businessName);
@@ -114,7 +144,24 @@ function VendorCard({
     docsRow: { flexDirection: "row" as const, gap: 16, marginTop: 14 },
     actions: { flexDirection: "row" as const, gap: 10, marginTop: 12, flexWrap: "wrap" as const },
     iconButtonRow: { flexDirection: "row" as const, gap: 4 },
-    iconButton: { width: 32, height: 32, borderRadius: 16, alignItems: "center" as const, justifyContent: "center" as const },
+    iconButton: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+    },
+    unreadDot: {
+      position: "absolute" as const,
+      top: 2,
+      right: 2,
+      width: 9,
+      height: 9,
+      borderRadius: 5,
+      backgroundColor: colors.danger,
+      borderWidth: 1.5,
+      borderColor: colors.surface,
+    },
   }));
 
   const approve = useMutation({
@@ -181,6 +228,16 @@ function VendorCard({
       <View style={styles.headerRow}>
         <Text style={styles.businessName}>{vendor.businessName}</Text>
         <View style={styles.iconButtonRow}>
+          <Pressable
+            style={styles.iconButton}
+            onPress={() =>
+              navigation.navigate("VendorChat", { vendorId: vendor.id, businessName: vendor.businessName })
+            }
+            hitSlop={6}
+          >
+            <Ionicons name="chatbubble-outline" size={18} color={theme.colors.textMuted} />
+            {!!vendor.unreadMessageCount && <View style={styles.unreadDot} />}
+          </Pressable>
           <Pressable
             style={styles.iconButton}
             onPress={() => (isEditing ? cancelEdit() : setIsEditing(true))}

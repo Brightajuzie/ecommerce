@@ -7,6 +7,7 @@ import { VendorTabNavigator } from "./VendorTabNavigator";
 import { ProductFormScreen } from "../screens/vendor/ProductFormScreen";
 import { VendorPendingScreen } from "../screens/vendor/VendorPendingScreen";
 import { LivenessCheckScreen } from "../screens/vendor/LivenessCheckScreen";
+import { VendorChatScreen } from "../screens/vendor/VendorChatScreen";
 import { IdentityVerificationScreen } from "../screens/buyer/IdentityVerificationScreen";
 import type { VendorStackParamList } from "./types";
 
@@ -61,6 +62,7 @@ export function VendorNavigator() {
         component={LivenessCheckScreen}
         options={{ headerShown: false }}
       />
+      <Stack.Screen name="VendorChat" component={VendorChatScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }
