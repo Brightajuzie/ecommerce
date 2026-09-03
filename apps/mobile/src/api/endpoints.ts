@@ -140,6 +140,11 @@ export const VendorsApi = {
   listAll: () => apiClient.get<VendorProfileDto[]>("/vendors/all").then((r) => r.data),
   approve: (id: string) => apiClient.patch<VendorProfileDto>(`/vendors/${id}/approve`).then((r) => r.data),
   suspend: (id: string) => apiClient.patch<VendorProfileDto>(`/vendors/${id}/suspend`).then((r) => r.data),
+  update: (
+    id: string,
+    input: { businessName?: string; description?: string; commissionRate?: number },
+  ) => apiClient.patch<VendorProfileDto>(`/vendors/${id}`, input).then((r) => r.data),
+  remove: (id: string) => apiClient.delete(`/vendors/${id}`).then((r) => r.data),
   setPayoutAccount: (input: SetPayoutAccountInput) =>
     apiClient.patch<VendorProfileDto>("/vendors/me/payout-account", input).then((r) => r.data),
   setDocuments: (input: { businessRegistrationDocUrl?: string; governmentIdDocUrl?: string }) =>
