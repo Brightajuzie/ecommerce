@@ -1,7 +1,9 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
   Param,
   Patch,
   Post,
@@ -18,6 +20,7 @@ import { VendorsService } from "./vendors.service";
 import { ApplyVendorDto } from "./dto/apply-vendor.dto";
 import { SetPayoutAccountDto } from "./dto/set-payout-account.dto";
 import { SetVendorDocumentsDto } from "./dto/set-vendor-documents.dto";
+import { UpdateVendorDto } from "./dto/update-vendor.dto";
 
 @ApiTags("vendors")
 @Controller("vendors")
@@ -100,5 +103,22 @@ export class VendorsController {
   @Patch(":id/suspend")
   suspend(@Param("id") id: string) {
     return this.vendorsService.setStatus(id, VendorStatus.SUSPENDED);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Patch(":id")
+  update(@Param("id") id: string, @Body() dto: UpdateVendorDto) {
+    return this.vendorsService.updateVendor(id, dto);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @HttpCode(204)
+  @Delete(":id")
+  remove(@Param("id") id: string) {
+    return this.vendorsService.deleteVendor(id);
   }
 }

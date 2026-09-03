@@ -3,13 +3,14 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { VendorStatus } from "@prisma/client";
+import { UserRole, VendorStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { FlutterwaveService } from "../payments/flutterwave/flutterwave.service";
 import type { PayoutAccount } from "../payment-settings/payment-settings.service";
 import { ApplyVendorDto } from "./dto/apply-vendor.dto";
 import { SetPayoutAccountDto } from "./dto/set-payout-account.dto";
 import { SetVendorDocumentsDto } from "./dto/set-vendor-documents.dto";
+import { UpdateVendorDto } from "./dto/update-vendor.dto";
 
 // Flattens the joined `user.identityVerified`/`livenessVerified` onto the
 // VendorProfile shape so the mobile client doesn't need a separate nested
@@ -101,6 +102,78 @@ export class VendorsService {
       where: { id: vendorId },
       data: { status },
     });
+  }
+
+  // Admin-only edit of a vendor's own listed details — name, description,
+  // commission rate. Distinct from apply()/setDocuments(), which the vendor
+  // submits about themselves; identity/liveness/document review stay on
+  // their own flows, not folded into this generic edit.
+  async updateVendor(vendorId: string, dto: UpdateVendorDto) {
+    const vendor = await this.prisma.vendorProfile.findUnique({
+      where: { id: vendorId },
+    });
+    if (!vendor) {
+      throw new NotFoundException("Vendor not found");
+    }
+    return this.prisma.vendorProfile.update({
+      where: { id: vendorId },
+      data: {
+        ...(dto.businessName !== undefined && { businessName: dto.businessName }),
+        ...(dto.description !== undefined && { description: dto.description }),
+        ...(dto.commissionRate !== undefined && { commissionRate: dto.commissionRate }),
+      },
+    });
+  }
+
+  /**
+   * Permanently removes a vendor's store — only when it's safe to: refuses
+   * if the vendor has ever had a VendorOrder (which would mean OrderItems
+   * pointing at their Products, since OrderItem/Product have no cascade —
+   * this check is what guarantees the cascade below can't fail on that FK),
+   * a withdrawal request, or a nonzero wallet balance, since any of those
+   * represent real financial/audit history that a hard delete shouldn't be
+   * able to silently erase. suspend() is the right tool for an active
+   * vendor with history; delete is for a mistaken/spam signup with none.
+   *
+   * The underlying User account isn't deleted — it's reverted to BUYER, so
+   * a vendor with no history simply loses selling access instead of losing
+   * their login, and the app doesn't end up routing them into a
+   * VendorNavigator with no VendorProfile behind it (see RootNavigator's
+   * role-based routing).
+   */
+  async deleteVendor(vendorId: string) {
+    const vendor = await this.prisma.vendorProfile.findUnique({
+      where: { id: vendorId },
+      include: { wallet: true },
+    });
+    if (!vendor) {
+      throw new NotFoundException("Vendor not found");
+    }
+
+    const [orderCount, withdrawalCount] = await Promise.all([
+      this.prisma.vendorOrder.count({ where: { vendorId } }),
+      this.prisma.withdrawalRequest.count({ where: { vendorId } }),
+    ]);
+    if (orderCount > 0 || withdrawalCount > 0) {
+      throw new ConflictException(
+        "This vendor has order or payout history and can't be deleted — suspend them instead.",
+      );
+    }
+    if (vendor.wallet && Number(vendor.wallet.balance) > 0) {
+      throw new ConflictException(
+        "This vendor's wallet still has a balance — resolve it before deleting.",
+      );
+    }
+
+    await this.prisma.$transaction([
+      // Cascades to their Products (and Wallet, if the zero-balance one
+      // above exists) per the schema's onDelete: Cascade on those relations.
+      this.prisma.vendorProfile.delete({ where: { id: vendorId } }),
+      this.prisma.user.update({
+        where: { id: vendor.userId },
+        data: { role: UserRole.BUYER },
+      }),
+    ]);
   }
 
   async getMyVendorProfile(userId: string) {
