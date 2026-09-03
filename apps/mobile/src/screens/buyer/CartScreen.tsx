@@ -183,7 +183,7 @@ export function CartScreen() {
               onPress={() =>
                 user
                   ? navigation.navigate("Checkout")
-                  : navigation.navigate("Login", { redirectTo: "Checkout" })
+                  : navigation.navigate("GuestCheckout", { redirectTo: "Checkout" })
               }
             />
           </View>

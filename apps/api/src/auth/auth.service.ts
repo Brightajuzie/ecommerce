@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import {
   ConflictException,
   Injectable,
@@ -11,6 +12,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { generateReferralCode } from "../users/referral-code.util";
 import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
+import { GuestCheckoutDto } from "./dto/guest-checkout.dto";
 import { JwtPayload } from "./types/authenticated-user.type";
 
 const REFERRAL_CODE_MAX_ATTEMPTS = 5;
@@ -75,6 +77,70 @@ export class AuthService {
     });
 
     return this.issueTokens(user.id, user.email, user.role);
+  }
+
+  /**
+   * Lets a buyer complete a purchase without registering first — creates a
+   * real account (so the rest of the app, order history, wallet, referrals,
+   * needs no separate "guest order" code path) with a random, never-
+   * revealed password hash. hasPassword: false marks it as not actually
+   * loggable-into yet; the buyer sets a real one afterward via
+   * setPassword(), typically prompted right on their order receipt once
+   * payment succeeds (see OrderDetailScreen).
+   *
+   * An email that's already registered is refused rather than silently
+   * reused — this must never become a way to check out into someone
+   * else's existing account.
+   */
+  async guestCheckout(dto: GuestCheckoutDto) {
+    const existing = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
+    if (existing) {
+      throw new ConflictException(
+        "An account with this email already exists — please sign in instead.",
+      );
+    }
+
+    const passwordHash = await bcrypt.hash(randomBytes(32).toString("hex"), SALT_ROUNDS);
+    const referralCode = await this.generateUniqueReferralCode();
+
+    const user = await this.prisma.user.create({
+      data: {
+        email: dto.email,
+        passwordHash,
+        hasPassword: false,
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        phone: dto.phone,
+        role: UserRole.BUYER,
+        referralCode,
+        cart: { create: {} },
+        addresses: {
+          create: {
+            label: dto.address.label || "Home",
+            line1: dto.address.line1,
+            line2: dto.address.line2,
+            city: dto.address.city,
+            state: dto.address.state,
+            country: dto.address.country || undefined,
+            phone: dto.address.phone,
+            isDefault: true,
+          },
+        },
+      },
+    });
+
+    return this.issueTokens(user.id, user.email, user.role);
+  }
+
+  /** Claims a guest-checkout account with a real password — see guestCheckout(). */
+  async setPassword(userId: string, password: string) {
+    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash, hasPassword: true },
+    });
   }
 
   async login(dto: LoginDto) {
@@ -165,6 +231,7 @@ export class AuthService {
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
+        hasPassword: user.hasPassword,
         createdAt: user.createdAt,
       },
     };

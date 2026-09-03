@@ -9,6 +9,7 @@ import { PrimaryButton } from "../../components/PrimaryButton";
 import { useTheme } from "../../theme/ThemeContext";
 import { useThemedStyles } from "../../theme/useThemedStyles";
 import { useAuthStore } from "../../store/authStore";
+import { useGuestCartStore } from "../../store/guestCartStore";
 import { optimizedImageUrl } from "../../utils/image";
 import type { BuyerStackParamList } from "../../navigation/types";
 
@@ -22,6 +23,7 @@ export function ProductDetailScreen() {
   const queryClient = useQueryClient();
   const theme = useTheme();
   const user = useAuthStore((s) => s.user);
+  const guestAddItem = useGuestCartStore((s) => s.addItem);
   const [quantity, setQuantity] = useState(1);
   const styles = useThemedStyles((colors) => ({
     container: { flex: 1, backgroundColor: colors.surface },
@@ -135,13 +137,17 @@ export function ProductDetailScreen() {
   });
 
   const handleAddToCart = () => {
+    setShowAddedAlert(false);
     if (!user) {
-      navigation.navigate("Login", {
-        pendingCartItem: { productId: route.params.productId, quantity },
-      });
+      // Guests get a real local cart (see guestCartStore) instead of being
+      // forced to sign in here — checkout is what asks for an account (see
+      // CartScreen -> GuestCheckoutScreen), not adding an item to look at.
+      if (productQuery.data) {
+        guestAddItem(productQuery.data, quantity);
+        setShowAddedAlert(true);
+      }
       return;
     }
-    setShowAddedAlert(false);
     addToCart.mutate();
   };
 
@@ -273,7 +279,11 @@ export function ProductDetailScreen() {
                 title="Checkout"
                 onPress={() => {
                   setShowAddedAlert(false);
-                  navigation.navigate("Checkout");
+                  if (user) {
+                    navigation.navigate("Checkout");
+                  } else {
+                    navigation.navigate("GuestCheckout", { redirectTo: "Checkout" });
+                  }
                 }}
               />
             </View>

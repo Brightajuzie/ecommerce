@@ -15,6 +15,7 @@ import type {
   CreateProductInput,
   CreateSlideInput,
   GatewaySettingsDto,
+  GuestCheckoutInput,
   IdentityVerificationResultDto,
   InitiatePaymentInput,
   LivenessCheckResultDto,
@@ -29,6 +30,7 @@ import type {
   ReorderSlidesInput,
   RequestWithdrawalInput,
   SendVendorMessageInput,
+  SetPasswordInput,
   SetPayoutAccountInput,
   SettingsDto,
   SlideDto,
@@ -55,6 +57,10 @@ export const AuthApi = {
     apiClient.post<AuthTokensDto>("/auth/register", input).then((r) => r.data),
   login: (input: LoginInput) =>
     apiClient.post<AuthTokensDto>("/auth/login", input).then((r) => r.data),
+  guestCheckout: (input: GuestCheckoutInput) =>
+    apiClient.post<AuthTokensDto>("/auth/guest-checkout", input).then((r) => r.data),
+  setPassword: (input: SetPasswordInput) =>
+    apiClient.post<void>("/auth/set-password", input).then((r) => r.data),
 };
 
 export const UsersApi = {
