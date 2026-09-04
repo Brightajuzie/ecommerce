@@ -75,6 +75,7 @@ export class PaymentSettingsService {
       dojahAppId: settings.dojahAppId,
       dojahSecretKey: maskSecret(settings.dojahSecretKey),
       dojahEnvironment: settings.dojahEnvironment,
+      codEnabled: settings.codEnabled,
     };
   }
 
@@ -97,6 +98,11 @@ export class PaymentSettingsService {
         dojahAppId: dto.dojahAppId || undefined,
         dojahSecretKey: dto.dojahSecretKey || undefined,
         dojahEnvironment: dto.dojahEnvironment || undefined,
+        // Not `dto.codEnabled || undefined` — that pattern (blank string
+        // means "leave unchanged") is wrong for a boolean: `false ||
+        // undefined` is always `undefined`, which would make it impossible
+        // to ever turn this off again. Explicit undefined-check instead.
+        codEnabled: dto.codEnabled !== undefined ? dto.codEnabled : undefined,
       },
     });
     return this.getGatewaySettings();

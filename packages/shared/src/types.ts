@@ -185,6 +185,10 @@ export interface SettingsDto {
   accentColor: string | null;
   logoUrl: string | null;
   referralBonusAmount: number;
+  // Actually stored on PlatformPaymentSettings, merged in read-only by
+  // SettingsService.get() so checkout can see it without admin access —
+  // see PaymentSettingsService for where it's actually written.
+  codEnabled: boolean;
   updatedAt: string;
 }
 
@@ -277,6 +281,7 @@ export interface GatewaySettingsDto {
   dojahAppId: string | null;
   dojahSecretKey: string | null;
   dojahEnvironment: string | null;
+  codEnabled: boolean;
 }
 
 // Admin-facing user record — scoped to BUYER/VENDOR accounts only, see

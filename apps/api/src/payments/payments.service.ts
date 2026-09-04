@@ -53,6 +53,14 @@ export class PaymentsService {
       throw new BadRequestException("This order is not awaiting payment");
     }
 
+    // Skips the gateway entirely rather than falling into the
+    // FLUTTERWAVE/OPAY branches below — must be checked before them, not
+    // folded into an `else`, since only two of the three providers ever
+    // reach a real gateway call.
+    if (dto.provider === PaymentProvider.COD) {
+      return this.initiateCod(order);
+    }
+
     const appUrl = this.configService.getOrThrow<string>("APP_URL");
     const reference = `IKS-${order.id}-${Date.now()}`;
     const amount = Number(order.totalAmount);
@@ -106,6 +114,59 @@ export class PaymentsService {
     });
 
     return { checkoutUrl, reference };
+  }
+
+  /**
+   * "Pay on delivery" — cash/card collected by the vendor in person instead
+   * of through a gateway. Marks the order PAID and every VendorOrder under
+   * it ACCEPTED immediately (no webhook to wait on), which is exactly what
+   * markPaymentResult() does for a real gateway payment — from here on a
+   * COD order flows through the same fulfillment pipeline as any other:
+   * OrdersService.updateVendorOrderStatus() still only credits the vendor
+   * and platform wallets on the DELIVERED transition, so "paid" here means
+   * "confirmed, cash due at the door", not "money already collected".
+   */
+  private async initiateCod(order: Prisma.OrderGetPayload<{ include: { buyer: true } }>) {
+    const settings = await this.prisma.platformPaymentSettings.findFirst();
+    if (!settings?.codEnabled) {
+      throw new BadRequestException("Pay on delivery is not available right now");
+    }
+
+    const reference = `COD-${order.id}-${Date.now()}`;
+    const amount = Number(order.totalAmount);
+
+    await this.prisma.payment.create({
+      data: {
+        orderId: order.id,
+        provider: PaymentProvider.COD,
+        providerReference: reference,
+        amount,
+        currency: order.currency,
+        status: PaymentStatus.SUCCESSFUL,
+      },
+    });
+
+    await this.prisma.$transaction([
+      this.prisma.order.update({
+        where: { id: order.id },
+        data: {
+          status: OrderStatus.PAID,
+          paymentProvider: PaymentProvider.COD,
+          paymentReference: reference,
+        },
+      }),
+      this.prisma.vendorOrder.updateMany({
+        where: { orderId: order.id },
+        data: { status: VendorOrderStatus.ACCEPTED },
+      }),
+    ]);
+
+    // Best-effort, same as the gateway path in markPaymentResult().
+    await this.creditReferralBonusIfFirstOrder(order.id).catch((error) =>
+      this.logger.error("Referral bonus crediting failed", error),
+    );
+
+    return { reference };
   }
 
   async handleFlutterwaveWebhook(

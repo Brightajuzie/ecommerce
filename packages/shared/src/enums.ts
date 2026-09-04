@@ -39,6 +39,9 @@ export enum VendorOrderStatus {
 export enum PaymentProvider {
   FLUTTERWAVE = "FLUTTERWAVE",
   OPAY = "OPAY",
+  // Cash/card collected by the vendor at delivery — only offered at
+  // checkout when PlatformPaymentSettings.codEnabled is true.
+  COD = "COD",
 }
 
 export enum PaymentStatus {

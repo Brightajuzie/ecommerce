@@ -4,6 +4,7 @@ import {
   Alert,
   Pressable,
   ScrollView,
+  Switch,
   Text,
   View,
 } from "react-native";
@@ -97,6 +98,7 @@ export function PaymentSettingsScreen() {
   const [dojahAppId, setDojahAppId] = useState("");
   const [dojahSecretKey, setDojahSecretKey] = useState("");
   const [dojahEnvironment, setDojahEnvironment] = useState<"sandbox" | "production">("sandbox");
+  const [codEnabled, setCodEnabled] = useState(false);
 
   useEffect(() => {
     if (settingsQuery.data) {
@@ -117,6 +119,7 @@ export function PaymentSettingsScreen() {
       setDojahEnvironment(
         gatewaySettingsQuery.data.dojahEnvironment === "production" ? "production" : "sandbox",
       );
+      setCodEnabled(gatewaySettingsQuery.data.codEnabled);
     }
   }, [gatewaySettingsQuery.data]);
 
@@ -168,6 +171,7 @@ export function PaymentSettingsScreen() {
         dojahAppId: dojahAppId || undefined,
         dojahSecretKey: dojahSecretKey || undefined,
         dojahEnvironment,
+        codEnabled,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["gatewaySettings"] });
@@ -302,6 +306,24 @@ export function PaymentSettingsScreen() {
             secureTextEntry
             placeholder="Leave blank to keep unchanged"
           />
+
+          <View
+            style={{
+              flexDirection: "row" as const,
+              justifyContent: "space-between" as const,
+              alignItems: "center" as const,
+              marginTop: 4,
+            }}
+          >
+            <View style={{ flex: 1, marginRight: 12 }}>
+              <Text style={styles.subsectionTitle}>Pay on delivery</Text>
+              <Text style={styles.sectionHint}>
+                Lets a buyer confirm an order without paying online — cash or card is collected by
+                the vendor at delivery instead. Off by default.
+              </Text>
+            </View>
+            <Switch value={codEnabled} onValueChange={setCodEnabled} />
+          </View>
 
           <Text style={styles.subsectionTitle}>
             Identity verification (Dojah){" "}

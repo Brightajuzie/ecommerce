@@ -112,7 +112,11 @@ export function OrderDetailScreen() {
     mutationFn: () =>
       PaymentsApi.initiate({ orderId: route.params.orderId, provider: PaymentProvider.FLUTTERWAVE }),
     onSuccess: (payment) => {
-      navigation.navigate("PaymentWebView", { checkoutUrl: payment.checkoutUrl, orderId: route.params.orderId });
+      // Always present for a FLUTTERWAVE initiate (only COD omits it) — the
+      // check just satisfies the now-optional type, not a real runtime case.
+      if (payment.checkoutUrl) {
+        navigation.navigate("PaymentWebView", { checkoutUrl: payment.checkoutUrl, orderId: route.params.orderId });
+      }
     },
   });
 
@@ -126,6 +130,14 @@ export function OrderDetailScreen() {
 
   const order = orderQuery.data;
   const isPaid = order.status === "PAID";
+  const isCod = order.paymentProvider === PaymentProvider.COD;
+  // PAID means "confirmed, fulfillment can proceed" for a COD order too
+  // (see PaymentsService.initiateCod) — the wallet/vendor-payout money
+  // itself isn't actually collected until delivery either way (see
+  // OrdersService.updateVendorOrderStatus), so this is a label-only
+  // distinction: don't tell a COD buyer they've already paid.
+  const statusLabel =
+    isPaid && isCod ? "Confirmed — pay on delivery" : (STATUS_LABELS[order.status] ?? order.status);
   const orderDate = new Date(order.createdAt).toLocaleString(undefined, {
     dateStyle: "medium",
     timeStyle: "short",
@@ -151,7 +163,7 @@ export function OrderDetailScreen() {
               ]}
             >
               <Text style={[styles.statusPillText, { color: isPaid ? statusColors.paidFg : statusColors.pendingFg }]}>
-                {STATUS_LABELS[order.status] ?? order.status}
+                {statusLabel}
               </Text>
             </View>
 
