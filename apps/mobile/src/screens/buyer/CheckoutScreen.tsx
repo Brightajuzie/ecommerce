@@ -6,7 +6,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { AddressDto } from "@ikaystores/shared";
 import { PaymentProvider } from "@ikaystores/shared";
-import { UsersApi, OrdersApi, PaymentsApi, SettingsApi } from "../../api/endpoints";
+import { CartApi, UsersApi, OrdersApi, PaymentsApi, SettingsApi } from "../../api/endpoints";
 import { getErrorMessage } from "../../api/errorMessage";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { FormInput } from "../../components/FormInput";
@@ -95,6 +95,12 @@ export function CheckoutScreen() {
     providerChipText: { color: colors.textSecondary, fontWeight: "600" as const },
     providerChipTextActive: { color: "#fff" },
     codHint: { color: colors.textMuted, fontSize: 12, lineHeight: 17, marginTop: 10 },
+    summaryRow: { flexDirection: "row" as const, justifyContent: "space-between" as const, marginBottom: 6 },
+    summaryLabel: { color: colors.textMuted, fontSize: 14 },
+    summaryValue: { color: colors.text, fontSize: 14, fontWeight: "600" as const },
+    summaryDivider: { height: 1, backgroundColor: colors.border, marginVertical: 8 },
+    summaryTotalLabel: { color: colors.text, fontSize: 15, fontWeight: "800" as const },
+    summaryTotalValue: { color: colors.text, fontSize: 16, fontWeight: "800" as const },
   }));
 
   // Defends this screen directly rather than relying solely on CartScreen's
@@ -111,9 +117,14 @@ export function CheckoutScreen() {
     queryFn: UsersApi.listAddresses,
     enabled: !!user,
   });
-  // codEnabled actually lives on PlatformPaymentSettings, merged in here by
-  // the public /settings endpoint — see SettingsService.get().
+  // codEnabled and deliveryFee actually live elsewhere (PlatformPaymentSettings
+  // and AppSettings respectively) but are merged into the public /settings
+  // response — see SettingsService.get().
   const settingsQuery = useQuery({ queryKey: ["settings"], queryFn: SettingsApi.get });
+  // Shown here purely as a preview of what checkout will charge — the
+  // authoritative subtotal/delivery/total are computed server-side in
+  // OrdersService.checkout(), same numbers, just not trusted from the client.
+  const cartQuery = useQuery({ queryKey: ["cart"], queryFn: CartApi.get, enabled: !!user });
 
   const createAddress = useMutation({
     mutationFn: () => UsersApi.createAddress({ ...newAddress, isDefault: true }),
@@ -155,6 +166,14 @@ export function CheckoutScreen() {
       : null;
 
   const addresses = addressesQuery.data ?? [];
+  const items = cartQuery.data?.items ?? [];
+  const subtotal = items.reduce((sum, item) => sum + Number(item.priceAtAdd) * item.quantity, 0);
+  const currency = items[0]?.product.currency ?? "NGN";
+  // Decimal fields (like this one) come back over the wire as JSON strings,
+  // not numbers — Number(...) avoids `subtotal + deliveryFee` silently
+  // string-concatenating instead of adding when deliveryFee isn't already 0.
+  const deliveryFee = Number(settingsQuery.data?.deliveryFee ?? 0);
+  const total = subtotal + deliveryFee;
 
   if (!user) {
     return (
@@ -319,6 +338,34 @@ export function CheckoutScreen() {
             </Text>
           )}
         </View>
+
+        {items.length > 0 && (
+          <View style={styles.card}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="receipt" size={16} color={theme.primaryColor} />
+              <Text style={styles.sectionLabel}>Order summary</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Subtotal</Text>
+              <Text style={styles.summaryValue}>
+                {currency} {subtotal.toLocaleString()}
+              </Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Delivery fee</Text>
+              <Text style={styles.summaryValue}>
+                {deliveryFee > 0 ? `${currency} ${deliveryFee.toLocaleString()}` : "Free"}
+              </Text>
+            </View>
+            <View style={styles.summaryDivider} />
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryTotalLabel}>Total</Text>
+              <Text style={styles.summaryTotalValue}>
+                {currency} {total.toLocaleString()}
+              </Text>
+            </View>
+          </View>
+        )}
 
         {placeOrder.isPending ? (
           <ActivityIndicator style={{ marginTop: 20 }} color={theme.primaryColor} />

@@ -10,5 +10,6 @@ export const updateSettingsSchema = z.object({
   accentColor: hexColor.optional(),
   logoUrl: z.string().url().optional(),
   referralBonusAmount: z.number().min(0).optional(),
+  deliveryFee: z.number().min(0).optional(),
 });
 export type UpdateSettingsInput = z.infer<typeof updateSettingsSchema>;

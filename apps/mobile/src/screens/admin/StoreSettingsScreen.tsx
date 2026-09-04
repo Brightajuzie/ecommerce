@@ -56,6 +56,7 @@ export function StoreSettingsScreen() {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [referralBonusAmount, setReferralBonusAmount] = useState("500");
+  const [deliveryFee, setDeliveryFee] = useState("0");
 
   useEffect(() => {
     if (settingsQuery.data) {
@@ -63,6 +64,7 @@ export function StoreSettingsScreen() {
       setSecondaryColor(settingsQuery.data.secondaryColor);
       setLogoUrl(settingsQuery.data.logoUrl);
       setReferralBonusAmount(String(settingsQuery.data.referralBonusAmount));
+      setDeliveryFee(String(settingsQuery.data.deliveryFee));
     }
   }, [settingsQuery.data]);
 
@@ -87,6 +89,7 @@ export function StoreSettingsScreen() {
         secondaryColor,
         logoUrl: logoUrl ?? undefined,
         referralBonusAmount: Number(referralBonusAmount),
+        deliveryFee: Number(deliveryFee),
       }),
     onSuccess: (data) => {
       queryClient.setQueryData(["settings"], data);
@@ -108,6 +111,7 @@ export function StoreSettingsScreen() {
   const primaryValid = HEX_PATTERN.test(primaryColor);
   const secondaryValid = HEX_PATTERN.test(secondaryColor);
   const referralBonusValid = Number(referralBonusAmount) >= 0 && referralBonusAmount !== "";
+  const deliveryFeeValid = Number(deliveryFee) >= 0 && deliveryFee !== "";
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -186,6 +190,15 @@ export function StoreSettingsScreen() {
         placeholder="500"
       />
 
+      <Text style={styles.sectionLabel}>Delivery fee</Text>
+      <FormInput
+        label="Flat delivery charge added at checkout (NGN)"
+        value={deliveryFee}
+        onChangeText={setDeliveryFee}
+        keyboardType="decimal-pad"
+        placeholder="0"
+      />
+
       <Text style={styles.sectionLabel}>Preview</Text>
       <View style={styles.previewRow}>
         <View style={[styles.previewButton, { backgroundColor: primaryColor }]}>
@@ -200,7 +213,7 @@ export function StoreSettingsScreen() {
         title="Save settings"
         onPress={() => saveMutation.mutate()}
         loading={saveMutation.isPending}
-        disabled={!primaryValid || !secondaryValid || !referralBonusValid}
+        disabled={!primaryValid || !secondaryValid || !referralBonusValid || !deliveryFeeValid}
       />
     </ScrollView>
   );

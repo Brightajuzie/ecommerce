@@ -75,6 +75,14 @@ export function OrderDetailScreen() {
     qrWrap: { alignItems: "center" as const, marginTop: 20 },
     qrHint: { fontSize: 12, color: colors.textFaint, marginTop: 10, textAlign: "center" as const },
     divider: { height: 1, backgroundColor: colors.border, width: "100%" as const, marginVertical: 20 },
+    summaryRow: {
+      flexDirection: "row" as const,
+      justifyContent: "space-between" as const,
+      width: "100%" as const,
+      marginBottom: 6,
+    },
+    summaryLabel: { color: colors.textMuted, fontSize: 14 },
+    summaryValue: { color: colors.text, fontSize: 14, fontWeight: "600" as const },
     total: { fontSize: 18, fontWeight: "800" as const, color: colors.text },
     vendorCard: {
       backgroundColor: colors.surface,
@@ -205,6 +213,22 @@ export function OrderDetailScreen() {
 
             <View style={styles.divider} />
 
+            {order.deliveryFee > 0 && (
+              <>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Subtotal</Text>
+                  <Text style={styles.summaryValue}>
+                    {order.currency} {(Number(order.totalAmount) - Number(order.deliveryFee)).toLocaleString()}
+                  </Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Delivery fee</Text>
+                  <Text style={styles.summaryValue}>
+                    {order.currency} {Number(order.deliveryFee).toLocaleString()}
+                  </Text>
+                </View>
+              </>
+            )}
             <Text style={styles.total}>
               Total: {order.currency} {Number(order.totalAmount).toLocaleString()}
             </Text>

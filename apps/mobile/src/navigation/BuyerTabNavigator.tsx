@@ -8,6 +8,7 @@ import { OrderHistoryScreen } from "../screens/buyer/OrderHistoryScreen";
 import { ProfileScreen } from "../screens/buyer/ProfileScreen";
 import { CartApi } from "../api/endpoints";
 import { useAuthStore } from "../store/authStore";
+import { useGuestCartStore } from "../store/guestCartStore";
 import { useTheme } from "../theme/ThemeContext";
 import { ResponsiveTabBar } from "./ResponsiveTabBar";
 import type { BuyerTabParamList } from "./types";
@@ -28,7 +29,13 @@ export function BuyerTabNavigator() {
   // mutations, so the badge updates immediately after adding/removing items
   // without any extra network calls of its own.
   const cartQuery = useQuery({ queryKey: ["cart"], queryFn: CartApi.get, enabled: !!user });
-  const cartCount = cartQuery.data?.items.reduce((sum, item) => sum + item.quantity, 0) ?? 0;
+  // Logged-out shoppers have no server cart to query (CartApi.get is
+  // disabled above) — their items live in guestCartStore instead, same as
+  // CartScreen/ProductDetailScreen already read from for that case.
+  const guestItems = useGuestCartStore((s) => s.items);
+  const cartCount = user
+    ? (cartQuery.data?.items.reduce((sum, item) => sum + item.quantity, 0) ?? 0)
+    : guestItems.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <Tab.Navigator
