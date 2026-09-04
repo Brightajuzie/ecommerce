@@ -8,7 +8,7 @@ export type CheckoutInput = z.infer<typeof checkoutSchema>;
 
 export const initiatePaymentSchema = z.object({
   orderId: z.string().uuid(),
-  provider: z.enum([PaymentProvider.FLUTTERWAVE, PaymentProvider.OPAY]),
+  provider: z.enum([PaymentProvider.FLUTTERWAVE, PaymentProvider.OPAY, PaymentProvider.COD]),
 });
 export type InitiatePaymentInput = z.infer<typeof initiatePaymentSchema>;
 

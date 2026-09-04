@@ -40,5 +40,9 @@ export const updateGatewaySettingsSchema = z.object({
   dojahAppId: z.string().max(200).optional(),
   dojahSecretKey: z.string().max(500).optional(),
   dojahEnvironment: z.enum(["sandbox", "production"]).optional(),
+  // Not string-blank-means-unchanged like the fields above — omitted means
+  // unchanged, but an explicit `false` here is a real value, not a
+  // "leave unchanged" placeholder.
+  codEnabled: z.boolean().optional(),
 });
 export type UpdateGatewaySettingsInput = z.infer<typeof updateGatewaySettingsSchema>;

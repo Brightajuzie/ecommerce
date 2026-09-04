@@ -6,7 +6,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { AddressDto } from "@ikaystores/shared";
 import { PaymentProvider } from "@ikaystores/shared";
-import { UsersApi, OrdersApi, PaymentsApi } from "../../api/endpoints";
+import { UsersApi, OrdersApi, PaymentsApi, SettingsApi } from "../../api/endpoints";
 import { getErrorMessage } from "../../api/errorMessage";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { FormInput } from "../../components/FormInput";
@@ -85,7 +85,7 @@ export function CheckoutScreen() {
     addAddressButton: { flexDirection: "row" as const, alignItems: "center" as const, gap: 6, marginTop: 4 },
     link: { fontWeight: "600" as const },
     newAddressForm: { marginTop: 12 },
-    providerRow: { flexDirection: "row" as const, gap: 10 },
+    providerRow: { flexDirection: "row" as const, flexWrap: "wrap" as const, gap: 10 },
     providerChip: {
       paddingHorizontal: 16,
       paddingVertical: 10,
@@ -94,6 +94,7 @@ export function CheckoutScreen() {
     },
     providerChipText: { color: colors.textSecondary, fontWeight: "600" as const },
     providerChipTextActive: { color: "#fff" },
+    codHint: { color: colors.textMuted, fontSize: 12, lineHeight: 17, marginTop: 10 },
   }));
 
   // Defends this screen directly rather than relying solely on CartScreen's
@@ -110,6 +111,9 @@ export function CheckoutScreen() {
     queryFn: UsersApi.listAddresses,
     enabled: !!user,
   });
+  // codEnabled actually lives on PlatformPaymentSettings, merged in here by
+  // the public /settings endpoint — see SettingsService.get().
+  const settingsQuery = useQuery({ queryKey: ["settings"], queryFn: SettingsApi.get });
 
   const createAddress = useMutation({
     mutationFn: () => UsersApi.createAddress({ ...newAddress, isDefault: true }),
@@ -129,7 +133,13 @@ export function CheckoutScreen() {
     },
     onSuccess: ({ order, payment }) => {
       queryClient.invalidateQueries({ queryKey: ["cart"] });
-      navigation.navigate("PaymentWebView", { checkoutUrl: payment.checkoutUrl, orderId: order.id });
+      if (payment.checkoutUrl) {
+        navigation.navigate("PaymentWebView", { checkoutUrl: payment.checkoutUrl, orderId: order.id });
+      } else {
+        // Pay on delivery — the order's already confirmed server-side
+        // (PaymentsService.initiateCod), no gateway page to visit.
+        navigation.replace("OrderDetail", { orderId: order.id });
+      }
     },
   });
 
@@ -283,7 +293,31 @@ export function CheckoutScreen() {
                 Opay
               </Text>
             </Pressable>
+            {settingsQuery.data?.codEnabled && (
+              <Pressable
+                style={[
+                  styles.providerChip,
+                  provider === PaymentProvider.COD && { backgroundColor: theme.primaryColor },
+                ]}
+                onPress={() => setProvider(PaymentProvider.COD)}
+              >
+                <Text
+                  style={[
+                    styles.providerChipText,
+                    provider === PaymentProvider.COD && styles.providerChipTextActive,
+                  ]}
+                >
+                  Pay on delivery
+                </Text>
+              </Pressable>
+            )}
           </View>
+          {provider === PaymentProvider.COD && (
+            <Text style={styles.codHint}>
+              Have the total ready in cash (or card, if the vendor supports it) when your order
+              arrives — no payment is taken now.
+            </Text>
+          )}
         </View>
 
         {placeOrder.isPending ? (

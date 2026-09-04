@@ -58,6 +58,12 @@ enum VendorOrderStatus {
 enum PaymentProvider {
   FLUTTERWAVE
   OPAY
+  // Cash/card collected by the vendor at delivery instead of online — only
+  // selectable at checkout when PlatformPaymentSettings.codEnabled is true.
+  // Skips the gateway entirely: PaymentsService.initiate() marks the order
+  // PAID immediately, same downstream state (VendorOrder ACCEPTED, wallet
+  // credit on DELIVERED) as a real gateway webhook would.
+  COD
 }
 
 enum PaymentStatus {
@@ -462,6 +468,13 @@ model PlatformPaymentSettings {
   dojahSecretKey           String?
   // "sandbox" (default) or "production" — selects Dojah's base URL.
   dojahEnvironment         String?
+  // Whether "Pay on delivery" (PaymentProvider.COD) is offered as a
+  // checkout option at all — off by default so a fresh environment
+  // doesn't silently let buyers skip online payment. Surfaced publicly
+  // via GET /settings (SettingsService merges it in) since checkout runs
+  // before a buyer necessarily has admin-level access to read it
+  // directly from here; writes stay SUPER_ADMIN-only through this table.
+  codEnabled               Boolean  @default(false)
   updatedAt                DateTime @updatedAt
 
   @@map("platform_payment_settings")

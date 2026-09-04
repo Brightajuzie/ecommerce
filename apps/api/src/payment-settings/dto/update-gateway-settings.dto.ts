@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
-import { IsEmail, IsIn, IsOptional, IsString, MaxLength } from "class-validator";
+import { IsBoolean, IsEmail, IsIn, IsOptional, IsString, MaxLength } from "class-validator";
 
 export class UpdateGatewaySettingsDto {
   @ApiPropertyOptional()
@@ -59,4 +59,9 @@ export class UpdateGatewaySettingsDto {
   @IsOptional()
   @IsIn(["sandbox", "production"])
   dojahEnvironment?: string;
+
+  @ApiPropertyOptional({ description: "Whether \"Pay on delivery\" is offered at checkout" })
+  @IsOptional()
+  @IsBoolean()
+  codEnabled?: boolean;
 }

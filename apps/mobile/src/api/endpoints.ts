@@ -135,8 +135,12 @@ export const OrdersApi = {
 };
 
 export const PaymentsApi = {
+  // checkoutUrl is absent for PaymentProvider.COD — that path confirms the
+  // order immediately server-side, with no gateway page to redirect to.
   initiate: (input: InitiatePaymentInput) =>
-    apiClient.post<{ checkoutUrl: string; reference: string }>("/payments/initiate", input).then((r) => r.data),
+    apiClient
+      .post<{ checkoutUrl?: string; reference: string }>("/payments/initiate", input)
+      .then((r) => r.data),
   verify: (reference: string) =>
     apiClient.get<{ status: string; orderStatus: string }>(`/payments/verify/${reference}`).then((r) => r.data),
 };
