@@ -63,3 +63,11 @@ export enum WithdrawalStatus {
   REJECTED = "REJECTED",
   FAILED = "FAILED",
 }
+
+export enum NotificationType {
+  // Sent to the buyer the moment their order is confirmed (real payment
+  // success or "pay on delivery" selected) — see PaymentsService.
+  ORDER_CONFIRMED = "ORDER_CONFIRMED",
+  // Sent to every admin at the same moment — see Notification.userId.
+  NEW_ORDER = "NEW_ORDER",
+}

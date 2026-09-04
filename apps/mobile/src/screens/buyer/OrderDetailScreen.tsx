@@ -72,6 +72,24 @@ export function OrderDetailScreen() {
       marginBottom: 10,
     },
     errorBannerText: { flex: 1, color: theme.scheme === "dark" ? "#FCA5A5" : "#B91C1C", fontSize: 12, fontWeight: "600" as const },
+    confirmedBanner: {
+      width: "100%" as const,
+      flexDirection: "row" as const,
+      gap: 10,
+      backgroundColor: theme.scheme === "dark" ? "#0F3D22" : "#F0FDF4",
+      borderWidth: 1,
+      borderColor: theme.scheme === "dark" ? "#1D6B3E" : "#BBF7D0",
+      borderRadius: 12,
+      padding: 14,
+      marginTop: 16,
+    },
+    confirmedBannerText: {
+      flex: 1,
+      color: theme.scheme === "dark" ? "#86EFAC" : "#166534",
+      fontSize: 13,
+      lineHeight: 19,
+      fontWeight: "600" as const,
+    },
     qrWrap: { alignItems: "center" as const, marginTop: 20 },
     qrHint: { fontSize: 12, color: colors.textFaint, marginTop: 10, textAlign: "center" as const },
     divider: { height: 1, backgroundColor: colors.border, width: "100%" as const, marginVertical: 20 },
@@ -174,6 +192,21 @@ export function OrderDetailScreen() {
                 {statusLabel}
               </Text>
             </View>
+
+            {/* Same message PaymentsService.notifyOrderConfirmed() logs to the
+                buyer's Notifications feed and emails them — shown here too
+                since this screen is exactly where they land right after
+                paying (or confirming pay-on-delivery), the moment it's most
+                useful to see it. */}
+            {isPaid && (
+              <View style={styles.confirmedBanner}>
+                <Ionicons name="bicycle" size={20} color={theme.scheme === "dark" ? "#86EFAC" : "#166534"} />
+                <Text style={styles.confirmedBannerText}>
+                  Your order will be delivered within a few hours. A rider will call you shortly to
+                  confirm your delivery location.
+                </Text>
+              </View>
+            )}
 
             {isPaid && user?.hasPassword === false && (
               <Pressable style={styles.passwordCard} onPress={() => navigation.navigate("SetPassword")}>

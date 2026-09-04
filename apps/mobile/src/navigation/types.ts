@@ -20,6 +20,7 @@ export type BuyerStackParamList = {
   OrderDetail: { orderId: string };
   SetPassword: undefined;
   IdentityVerification: undefined;
+  Notifications: undefined;
 };
 
 export type BuyerTabParamList = {
@@ -54,6 +55,7 @@ export type AdminStackParamList = {
   IdentityVerification: undefined;
   VendorChat: { vendorId: string; businessName: string };
   BroadcastMessage: undefined;
+  Notifications: undefined;
 };
 
 export type AdminTabParamList = {

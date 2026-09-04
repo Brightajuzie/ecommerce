@@ -9,6 +9,7 @@ import { PaymentWebViewScreen } from "../screens/buyer/PaymentWebViewScreen";
 import { OrderDetailScreen } from "../screens/buyer/OrderDetailScreen";
 import { SetPasswordScreen } from "../screens/buyer/SetPasswordScreen";
 import { IdentityVerificationScreen } from "../screens/buyer/IdentityVerificationScreen";
+import { NotificationsScreen } from "../screens/buyer/NotificationsScreen";
 import type { BuyerStackParamList } from "./types";
 
 const Stack = createNativeStackNavigator<BuyerStackParamList>();
@@ -48,6 +49,11 @@ export function BuyerNavigator() {
       <Stack.Screen
         name="IdentityVerification"
         component={IdentityVerificationScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Notifications"
+        component={NotificationsScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>

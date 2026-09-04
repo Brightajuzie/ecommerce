@@ -7,6 +7,7 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import {
+  NotificationType,
   OrderStatus,
   PaymentProvider,
   PaymentStatus,
@@ -15,6 +16,8 @@ import {
   WalletTransactionType,
 } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
+import { EmailService } from "../email/email.service";
+import { NotificationsService } from "../notifications/notifications.service";
 import { FlutterwaveService } from "./flutterwave/flutterwave.service";
 import { OpayService, OpayCallbackPayload } from "./opay/opay.service";
 import { InitiatePaymentDto } from "./dto/initiate-payment.dto";
@@ -39,6 +42,8 @@ export class PaymentsService {
     private readonly configService: ConfigService,
     private readonly flutterwave: FlutterwaveService,
     private readonly opay: OpayService,
+    private readonly notificationsService: NotificationsService,
+    private readonly emailService: EmailService,
   ) {}
 
   async initiate(userId: string, dto: InitiatePaymentDto) {
@@ -165,6 +170,9 @@ export class PaymentsService {
     await this.creditReferralBonusIfFirstOrder(order.id).catch((error) =>
       this.logger.error("Referral bonus crediting failed", error),
     );
+    await this.notifyOrderConfirmed(order.id).catch((error) =>
+      this.logger.error("Order-confirmed notification failed", error),
+    );
 
     return { reference };
   }
@@ -274,6 +282,63 @@ export class PaymentsService {
     await this.creditReferralBonusIfFirstOrder(payment.orderId).catch((error) =>
       this.logger.error("Referral bonus crediting failed", error),
     );
+    await this.notifyOrderConfirmed(payment.orderId).catch((error) =>
+      this.logger.error("Order-confirmed notification failed", error),
+    );
+  }
+
+  /**
+   * Fires once an order is confirmed — either a real gateway payment
+   * succeeded (markPaymentResult) or "pay on delivery" was selected
+   * (initiateCod). Same three actions either way: an in-app notification
+   * for the buyer, a broadcast notification for every admin, and an email
+   * to the buyer — all best-effort, never allowed to fail the payment flow
+   * they're attached to (see both call sites).
+   */
+  private async notifyOrderConfirmed(orderId: string) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: { buyer: true },
+    });
+    if (!order) {
+      return;
+    }
+
+    const orderNumber = order.id.slice(0, 8).toUpperCase();
+    const buyerName = `${order.buyer.firstName} ${order.buyer.lastName}`;
+    const amount = `${order.currency} ${Number(order.totalAmount).toLocaleString()}`;
+
+    const buyerMessage =
+      "Your order is confirmed and will be delivered within a few hours. " +
+      "A rider will call you shortly to confirm your delivery location.";
+
+    await this.notificationsService.create(
+      order.buyerId,
+      NotificationType.ORDER_CONFIRMED,
+      "Order confirmed",
+      buyerMessage,
+      order.id,
+    );
+
+    await this.notificationsService.createAdminBroadcast(
+      NotificationType.NEW_ORDER,
+      "New order paid",
+      `Order #${orderNumber} (${amount}) from ${buyerName} was just confirmed.`,
+      order.id,
+    );
+
+    await this.emailService.send({
+      to: order.buyer.email,
+      subject: "Your Ikaystores order is confirmed",
+      text:
+        `Hi ${order.buyer.firstName},\n\n` +
+        `Order #${orderNumber} (${amount}) is confirmed. ${buyerMessage}\n\n` +
+        `— Ikaystores`,
+      html:
+        `<p>Hi ${order.buyer.firstName},</p>` +
+        `<p>Order <strong>#${orderNumber}</strong> (${amount}) is confirmed. ${buyerMessage}</p>` +
+        `<p>— Ikaystores</p>`,
+    });
   }
 
   /**

@@ -20,6 +20,7 @@ import type {
   InitiatePaymentInput,
   LivenessCheckResultDto,
   LoginInput,
+  NotificationDto,
   OrderDto,
   PaginatedResult,
   PlatformPaymentSettingsDto,
@@ -222,6 +223,16 @@ export const WalletApi = {
   platform: () => apiClient.get<WalletDto>("/wallets/platform").then((r) => r.data),
   withdrawFromPlatform: (input: RequestWithdrawalInput) =>
     apiClient.post<WithdrawalRequestDto>("/wallets/platform/withdraw", input).then((r) => r.data),
+};
+
+export const NotificationsApi = {
+  listMine: () => apiClient.get<NotificationDto[]>("/notifications").then((r) => r.data),
+  unreadCountMine: () => apiClient.get<number>("/notifications/unread-count").then((r) => r.data),
+  listForAdmin: () => apiClient.get<NotificationDto[]>("/notifications/admin").then((r) => r.data),
+  unreadCountForAdmin: () =>
+    apiClient.get<number>("/notifications/admin/unread-count").then((r) => r.data),
+  markRead: (id: string) =>
+    apiClient.patch<NotificationDto>(`/notifications/${id}/read`).then((r) => r.data),
 };
 
 export const PaymentSettingsApi = {

@@ -6,7 +6,7 @@ import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { UserRole } from "@ikaystores/shared";
-import { AdminProductsApi, AdminUsersApi, VendorsApi, WalletApi } from "../../api/endpoints";
+import { AdminProductsApi, AdminUsersApi, NotificationsApi, VendorsApi, WalletApi } from "../../api/endpoints";
 import { useTheme } from "../../theme/ThemeContext";
 import { useThemedStyles } from "../../theme/useThemedStyles";
 import { useAuthStore } from "../../store/authStore";
@@ -45,6 +45,11 @@ export function AdminDashboardScreen() {
     queryFn: WalletApi.platform,
     enabled: isSuperAdmin,
   });
+  const unreadNotificationsQuery = useQuery({
+    queryKey: ["adminNotificationsUnreadCount"],
+    queryFn: NotificationsApi.unreadCountForAdmin,
+    refetchInterval: 15000,
+  });
 
   const isLoading =
     productsQuery.isLoading || usersQuery.isLoading || vendorsQuery.isLoading || pendingWithdrawalsQuery.isLoading;
@@ -55,7 +60,34 @@ export function AdminDashboardScreen() {
     centeredColumn: { width: "100%" as const, maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" as const, paddingHorizontal: 16 },
     center: { flex: 1, alignItems: "center" as const, justifyContent: "center" as const },
     greeting: { fontSize: 14, color: colors.textMuted, fontWeight: "600" as const },
-    title: { fontSize: 28, fontWeight: "800" as const, color: colors.text, marginBottom: 18 },
+    titleRow: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      justifyContent: "space-between" as const,
+      marginBottom: 18,
+    },
+    title: { fontSize: 28, fontWeight: "800" as const, color: colors.text },
+    bellButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+    },
+    bellDot: {
+      position: "absolute" as const,
+      top: 8,
+      right: 8,
+      width: 9,
+      height: 9,
+      borderRadius: 5,
+      backgroundColor: theme.colors.danger,
+      borderWidth: 1.5,
+      borderColor: colors.surface,
+    },
     walletCard: {
       borderRadius: 20,
       padding: 22,
@@ -140,7 +172,13 @@ export function AdminDashboardScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.centeredColumn}>
         <Text style={styles.greeting}>Overview</Text>
-        <Text style={styles.title}>Admin Dashboard</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>Admin Dashboard</Text>
+          <Pressable style={styles.bellButton} onPress={() => navigation.navigate("Notifications")}>
+            <Ionicons name="notifications" size={20} color={theme.colors.text} />
+            {(unreadNotificationsQuery.data ?? 0) > 0 && <View style={styles.bellDot} />}
+          </Pressable>
+        </View>
 
         {isSuperAdmin && (
           <Pressable
