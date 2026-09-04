@@ -6,6 +6,7 @@ import { AdminVendorChatScreen } from "../screens/admin/AdminVendorChatScreen";
 import { BroadcastMessageScreen } from "../screens/admin/BroadcastMessageScreen";
 import { ProductFormScreen } from "../screens/vendor/ProductFormScreen";
 import { IdentityVerificationScreen } from "../screens/buyer/IdentityVerificationScreen";
+import { NotificationsScreen } from "../screens/admin/NotificationsScreen";
 import type { AdminStackParamList } from "./types";
 
 const Stack = createNativeStackNavigator<AdminStackParamList>();
@@ -26,6 +27,11 @@ export function AdminNavigator() {
       <Stack.Screen
         name="IdentityVerification"
         component={IdentityVerificationScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Notifications"
+        component={NotificationsScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>

@@ -144,6 +144,7 @@ model User {
   orders                Order[]
   identityVerifications IdentityVerification[]
   sentVendorMessages    VendorMessage[]
+  notifications         Notification[]
 
   @@map("users")
 }
@@ -237,6 +238,40 @@ model VendorMessage {
 
   @@index([vendorId, createdAt])
   @@map("vendor_messages")
+}
+
+enum NotificationType {
+  // Sent to the buyer the moment their order is confirmed (real payment
+  // success or "pay on delivery" selected) — see PaymentsService.
+  ORDER_CONFIRMED
+  // Sent to every ADMIN/SUPER_ADMIN (userId null, see below) at the same
+  // moment, so staff notice a paid order without polling the orders list.
+  NEW_ORDER
+}
+
+// A lightweight, poll-based notification feed — same "no realtime infra"
+// approach as VendorMessage's 5s polling, not a push-notification system
+// (no device tokens are collected anywhere in this app yet).
+model Notification {
+  id        String            @id @default(uuid())
+  // Null means "every admin" (see NotificationsService.notifyAdmins) rather
+  // than one row per admin — mirrors VendorMessage's isBroadcast idea, just
+  // as the addressing mechanism instead of a flag, since there's no single
+  // "admin team" row to attach a userId to.
+  userId    String?
+  type      NotificationType
+  title     String
+  body      String            @db.VarChar(1000)
+  orderId   String?
+  readAt    DateTime?
+  createdAt DateTime          @default(now())
+
+  user  User?  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order Order? @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([orderId])
+  @@map("notifications")
 }
 
 model Category {
@@ -342,10 +377,11 @@ model Order {
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
-  buyer        User          @relation(fields: [buyerId], references: [id])
-  address      Address       @relation(fields: [addressId], references: [id])
-  vendorOrders VendorOrder[]
-  payments     Payment[]
+  buyer         User           @relation(fields: [buyerId], references: [id])
+  address       Address        @relation(fields: [addressId], references: [id])
+  vendorOrders  VendorOrder[]
+  payments      Payment[]
+  notifications Notification[]
 
   @@index([buyerId])
   @@map("orders")

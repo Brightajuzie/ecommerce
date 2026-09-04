@@ -1,4 +1,5 @@
 import {
+  NotificationType,
   OrderStatus,
   PaymentProvider,
   ProductStatus,
@@ -92,6 +93,20 @@ export interface VendorMessageDto {
   isBroadcast: boolean;
   readByVendorAt: string | null;
   readByAdminAt: string | null;
+  createdAt: string;
+}
+
+export interface NotificationDto {
+  id: string;
+  // Null on an admin-broadcast row (see Notification.userId in
+  // schema.prisma) — never null on a row returned from GET /notifications
+  // (the buyer's own feed), only possibly null from GET /notifications/admin.
+  userId: string | null;
+  type: NotificationType;
+  title: string;
+  body: string;
+  orderId: string | null;
+  readAt: string | null;
   createdAt: string;
 }
 

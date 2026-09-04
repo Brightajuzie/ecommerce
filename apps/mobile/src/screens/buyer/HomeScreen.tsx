@@ -17,11 +17,12 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import type { CategoryDto, ProductDto } from "@ikaystores/shared";
-import { ProductsApi, CategoriesApi } from "../../api/endpoints";
+import { ProductsApi, CategoriesApi, NotificationsApi } from "../../api/endpoints";
 import { AppDownloadBanner } from "../../components/AppDownloadBanner";
 import { FloatingProduce } from "../../components/FloatingProduce";
 import { Footer } from "../../components/Footer";
 import { SlideCarousel } from "../../components/SlideCarousel";
+import { useAuthStore } from "../../store/authStore";
 import { useTheme } from "../../theme/ThemeContext";
 import { useThemedStyles } from "../../theme/useThemedStyles";
 import { optimizedImageUrl } from "../../utils/image";
@@ -96,6 +97,7 @@ function iconForCategory(name: string): keyof typeof Ionicons.glyphMap {
 export function HomeScreen() {
   const navigation = useNavigation<HomeNavigationProp>();
   const theme = useTheme();
+  const user = useAuthStore((s) => s.user);
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const numColumns = columnsForWidth(windowWidth);
@@ -138,6 +140,18 @@ export function HomeScreen() {
       justifyContent: "center" as const,
       backgroundColor: "rgba(255,255,255,0.18)",
       marginLeft: 10,
+    },
+    headerActions: { flexDirection: "row" as const, alignItems: "center" as const },
+    notificationDot: {
+      position: "absolute" as const,
+      top: 6,
+      right: 6,
+      width: 9,
+      height: 9,
+      borderRadius: 5,
+      backgroundColor: colors.danger,
+      borderWidth: 1.5,
+      borderColor: theme.primaryColor,
     },
     // Reduced to 70% width (30% narrower) and centered — same on every
     // platform since this is the one shared style/layout RN renders from
@@ -264,6 +278,13 @@ export function HomeScreen() {
   const categoriesQuery = useQuery({
     queryKey: ["categories"],
     queryFn: CategoriesApi.list,
+  });
+
+  const unreadNotificationsQuery = useQuery({
+    queryKey: ["notificationsUnreadCount"],
+    queryFn: NotificationsApi.unreadCountMine,
+    enabled: !!user,
+    refetchInterval: 15000,
   });
 
   const productsQuery = useInfiniteQuery({
@@ -415,17 +436,35 @@ export function HomeScreen() {
               a redundant "logo, then logo again" right at the top. */}
           <View style={styles.heroTop}>
             <Text style={styles.tagline}>Fresh finds, everyday prices 🌿</Text>
-            {/* Quick day/night switch, separate from the fuller Light/Dark/
-                System picker on Profile — tapping here always sets an
-                explicit mode (never "system"), since a single tap toggling
-                between exactly two states is the whole point of a switch. */}
-            <Pressable
-              onPress={() => theme.setMode(theme.scheme === "dark" ? "light" : "dark")}
-              hitSlop={8}
-              style={styles.themeToggle}
-            >
-              <Ionicons name={theme.scheme === "dark" ? "sunny" : "moon"} size={18} color="#fff" />
-            </Pressable>
+            <View style={styles.headerActions}>
+              {/* Guests have no account yet (see AuthService.guestCheckout),
+                  so there's nowhere for a personal notification to live
+                  until checkout creates one — hidden rather than shown
+                  empty. */}
+              {user && (
+                <Pressable
+                  onPress={() => navigation.navigate("Notifications")}
+                  hitSlop={8}
+                  style={styles.themeToggle}
+                >
+                  <Ionicons name="notifications" size={18} color="#fff" />
+                  {(unreadNotificationsQuery.data ?? 0) > 0 && (
+                    <View style={styles.notificationDot} />
+                  )}
+                </Pressable>
+              )}
+              {/* Quick day/night switch, separate from the fuller Light/Dark/
+                  System picker on Profile — tapping here always sets an
+                  explicit mode (never "system"), since a single tap toggling
+                  between exactly two states is the whole point of a switch. */}
+              <Pressable
+                onPress={() => theme.setMode(theme.scheme === "dark" ? "light" : "dark")}
+                hitSlop={8}
+                style={styles.themeToggle}
+              >
+                <Ionicons name={theme.scheme === "dark" ? "sunny" : "moon"} size={18} color="#fff" />
+              </Pressable>
+            </View>
           </View>
 
           <View style={styles.searchBar}>

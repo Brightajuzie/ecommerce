@@ -44,4 +44,12 @@ export const envValidationSchema = Joi.object({
   DOJAH_ENVIRONMENT: Joi.string()
     .valid("sandbox", "production")
     .default("sandbox"),
+
+  // Outgoing transactional email (order confirmations) — see EmailService.
+  // Left blank, sends are logged rather than attempted.
+  SMTP_HOST: Joi.string().allow("").default(""),
+  SMTP_PORT: Joi.string().allow("").default("587"),
+  SMTP_USER: Joi.string().allow("").default(""),
+  SMTP_PASS: Joi.string().allow("").default(""),
+  SMTP_FROM: Joi.string().allow("").default(""),
 });

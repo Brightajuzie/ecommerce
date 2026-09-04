@@ -21,6 +21,8 @@ import { UploadsModule } from "./uploads/uploads.module";
 import { KycModule } from "./kyc/kyc.module";
 import { PaymentSettingsModule } from "./payment-settings/payment-settings.module";
 import { WalletsModule } from "./wallets/wallets.module";
+import { NotificationsModule } from "./notifications/notifications.module";
+import { EmailModule } from "./email/email.module";
 
 @Module({
   imports: [
@@ -60,6 +62,8 @@ import { WalletsModule } from "./wallets/wallets.module";
     KycModule,
     PaymentSettingsModule,
     WalletsModule,
+    NotificationsModule,
+    EmailModule,
   ],
   controllers: [AppController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
