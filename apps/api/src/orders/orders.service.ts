@@ -57,11 +57,20 @@ export class OrdersService {
       itemsByVendor.set(item.product.vendorId, list);
     }
 
-    const totalAmount = cart.items.reduce(
+    const itemsSubtotal = cart.items.reduce(
       (sum, item) => sum + Number(item.priceAtAdd) * item.quantity,
       0,
     );
     const currency = cart.items[0].product.currency;
+
+    // Flat, platform-wide — not per vendor, so it isn't folded into any
+    // VendorOrder's subtotal/commission math below and doesn't affect
+    // vendor payouts. Snapshotted onto the order (not just added into
+    // totalAmount) so the receipt can still show the split later even if
+    // an admin changes the fee afterward.
+    const appSettings = await this.prisma.appSettings.findFirst();
+    const deliveryFee = Number(appSettings?.deliveryFee ?? 0);
+    const totalAmount = itemsSubtotal + deliveryFee;
 
     const paymentSettings = await this.paymentSettingsService.get();
     const companySharePercent = Number(paymentSettings.companySharePercent);
@@ -73,6 +82,7 @@ export class OrdersService {
         data: {
           buyerId: userId,
           addressId: dto.addressId,
+          deliveryFee,
           totalAmount,
           currency,
         },

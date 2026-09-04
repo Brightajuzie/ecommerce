@@ -17,6 +17,7 @@ interface VendorOrderCreateData {
 interface MockPrisma {
   address: { findUnique: jest.Mock };
   cart: { findUnique: jest.Mock };
+  appSettings: { findFirst: jest.Mock };
   order: { create: jest.Mock; findUniqueOrThrow: jest.Mock };
   vendorOrder: { create: jest.Mock };
   product: { update: jest.Mock };
@@ -42,6 +43,10 @@ describe("OrdersService.checkout", () => {
     prisma = {
       address: { findUnique: jest.fn() },
       cart: { findUnique: jest.fn() },
+      // Defaults to no delivery fee configured, matching AppSettings'
+      // schema default — individual tests override this to cover the fee
+      // being folded into totalAmount.
+      appSettings: { findFirst: jest.fn().mockResolvedValue({ deliveryFee: 0 }) },
       order: { create: jest.fn(), findUniqueOrThrow: jest.fn() },
       vendorOrder: { create: jest.fn() },
       product: { update: jest.fn() },
@@ -195,5 +200,51 @@ describe("OrdersService.checkout", () => {
       where: { cartId: "cart-1" },
     });
     expect(result).toBeDefined();
+  });
+
+  it("adds the platform's delivery fee to the order total without touching vendor payouts", async () => {
+    prisma.address.findUnique.mockResolvedValue({
+      id: "addr-1",
+      userId: "buyer-1",
+    });
+    prisma.cart.findUnique.mockResolvedValue({
+      id: "cart-1",
+      items: [
+        {
+          productId: "p1",
+          quantity: 2,
+          priceAtAdd: 1000,
+          product: {
+            id: "p1",
+            title: "Widget",
+            stock: 10,
+            vendorId: "vendor-A",
+            currency: "NGN",
+            vendor: { commissionRate: 10 },
+          },
+        },
+      ],
+    });
+    prisma.appSettings.findFirst.mockResolvedValue({ deliveryFee: 300 });
+
+    prisma.vendorOrder.create.mockImplementation(({ data }: { data: VendorOrderCreateData }) =>
+      Promise.resolve(data),
+    );
+    prisma.order.create.mockResolvedValue({ id: "order-1" });
+    prisma.order.findUniqueOrThrow.mockResolvedValue({ id: "order-1", vendorOrders: [] });
+    prisma.$transaction.mockImplementation(
+      async (cb: (tx: MockPrisma) => Promise<unknown>) => cb(prisma),
+    );
+
+    await service.checkout("buyer-1", { addressId: "addr-1" });
+
+    // Cart subtotal is 2000; the 300 delivery fee is added on top for the
+    // amount actually charged, but doesn't change the vendor's subtotal/
+    // commission math (asserted via the multi-vendor test above).
+    expect(prisma.order.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ deliveryFee: 300, totalAmount: 2300 }),
+    });
+    const vendorOrderData = prisma.vendorOrder.create.mock.calls[0][0].data as VendorOrderCreateData;
+    expect(vendorOrderData.subtotal).toBe(2000);
   });
 });

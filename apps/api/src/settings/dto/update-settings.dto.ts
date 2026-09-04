@@ -37,4 +37,10 @@ export class UpdateSettingsDto {
   @IsNumber()
   @Min(0)
   referralBonusAmount?: number;
+
+  @ApiPropertyOptional({ example: 500, description: "Flat delivery charge added to the cart subtotal at checkout" })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  deliveryFee?: number;
 }

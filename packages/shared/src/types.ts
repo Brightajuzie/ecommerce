@@ -156,6 +156,7 @@ export interface VendorOrderDto {
 export interface OrderDto {
   id: string;
   buyerId: string;
+  deliveryFee: number;
   totalAmount: number;
   currency: string;
   status: OrderStatus;
@@ -185,6 +186,7 @@ export interface SettingsDto {
   accentColor: string | null;
   logoUrl: string | null;
   referralBonusAmount: number;
+  deliveryFee: number;
   // Actually stored on PlatformPaymentSettings, merged in read-only by
   // SettingsService.get() so checkout can see it without admin access —
   // see PaymentSettingsService for where it's actually written.
