@@ -76,6 +76,8 @@ export class PaymentSettingsService {
       dojahSecretKey: maskSecret(settings.dojahSecretKey),
       dojahEnvironment: settings.dojahEnvironment,
       codEnabled: settings.codEnabled,
+      gmailUser: settings.gmailUser,
+      gmailAppPassword: maskSecret(settings.gmailAppPassword),
     };
   }
 
@@ -103,6 +105,8 @@ export class PaymentSettingsService {
         // undefined` is always `undefined`, which would make it impossible
         // to ever turn this off again. Explicit undefined-check instead.
         codEnabled: dto.codEnabled !== undefined ? dto.codEnabled : undefined,
+        gmailUser: dto.gmailUser || undefined,
+        gmailAppPassword: dto.gmailAppPassword || undefined,
       },
     });
     return this.getGatewaySettings();

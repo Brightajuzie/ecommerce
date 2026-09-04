@@ -44,5 +44,7 @@ export const updateGatewaySettingsSchema = z.object({
   // unchanged, but an explicit `false` here is a real value, not a
   // "leave unchanged" placeholder.
   codEnabled: z.boolean().optional(),
+  gmailUser: z.string().email().optional(),
+  gmailAppPassword: z.string().max(200).optional(),
 });
 export type UpdateGatewaySettingsInput = z.infer<typeof updateGatewaySettingsSchema>;

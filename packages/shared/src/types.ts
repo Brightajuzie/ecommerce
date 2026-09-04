@@ -299,6 +299,8 @@ export interface GatewaySettingsDto {
   dojahSecretKey: string | null;
   dojahEnvironment: string | null;
   codEnabled: boolean;
+  gmailUser: string | null;
+  gmailAppPassword: string | null;
 }
 
 // Admin-facing user record — scoped to BUYER/VENDOR accounts only, see
