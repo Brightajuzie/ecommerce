@@ -1,6 +1,7 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadGatewayException, BadRequestException, Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { FlutterwaveService } from "../payments/flutterwave/flutterwave.service";
+import { EmailService } from "../email/email.service";
 import { UpdatePaymentSettingsDto } from "./dto/update-payment-settings.dto";
 import { SetPayoutAccountDto } from "./dto/set-payout-account.dto";
 import { UpdateGatewaySettingsDto } from "./dto/update-gateway-settings.dto";
@@ -27,6 +28,7 @@ export class PaymentSettingsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly flutterwaveService: FlutterwaveService,
+    private readonly emailService: EmailService,
   ) {}
 
   async get() {
@@ -134,5 +136,22 @@ export class PaymentSettingsService {
       where: { id: settings.id },
       data: { payoutAccount: payoutAccount as unknown as object },
     });
+  }
+
+  // Sent to the calling admin's own inbox (never a freeform address, so
+  // there's no field on the settings screen that could be used to spam a
+  // third party) — lets them confirm their saved Gmail credentials actually
+  // work without needing to place a real order first.
+  async sendTestEmail(toEmail: string) {
+    const result = await this.emailService.send({
+      to: toEmail,
+      subject: "Test email from Ikaystores",
+      text: "This confirms your outgoing email settings on Ikaystores are working correctly.",
+      html: "<p>This confirms your outgoing email settings on Ikaystores are working correctly.</p>",
+    });
+    if (!result.sent) {
+      throw new BadGatewayException(result.error ?? "Could not send test email");
+    }
+    return { sent: true };
   }
 }

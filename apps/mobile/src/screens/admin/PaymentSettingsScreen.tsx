@@ -25,6 +25,7 @@ export function PaymentSettingsScreen() {
   const theme = useTheme();
   const queryClient = useQueryClient();
   const isSuperAdmin = useAuthStore((s) => s.user?.role === UserRole.SUPER_ADMIN);
+  const adminEmail = useAuthStore((s) => s.user?.email ?? "your email");
   const styles = useThemedStyles((colors) => ({
     container: { flex: 1, backgroundColor: colors.surface },
     content: { paddingTop: 60, paddingHorizontal: 16, paddingBottom: 24 },
@@ -189,6 +190,19 @@ export function PaymentSettingsScreen() {
     },
     onError: (error: any) => {
       Alert.alert("Could not save", error?.response?.data?.message ?? "Please try again.");
+    },
+  });
+
+  const sendTestEmail = useMutation({
+    mutationFn: () => PaymentSettingsApi.sendTestEmail(),
+    onSuccess: () => {
+      Alert.alert("Sent", `Check ${adminEmail} — a test email is on its way.`);
+    },
+    onError: (error: any) => {
+      Alert.alert(
+        "Could not send test email",
+        error?.response?.data?.message ?? "Please check the Gmail credentials above and try again.",
+      );
     },
   });
 
@@ -430,6 +444,17 @@ export function PaymentSettingsScreen() {
             secureTextEntry
             placeholder="Leave blank to keep unchanged"
           />
+          {gatewaySettingsQuery.data?.gmailUser && gatewaySettingsQuery.data?.gmailAppPassword && (
+            <Pressable
+              style={{ marginBottom: 16, opacity: sendTestEmail.isPending ? 0.6 : 1 }}
+              onPress={() => sendTestEmail.mutate()}
+              disabled={sendTestEmail.isPending}
+            >
+              <Text style={{ color: theme.primaryColor, fontWeight: "700" as const, fontSize: 13 }}>
+                {sendTestEmail.isPending ? "Sending…" : `Send a test email to ${adminEmail}`}
+              </Text>
+            </Pressable>
+          )}
 
           <Text style={styles.subsectionTitle}>Support</Text>
           <FormInput

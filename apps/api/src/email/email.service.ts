@@ -80,11 +80,17 @@ export class EmailService {
     };
   }
 
-  async send(input: SendEmailInput): Promise<void> {
+  // Returns whether it actually sent rather than throwing — most callers
+  // (order-confirmation emails) fire-and-forget and ignore the result,
+  // since a failed email should never fail the order/payment flow it's
+  // attached to. PaymentSettingsService.sendTestEmail() is the one caller
+  // that reads it, to tell an admin whether their Gmail setup actually works.
+  async send(input: SendEmailInput): Promise<{ sent: boolean; error?: string }> {
     const config = await this.resolveConfig();
     if (!config) {
-      this.logger.log(`[email skipped, no provider configured] to=${input.to} subject="${input.subject}"`);
-      return;
+      const error = "No email provider configured";
+      this.logger.log(`[email skipped, ${error}] to=${input.to} subject="${input.subject}"`);
+      return { sent: false, error };
     }
 
     try {
@@ -95,10 +101,10 @@ export class EmailService {
         text: input.text,
         html: input.html,
       });
+      return { sent: true };
     } catch (error) {
-      // Best-effort: a failed email should never fail the order/payment
-      // flow it's attached to — every caller treats this as fire-and-forget.
       this.logger.error(`Failed to send email to ${input.to}`, error);
+      return { sent: false, error: error instanceof Error ? error.message : "Failed to send email" };
     }
   }
 }
