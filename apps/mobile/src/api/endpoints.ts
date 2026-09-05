@@ -246,4 +246,6 @@ export const PaymentSettingsApi = {
   getGateway: () => apiClient.get<GatewaySettingsDto>("/payment-settings/gateway").then((r) => r.data),
   updateGateway: (input: UpdateGatewaySettingsInput) =>
     apiClient.patch<GatewaySettingsDto>("/payment-settings/gateway", input).then((r) => r.data),
+  sendTestEmail: () =>
+    apiClient.post<{ sent: boolean }>("/payment-settings/gateway/test-email").then((r) => r.data),
 };

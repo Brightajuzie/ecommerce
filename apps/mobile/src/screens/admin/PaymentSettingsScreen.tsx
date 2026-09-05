@@ -25,6 +25,7 @@ export function PaymentSettingsScreen() {
   const theme = useTheme();
   const queryClient = useQueryClient();
   const isSuperAdmin = useAuthStore((s) => s.user?.role === UserRole.SUPER_ADMIN);
+  const adminEmail = useAuthStore((s) => s.user?.email ?? "your email");
   const styles = useThemedStyles((colors) => ({
     container: { flex: 1, backgroundColor: colors.surface },
     content: { paddingTop: 60, paddingHorizontal: 16, paddingBottom: 24 },
@@ -99,6 +100,8 @@ export function PaymentSettingsScreen() {
   const [dojahSecretKey, setDojahSecretKey] = useState("");
   const [dojahEnvironment, setDojahEnvironment] = useState<"sandbox" | "production">("sandbox");
   const [codEnabled, setCodEnabled] = useState(false);
+  const [gmailUser, setGmailUser] = useState("");
+  const [gmailAppPassword, setGmailAppPassword] = useState("");
 
   useEffect(() => {
     if (settingsQuery.data) {
@@ -120,6 +123,7 @@ export function PaymentSettingsScreen() {
         gatewaySettingsQuery.data.dojahEnvironment === "production" ? "production" : "sandbox",
       );
       setCodEnabled(gatewaySettingsQuery.data.codEnabled);
+      setGmailUser(gatewaySettingsQuery.data.gmailUser ?? "");
     }
   }, [gatewaySettingsQuery.data]);
 
@@ -172,6 +176,8 @@ export function PaymentSettingsScreen() {
         dojahSecretKey: dojahSecretKey || undefined,
         dojahEnvironment,
         codEnabled,
+        gmailUser: gmailUser || undefined,
+        gmailAppPassword: gmailAppPassword || undefined,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["gatewaySettings"] });
@@ -179,10 +185,24 @@ export function PaymentSettingsScreen() {
       setFlwEncryptionKey("");
       setOpaySecretKey("");
       setDojahSecretKey("");
+      setGmailAppPassword("");
       Alert.alert("Saved", "Payment gateway settings updated.");
     },
     onError: (error: any) => {
       Alert.alert("Could not save", error?.response?.data?.message ?? "Please try again.");
+    },
+  });
+
+  const sendTestEmail = useMutation({
+    mutationFn: () => PaymentSettingsApi.sendTestEmail(),
+    onSuccess: () => {
+      Alert.alert("Sent", `Check ${adminEmail} — a test email is on its way.`);
+    },
+    onError: (error: any) => {
+      Alert.alert(
+        "Could not send test email",
+        error?.response?.data?.message ?? "Please check the Gmail credentials above and try again.",
+      );
     },
   });
 
@@ -385,6 +405,56 @@ export function PaymentSettingsScreen() {
               </Pressable>
             ))}
           </View>
+
+          <Text style={styles.subsectionTitle}>
+            Outgoing email (Gmail){" "}
+            <Text
+              style={{
+                fontSize: 12,
+                fontWeight: "700" as const,
+                color: gatewaySettingsQuery.data?.gmailUser && gatewaySettingsQuery.data?.gmailAppPassword
+                  ? theme.colors.success
+                  : theme.colors.textFaint,
+              }}
+            >
+              {gatewaySettingsQuery.data?.gmailUser && gatewaySettingsQuery.data?.gmailAppPassword
+                ? "● Active"
+                : "○ Not configured"}
+            </Text>
+          </Text>
+          <Text style={styles.sectionHint}>
+            Powers order-confirmation emails to buyers. Activates automatically as soon as both
+            fields below are saved — no server restart needed. Use a Gmail App Password here, not
+            your regular Gmail password — Gmail requires it for this kind of sign-in. Turn on
+            2-Step Verification on the Gmail account first, then generate one at{" "}
+            myaccount.google.com/apppasswords and paste the 16-character result below.
+          </Text>
+          <FormInput
+            label="Gmail address"
+            value={gmailUser}
+            onChangeText={setGmailUser}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+          <FormInput
+            label={`App password${gatewaySettingsQuery.data?.gmailAppPassword ? ` (currently ${gatewaySettingsQuery.data.gmailAppPassword})` : ""}`}
+            value={gmailAppPassword}
+            onChangeText={setGmailAppPassword}
+            autoCapitalize="none"
+            secureTextEntry
+            placeholder="Leave blank to keep unchanged"
+          />
+          {gatewaySettingsQuery.data?.gmailUser && gatewaySettingsQuery.data?.gmailAppPassword && (
+            <Pressable
+              style={{ marginBottom: 16, opacity: sendTestEmail.isPending ? 0.6 : 1 }}
+              onPress={() => sendTestEmail.mutate()}
+              disabled={sendTestEmail.isPending}
+            >
+              <Text style={{ color: theme.primaryColor, fontWeight: "700" as const, fontSize: 13 }}>
+                {sendTestEmail.isPending ? "Sending…" : `Send a test email to ${adminEmail}`}
+              </Text>
+            </Pressable>
+          )}
 
           <Text style={styles.subsectionTitle}>Support</Text>
           <FormInput

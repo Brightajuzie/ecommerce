@@ -64,4 +64,18 @@ export class UpdateGatewaySettingsDto {
   @IsOptional()
   @IsBoolean()
   codEnabled?: boolean;
+
+  @ApiPropertyOptional({ description: "Sending Gmail address for outgoing email" })
+  @IsOptional()
+  @IsEmail()
+  gmailUser?: string;
+
+  @ApiPropertyOptional({
+    description:
+      "Gmail App Password (not the account login password) — generate one at myaccount.google.com/apppasswords",
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  gmailAppPassword?: string;
 }

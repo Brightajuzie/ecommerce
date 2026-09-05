@@ -519,6 +519,15 @@ model PlatformPaymentSettings {
   // before a buyer necessarily has admin-level access to read it
   // directly from here; writes stay SUPER_ADMIN-only through this table.
   codEnabled               Boolean  @default(false)
+  // Gmail SMTP credentials for outgoing email (order confirmations, etc.)
+  // — EmailService reads these first and falls back to the server's SMTP_*
+  // env vars when null, same override pattern as the keys above. gmailUser
+  // is the sending Gmail address; gmailAppPassword is a 16-character Gmail
+  // App Password (not the account's login password — Gmail requires an App
+  // Password for SMTP auth, generated at myaccount.google.com/apppasswords,
+  // which needs 2-Step Verification enabled on the account first).
+  gmailUser                String?
+  gmailAppPassword         String?
   updatedAt                DateTime @updatedAt
 
   @@map("platform_payment_settings")

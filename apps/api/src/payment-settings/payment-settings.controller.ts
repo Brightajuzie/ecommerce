@@ -1,9 +1,11 @@
-import { Body, Controller, Get, Patch, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Patch, Post, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { UserRole } from "@prisma/client";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
 import { Roles } from "../common/decorators/roles.decorator";
+import { CurrentUser } from "../common/decorators/current-user.decorator";
+import type { AuthenticatedUser } from "../auth/types/authenticated-user.type";
 import { PaymentSettingsService } from "./payment-settings.service";
 import { UpdatePaymentSettingsDto } from "./dto/update-payment-settings.dto";
 import { SetPayoutAccountDto } from "./dto/set-payout-account.dto";
@@ -50,5 +52,14 @@ export class PaymentSettingsController {
   @Patch("gateway")
   updateGateway(@Body() dto: UpdateGatewaySettingsDto) {
     return this.paymentSettingsService.updateGatewaySettings(dto);
+  }
+
+  // Sends to the calling admin's own account email — never a freeform
+  // address — so they can confirm their saved Gmail credentials actually
+  // work without needing to place a real order first.
+  @Roles(UserRole.SUPER_ADMIN)
+  @Post("gateway/test-email")
+  sendTestEmail(@CurrentUser() user: AuthenticatedUser) {
+    return this.paymentSettingsService.sendTestEmail(user.email);
   }
 }
