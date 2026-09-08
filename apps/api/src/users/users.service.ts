@@ -18,7 +18,27 @@ import { generateReferralCode } from "./referral-code.util";
 const REFERRAL_CODE_MAX_ATTEMPTS = 5;
 
 const SALT_ROUNDS = 10;
-const ADMIN_MANAGED_ROLES = [UserRole.BUYER, UserRole.VENDOR] as const;
+
+// Who can see/create/edit an account of a given role, through the admin
+// user-management endpoints below. SUPER_ADMIN can manage every role,
+// including other ADMIN/SUPER_ADMIN accounts. A regular ADMIN's reach is
+// deliberately narrower than that — BUYER/VENDOR (as before) plus EDITOR
+// (a lower-privilege role than ADMIN itself) — but never ADMIN or
+// SUPER_ADMIN, so there's no path for an ADMIN to touch a peer or
+// superior's account, let alone escalate their own.
+function manageableRolesFor(callerRole: UserRole): readonly UserRole[] {
+  if (callerRole === UserRole.SUPER_ADMIN) {
+    return [
+      UserRole.BUYER,
+      UserRole.VENDOR,
+      UserRole.EDITOR,
+      UserRole.ADMIN,
+      UserRole.SUPER_ADMIN,
+    ] as const;
+  }
+  return [UserRole.BUYER, UserRole.VENDOR, UserRole.EDITOR] as const;
+}
+
 const ADMIN_USER_SELECT = {
   id: true,
   email: true,
@@ -123,16 +143,26 @@ export class UsersService {
     return { success: true };
   }
 
-  // Admin-facing user management is scoped to BUYER/VENDOR accounts only —
-  // ADMIN/SUPER_ADMIN accounts never appear in this list and can't be
-  // created or edited through it, so there's no path here to privilege
-  // escalation or an admin editing a peer/superior's account.
-  async listForAdmin(query: AdminListUsersQueryDto) {
+  // Scoped to whichever roles the caller can manage (see
+  // manageableRolesFor) — a regular ADMIN never sees another ADMIN or
+  // SUPER_ADMIN account here, so there's no path to an admin editing a
+  // peer/superior's account, let alone escalating their own.
+  async listForAdmin(callerRole: UserRole, query: AdminListUsersQueryDto) {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 20;
+    const manageableRoles = manageableRolesFor(callerRole);
+
+    // A role filter outside what this caller can manage isn't an error —
+    // it just can't match anything, same as filtering by a role that
+    // simply has no accounts. Short-circuits before hitting the DB rather
+    // than passing an empty `in: []` (which Prisma would also just match
+    // nothing on, but this is clearer about why).
+    if (query.role && !manageableRoles.includes(query.role)) {
+      return { data: [], page, pageSize, total: 0 };
+    }
 
     const where: Prisma.UserWhereInput = {
-      role: query.role ? query.role : { in: [...ADMIN_MANAGED_ROLES] },
+      role: query.role ? query.role : { in: [...manageableRoles] },
       ...(query.search
         ? {
             OR: [
@@ -171,18 +201,25 @@ export class UsersService {
     return `${generateReferralCode()}${Date.now().toString(36).toUpperCase()}`;
   }
 
-  async findOneForAdmin(userId: string) {
+  async findOneForAdmin(callerRole: UserRole, userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: ADMIN_USER_SELECT,
     });
-    if (!user || !ADMIN_MANAGED_ROLES.includes(user.role as (typeof ADMIN_MANAGED_ROLES)[number])) {
+    if (!user || !manageableRolesFor(callerRole).includes(user.role)) {
       throw new NotFoundException("User not found");
     }
     return user;
   }
 
-  async createForAdmin(dto: AdminCreateUserDto) {
+  async createForAdmin(callerRole: UserRole, dto: AdminCreateUserDto) {
+    const role = dto.role ?? UserRole.BUYER;
+    if (!manageableRolesFor(callerRole).includes(role)) {
+      throw new ForbiddenException(
+        "You don't have permission to create an account with this role",
+      );
+    }
+
     const existing = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
@@ -191,7 +228,6 @@ export class UsersService {
     }
 
     const passwordHash = await bcrypt.hash(dto.password, SALT_ROUNDS);
-    const role = dto.role ?? UserRole.BUYER;
     const referralCode = await this.generateUniqueReferralCode();
 
     const user = await this.prisma.user.create({
@@ -224,13 +260,31 @@ export class UsersService {
     return user;
   }
 
-  async updateForAdmin(userId: string, dto: AdminUpdateUserDto) {
+  async updateForAdmin(
+    callerRole: UserRole,
+    callerId: string,
+    userId: string,
+    dto: AdminUpdateUserDto,
+  ) {
+    const manageableRoles = manageableRolesFor(callerRole);
     const target = await this.prisma.user.findUnique({
       where: { id: userId },
       include: { vendorProfile: true },
     });
-    if (!target || !ADMIN_MANAGED_ROLES.includes(target.role as (typeof ADMIN_MANAGED_ROLES)[number])) {
+    if (!target || !manageableRoles.includes(target.role)) {
       throw new NotFoundException("User not found");
+    }
+
+    if (dto.role && !manageableRoles.includes(dto.role)) {
+      throw new ForbiddenException(
+        "You don't have permission to assign this role",
+      );
+    }
+    // A guard against accidental self-lockout, not privilege escalation
+    // (manageableRoles already blocks that) — e.g. a SUPER_ADMIN demoting
+    // themselves to BUYER mid-edit and losing access to undo it.
+    if (userId === callerId && dto.role && dto.role !== target.role) {
+      throw new ForbiddenException("You can't change your own role");
     }
 
     if (dto.email && dto.email !== target.email) {
@@ -249,9 +303,12 @@ export class UsersService {
         );
       }
     }
-    if (dto.role === UserRole.BUYER && target.role === UserRole.VENDOR) {
+    // Blocks switching AWAY from vendor to any other role, not just to
+    // BUYER — a vendor with products/orders on their profile would be
+    // orphaned by a role change to EDITOR/ADMIN just as much as to BUYER.
+    if (target.role === UserRole.VENDOR && dto.role && dto.role !== UserRole.VENDOR) {
       throw new ForbiddenException(
-        "Switching an existing vendor back to a buyer isn't supported here — it would orphan their products and orders",
+        "Switching an existing vendor to another role isn't supported here — it would orphan their products and orders",
       );
     }
 

@@ -73,33 +73,39 @@ export class UsersController {
     return this.usersService.deleteAddress(user.userId, id);
   }
 
-  // Scoped to BUYER/VENDOR accounts only — see users.service.ts for why
-  // ADMIN/SUPER_ADMIN accounts are excluded from all three of these.
+  // Which roles a caller sees/creates/edits through these four routes
+  // depends on their own role — see UsersService.manageableRolesFor. A
+  // regular ADMIN's reach stops at BUYER/VENDOR/EDITOR; only SUPER_ADMIN
+  // can see or manage ADMIN/SUPER_ADMIN accounts.
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @Get()
-  listForAdmin(@Query() query: AdminListUsersQueryDto) {
-    return this.usersService.listForAdmin(query);
+  listForAdmin(@CurrentUser() user: AuthenticatedUser, @Query() query: AdminListUsersQueryDto) {
+    return this.usersService.listForAdmin(user.role, query);
   }
 
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @Get(":id")
-  findOneForAdmin(@Param("id") id: string) {
-    return this.usersService.findOneForAdmin(id);
+  findOneForAdmin(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string) {
+    return this.usersService.findOneForAdmin(user.role, id);
   }
 
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @Post()
-  createForAdmin(@Body() dto: AdminCreateUserDto) {
-    return this.usersService.createForAdmin(dto);
+  createForAdmin(@CurrentUser() user: AuthenticatedUser, @Body() dto: AdminCreateUserDto) {
+    return this.usersService.createForAdmin(user.role, dto);
   }
 
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @Patch(":id")
-  updateForAdmin(@Param("id") id: string, @Body() dto: AdminUpdateUserDto) {
-    return this.usersService.updateForAdmin(id, dto);
+  updateForAdmin(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id") id: string,
+    @Body() dto: AdminUpdateUserDto,
+  ) {
+    return this.usersService.updateForAdmin(user.role, user.userId, id, dto);
   }
 }

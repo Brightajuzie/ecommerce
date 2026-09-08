@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ScrollView, Switch, Text, View } from "react-native";
+import { Pressable, ScrollView, Switch, Text, View } from "react-native";
 import { useRoute, useNavigation, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -8,16 +8,42 @@ import { AdminUsersApi } from "../../api/endpoints";
 import { getErrorMessage } from "../../api/errorMessage";
 import { FormInput } from "../../components/FormInput";
 import { PrimaryButton } from "../../components/PrimaryButton";
+import { useAuthStore } from "../../store/authStore";
+import { useTheme } from "../../theme/ThemeContext";
 import { useThemedStyles } from "../../theme/useThemedStyles";
 import type { AdminStackParamList } from "../../navigation/types";
 
-// Create/edit for BUYER/VENDOR accounts only — the backend rejects any
-// attempt to touch an ADMIN/SUPER_ADMIN account or set that role here.
+const ROLE_LABELS: Record<UserRole, string> = {
+  [UserRole.BUYER]: "User",
+  [UserRole.VENDOR]: "Vendor",
+  [UserRole.EDITOR]: "Editor",
+  [UserRole.ADMIN]: "Admin",
+  [UserRole.SUPER_ADMIN]: "Super Admin",
+};
+
+// Client-side mirror of UsersService.manageableRolesFor on the backend —
+// purely for a sensible picker; the server is what actually enforces this,
+// so a mismatch here just means a rejected save, not a security hole.
+function assignableRolesFor(callerRole: UserRole | undefined): UserRole[] {
+  if (callerRole === UserRole.SUPER_ADMIN) {
+    return [UserRole.BUYER, UserRole.VENDOR, UserRole.EDITOR, UserRole.ADMIN, UserRole.SUPER_ADMIN];
+  }
+  return [UserRole.BUYER, UserRole.VENDOR, UserRole.EDITOR];
+}
+
+// Create/edit for any role the caller can manage — see
+// UsersService.manageableRolesFor on the backend, which is what actually
+// enforces who can see/create/edit which accounts; the role picker here
+// just mirrors that so the UI doesn't offer a choice the server would
+// reject anyway.
 export function AdminUserFormScreen() {
   const route = useRoute<RouteProp<AdminStackParamList, "UserForm">>();
   const navigation = useNavigation<NativeStackNavigationProp<AdminStackParamList>>();
   const queryClient = useQueryClient();
+  const theme = useTheme();
   const userId = route.params?.userId;
+  const callerRole = useAuthStore((s) => s.user?.role);
+  const callerId = useAuthStore((s) => s.user?.id);
 
   const userQuery = useQuery({
     queryKey: ["adminUser", userId],
@@ -30,7 +56,7 @@ export function AdminUserFormScreen() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-  const [asVendor, setAsVendor] = useState(false);
+  const [role, setRole] = useState<UserRole>(UserRole.BUYER);
   const [businessName, setBusinessName] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -55,6 +81,18 @@ export function AdminUserFormScreen() {
       marginBottom: 16,
     },
     toggleLabel: { fontSize: 15, color: colors.text, fontWeight: "600" as const, flex: 1 },
+    sectionLabel: { fontSize: 14, fontWeight: "700" as const, color: colors.text, marginBottom: 8, marginTop: 4 },
+    roleRow: { flexDirection: "row" as const, flexWrap: "wrap" as const, gap: 8, marginBottom: 8 },
+    roleChip: {
+      paddingHorizontal: 14,
+      paddingVertical: 9,
+      borderRadius: 18,
+      backgroundColor: colors.surfaceAlt,
+    },
+    roleChipDisabled: { opacity: 0.4 },
+    roleChipText: { color: colors.textSecondary, fontWeight: "600" as const, fontSize: 13 },
+    roleChipTextActive: { color: "#fff" },
+    roleHint: { color: colors.textMuted, fontSize: 12, marginBottom: 16, lineHeight: 17 },
   }));
 
   useEffect(() => {
@@ -64,15 +102,27 @@ export function AdminUserFormScreen() {
       setLastName(u.lastName);
       setEmail(u.email);
       setPhone(u.phone ?? "");
-      setAsVendor(u.role === UserRole.VENDOR);
+      setRole(u.role);
       setBusinessName(u.vendorProfile?.businessName ?? "");
       setIsActive(u.isActive);
     }
   }, [userQuery.data]);
 
+  const isEditingSelf = !!userId && userId === callerId;
   // Once an account is already a vendor, this form can no longer switch it
-  // back to buyer (see users.service.ts) — so the toggle is locked on.
-  const vendorToggleLocked = !!userId && userQuery.data?.role === UserRole.VENDOR;
+  // to any other role (see users.service.ts — it would orphan their
+  // products/orders); editing your own account can't change its own role
+  // either, to avoid an accidental self-lockout.
+  const roleLocked = (!!userId && userQuery.data?.role === UserRole.VENDOR) || isEditingSelf;
+  const assignableRoles = assignableRolesFor(callerRole);
+  // The target's current role stays selectable even if it's now outside
+  // what this caller could newly assign (e.g. a SUPER_ADMIN-created EDITOR
+  // being viewed — not applicable today since EDITOR is assignable by both,
+  // but keeps this correct if that ever changes).
+  const roleOptions =
+    userQuery.data && !assignableRoles.includes(userQuery.data.role)
+      ? [userQuery.data.role, ...assignableRoles]
+      : assignableRoles;
 
   const saveMutation = useMutation({
     mutationFn: () => {
@@ -82,8 +132,8 @@ export function AdminUserFormScreen() {
           lastName,
           email,
           phone: phone || undefined,
-          role: asVendor ? UserRole.VENDOR : UserRole.BUYER,
-          businessName: asVendor ? businessName : undefined,
+          role,
+          businessName: role === UserRole.VENDOR ? businessName : undefined,
           isActive,
         });
       }
@@ -93,8 +143,8 @@ export function AdminUserFormScreen() {
         email,
         phone: phone || undefined,
         password,
-        role: asVendor ? UserRole.VENDOR : UserRole.BUYER,
-        businessName: asVendor ? businessName : undefined,
+        role,
+        businessName: role === UserRole.VENDOR ? businessName : undefined,
       });
     },
     onSuccess: () => {
@@ -112,7 +162,20 @@ export function AdminUserFormScreen() {
     !!lastName &&
     !!email &&
     (userId || password.length >= 8) &&
-    (!asVendor || !!businessName);
+    (role !== UserRole.VENDOR || !!businessName);
+
+  if (userId && userQuery.isError) {
+    return (
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <Text style={styles.title}>Edit user</Text>
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorBannerText}>
+            {getErrorMessage(userQuery.error, "Could not load this account.")}
+          </Text>
+        </View>
+      </ScrollView>
+    );
+  }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -138,16 +201,53 @@ export function AdminUserFormScreen() {
         />
       )}
 
-      <View style={styles.toggleRow}>
-        <Text style={styles.toggleLabel}>Vendor account</Text>
-        <Switch value={asVendor} onValueChange={setAsVendor} disabled={vendorToggleLocked} />
+      <Text style={styles.sectionLabel}>Role</Text>
+      <View style={styles.roleRow}>
+        {roleOptions.map((option) => (
+          <Pressable
+            key={option}
+            style={[
+              styles.roleChip,
+              role === option && { backgroundColor: theme.primaryColor },
+              roleLocked && role !== option && styles.roleChipDisabled,
+            ]}
+            onPress={() => !roleLocked && setRole(option)}
+            disabled={roleLocked}
+          >
+            <Text style={[styles.roleChipText, role === option && styles.roleChipTextActive]}>
+              {ROLE_LABELS[option]}
+            </Text>
+          </Pressable>
+        ))}
       </View>
-      {asVendor && (
+      {isEditingSelf ? (
+        <Text style={styles.roleHint}>You can't change your own role.</Text>
+      ) : roleLocked ? (
+        <Text style={styles.roleHint}>
+          An existing vendor's role can't be changed here — it would orphan their products and orders.
+        </Text>
+      ) : (
+        (role === UserRole.ADMIN || role === UserRole.SUPER_ADMIN) && (
+          <Text style={styles.roleHint}>
+            {role === UserRole.SUPER_ADMIN
+              ? "Full access, including the platform wallet and revenue-split settings."
+              : "Full admin access except the platform wallet and revenue-split settings."}
+          </Text>
+        )
+      )}
+      {role === UserRole.EDITOR && (
+        <Text style={styles.roleHint}>
+          Can manage products, categories, slides, and store settings only — no users, vendors,
+          payments, or wallets.
+        </Text>
+      )}
+
+      {role === UserRole.VENDOR && (
         <FormInput
           label="Business name"
           value={businessName}
           onChangeText={setBusinessName}
-          editable={!vendorToggleLocked || !businessName}
+          editable={!roleLocked || !businessName}
         />
       )}
 

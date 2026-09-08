@@ -1,8 +1,10 @@
 import { z } from "zod";
 import { UserRole } from "../enums";
 
-// Admin-managed accounts are restricted to BUYER/VENDOR — never
-// ADMIN/SUPER_ADMIN — see users.service.ts for the full rationale.
+// Every role is a valid value here — which ones a given caller can actually
+// assign is enforced server-side in users.service.ts's manageableRolesFor
+// (SUPER_ADMIN can grant any role; a regular ADMIN can grant BUYER/VENDOR/
+// EDITOR but not ADMIN/SUPER_ADMIN), not by this schema.
 export const adminCreateUserSchema = z
   .object({
     email: z.string().email(),
@@ -10,7 +12,7 @@ export const adminCreateUserSchema = z
     firstName: z.string().min(1),
     lastName: z.string().min(1),
     phone: z.string().min(7).optional(),
-    role: z.enum([UserRole.BUYER, UserRole.VENDOR]).default(UserRole.BUYER),
+    role: z.nativeEnum(UserRole).default(UserRole.BUYER),
     businessName: z.string().min(2).optional(),
   })
   .refine((data) => data.role !== UserRole.VENDOR || !!data.businessName, {
@@ -24,7 +26,7 @@ export const adminUpdateUserSchema = z.object({
   lastName: z.string().min(1).optional(),
   email: z.string().email().optional(),
   phone: z.string().min(7).optional(),
-  role: z.enum([UserRole.BUYER, UserRole.VENDOR]).optional(),
+  role: z.nativeEnum(UserRole).optional(),
   businessName: z.string().min(2).optional(),
   isActive: z.boolean().optional(),
 });

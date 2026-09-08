@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsIn, IsInt, IsOptional, IsString, Min } from "class-validator";
+import { IsEnum, IsInt, IsOptional, IsString, Min } from "class-validator";
 import { UserRole } from "@prisma/client";
 
 export class AdminListUsersQueryDto {
@@ -9,9 +9,12 @@ export class AdminListUsersQueryDto {
   @IsString()
   search?: string;
 
-  @ApiPropertyOptional({ enum: [UserRole.BUYER, UserRole.VENDOR] })
+  // Any role is syntactically valid — UsersService.listForAdmin intersects
+  // this against manageableRolesFor(callerRole), so e.g. a regular ADMIN
+  // filtering by role=ADMIN just gets an empty result, not an error.
+  @ApiPropertyOptional({ enum: UserRole })
   @IsOptional()
-  @IsIn([UserRole.BUYER, UserRole.VENDOR])
+  @IsEnum(UserRole)
   role?: UserRole;
 
   @ApiPropertyOptional({ default: 1 })
