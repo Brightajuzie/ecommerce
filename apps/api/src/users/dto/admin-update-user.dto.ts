@@ -3,17 +3,17 @@ import { UserRole } from "@prisma/client";
 import {
   IsBoolean,
   IsEmail,
-  IsIn,
+  IsEnum,
   IsOptional,
   IsString,
   MinLength,
   ValidateIf,
 } from "class-validator";
 
-// Role can only be set to BUYER or VENDOR here — never ADMIN/SUPER_ADMIN,
-// and the service layer additionally refuses to touch a target account
-// that's already ADMIN/SUPER_ADMIN, so this endpoint can't be used to
-// edit or promote into privileged accounts either way.
+// Every role is syntactically valid here — which target accounts a caller
+// can see/edit at all, and which roles they can set, are both enforced in
+// UsersService (manageableRolesFor + the self-role-change guard), not by
+// this DTO.
 export class AdminUpdateUserDto {
   @ApiPropertyOptional()
   @IsOptional()
@@ -37,9 +37,9 @@ export class AdminUpdateUserDto {
   @IsString()
   phone?: string;
 
-  @ApiPropertyOptional({ enum: [UserRole.BUYER, UserRole.VENDOR] })
+  @ApiPropertyOptional({ enum: UserRole })
   @IsOptional()
-  @IsIn([UserRole.BUYER, UserRole.VENDOR])
+  @IsEnum(UserRole)
   role?: UserRole;
 
   // Required when switching a BUYER into a VENDOR for the first time (to

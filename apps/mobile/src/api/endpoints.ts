@@ -44,6 +44,7 @@ import type {
   UpdateVendorInput,
   UpdateVendorOrderStatusInput,
   UserDto,
+  UserRole,
   VendorMessageDto,
   VendorOrderDto,
   VendorProfileDto,
@@ -83,7 +84,7 @@ export const UsersApi = {
 };
 
 export const AdminUsersApi = {
-  list: (params: { search?: string; role?: "BUYER" | "VENDOR"; page?: number; pageSize?: number }) =>
+  list: (params: { search?: string; role?: UserRole; page?: number; pageSize?: number }) =>
     apiClient.get<PaginatedResult<AdminUserDto>>("/users", { params }).then((r) => r.data),
   findOne: (id: string) => apiClient.get<AdminUserDto>(`/users/${id}`).then((r) => r.data),
   create: (input: AdminCreateUserInput) =>

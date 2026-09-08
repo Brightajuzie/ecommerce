@@ -52,7 +52,7 @@ export class ProductsController {
   // isn't swallowed as a product id.
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.EDITOR, UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @Get("admin")
   browseForAdmin(@Query() query: AdminProductQueryDto) {
     return this.productsService.browseForAdmin(query);
@@ -77,7 +77,7 @@ export class ProductsController {
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.VENDOR, UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.VENDOR, UserRole.EDITOR, UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @Patch(":id")
   update(
     @CurrentUser() user: AuthenticatedUser,
@@ -89,7 +89,7 @@ export class ProductsController {
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.VENDOR, UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.VENDOR, UserRole.EDITOR, UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @Delete(":id")
   remove(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string) {
     return this.productsService.remove(user.userId, id, user.role);

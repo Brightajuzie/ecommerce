@@ -8,18 +8,47 @@ import { UserRole } from "@ikaystores/shared";
 import type { AdminUserDto } from "@ikaystores/shared";
 import { AdminUsersApi } from "../../api/endpoints";
 import { PrimaryButton } from "../../components/PrimaryButton";
+import { useAuthStore } from "../../store/authStore";
 import { useTheme } from "../../theme/ThemeContext";
 import { useThemedStyles } from "../../theme/useThemedStyles";
 import type { AdminStackParamList } from "../../navigation/types";
 
 const MAX_CONTENT_WIDTH = 800;
 
-// Scoped to BUYER/VENDOR accounts — see users.service.ts on the backend for
-// why ADMIN/SUPER_ADMIN accounts never appear here or go through this flow.
+const ROLE_LABELS: Record<UserRole, string> = {
+  [UserRole.BUYER]: "User",
+  [UserRole.VENDOR]: "Vendor",
+  [UserRole.EDITOR]: "Editor",
+  [UserRole.ADMIN]: "Admin",
+  [UserRole.SUPER_ADMIN]: "Super Admin",
+};
+
+const ROLE_BADGE_COLORS: Record<UserRole, string> = {
+  [UserRole.BUYER]: "#6B7280",
+  [UserRole.VENDOR]: "#2563EB",
+  [UserRole.EDITOR]: "#7C3AED",
+  [UserRole.ADMIN]: "#059669",
+  [UserRole.SUPER_ADMIN]: "#B45309",
+};
+
+// Which roles show up here (both in the list and the role filter) depends
+// on the caller — see UsersService.manageableRolesFor on the backend,
+// which is what actually enforces it; a regular ADMIN never sees an
+// ADMIN/SUPER_ADMIN account, even with this filter.
+function visibleRolesFor(callerRole: UserRole | undefined): UserRole[] {
+  if (callerRole === UserRole.SUPER_ADMIN) {
+    return [UserRole.BUYER, UserRole.VENDOR, UserRole.EDITOR, UserRole.ADMIN, UserRole.SUPER_ADMIN];
+  }
+  return [UserRole.BUYER, UserRole.VENDOR, UserRole.EDITOR];
+}
+
 export function AdminUsersScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AdminStackParamList>>();
   const theme = useTheme();
+  const callerRole = useAuthStore((s) => s.user?.role);
   const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState<UserRole | null>(null);
+  const visibleRoles = visibleRolesFor(callerRole);
   const styles = useThemedStyles((colors) => ({
     container: { flex: 1, backgroundColor: colors.background, paddingTop: 60 },
     centeredColumn: { width: "100%" as const, maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" as const, paddingHorizontal: 16 },
@@ -72,11 +101,21 @@ export function AdminUsersScreen() {
     roleBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
     suspendedBadge: { backgroundColor: colors.danger },
     badgeText: { color: "#fff", fontSize: 10, fontWeight: "700" as const },
+    filterRow: { flexDirection: "row" as const, flexWrap: "wrap" as const, gap: 8, marginBottom: 16 },
+    filterChip: {
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+      borderRadius: 16,
+      backgroundColor: colors.surface,
+    },
+    filterChipText: { color: colors.textSecondary, fontWeight: "600" as const, fontSize: 12 },
+    filterChipTextActive: { color: "#fff" },
   }));
 
   const usersQuery = useQuery({
-    queryKey: ["adminUsers", search],
-    queryFn: () => AdminUsersApi.list({ search: search || undefined, pageSize: 50 }),
+    queryKey: ["adminUsers", search, roleFilter],
+    queryFn: () =>
+      AdminUsersApi.list({ search: search || undefined, role: roleFilter ?? undefined, pageSize: 50 }),
   });
 
   return (
@@ -95,6 +134,27 @@ export function AdminUsersScreen() {
             value={search}
             onChangeText={setSearch}
           />
+        </View>
+        <View style={styles.filterRow}>
+          <Pressable
+            style={[styles.filterChip, roleFilter === null && { backgroundColor: theme.primaryColor }]}
+            onPress={() => setRoleFilter(null)}
+          >
+            <Text style={[styles.filterChipText, roleFilter === null && styles.filterChipTextActive]}>
+              All
+            </Text>
+          </Pressable>
+          {visibleRoles.map((r) => (
+            <Pressable
+              key={r}
+              style={[styles.filterChip, roleFilter === r && { backgroundColor: theme.primaryColor }]}
+              onPress={() => setRoleFilter(r)}
+            >
+              <Text style={[styles.filterChipText, roleFilter === r && styles.filterChipTextActive]}>
+                {ROLE_LABELS[r]}
+              </Text>
+            </Pressable>
+          ))}
         </View>
       </View>
 
@@ -129,13 +189,8 @@ export function AdminUsersScreen() {
                   )}
                 </View>
                 <View style={styles.badgeColumn}>
-                  <View
-                    style={[
-                      styles.roleBadge,
-                      { backgroundColor: item.role === UserRole.VENDOR ? theme.primaryColor : theme.colors.textMuted },
-                    ]}
-                  >
-                    <Text style={styles.badgeText}>{item.role}</Text>
+                  <View style={[styles.roleBadge, { backgroundColor: ROLE_BADGE_COLORS[item.role] }]}>
+                    <Text style={styles.badgeText}>{ROLE_LABELS[item.role]}</Text>
                   </View>
                   {!item.isActive && (
                     <View style={[styles.roleBadge, styles.suspendedBadge]}>

@@ -54,7 +54,9 @@ export function RootNavigator() {
         <BuyerNavigator />
       ) : user?.role === UserRole.VENDOR ? (
         <VendorNavigator />
-      ) : user?.role === UserRole.ADMIN || user?.role === UserRole.SUPER_ADMIN ? (
+      ) : user?.role === UserRole.ADMIN ||
+        user?.role === UserRole.SUPER_ADMIN ||
+        user?.role === UserRole.EDITOR ? (
         <AdminNavigator />
       ) : (
         <BuyerNavigator />

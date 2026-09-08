@@ -2,15 +2,16 @@ import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { UserRole } from "@prisma/client";
 import {
   IsEmail,
-  IsIn,
+  IsEnum,
   IsOptional,
   IsString,
   MinLength,
   ValidateIf,
 } from "class-validator";
 
-// Admin-created accounts are restricted to BUYER/VENDOR — creating another
-// ADMIN or SUPER_ADMIN account isn't something this endpoint allows.
+// Every role is syntactically valid here — which ones the calling admin can
+// actually assign is enforced in UsersService.createForAdmin via
+// manageableRolesFor(callerRole), not by this DTO.
 export class AdminCreateUserDto {
   @ApiProperty()
   @IsEmail()
@@ -36,9 +37,9 @@ export class AdminCreateUserDto {
   @IsString()
   phone?: string;
 
-  @ApiPropertyOptional({ enum: [UserRole.BUYER, UserRole.VENDOR] })
+  @ApiPropertyOptional({ enum: UserRole })
   @IsOptional()
-  @IsIn([UserRole.BUYER, UserRole.VENDOR])
+  @IsEnum(UserRole)
   role?: UserRole;
 
   @ApiPropertyOptional()

@@ -10,7 +10,9 @@ import { UpdateProductDto } from "./dto/update-product.dto";
 import { ProductQueryDto } from "./dto/product-query.dto";
 import { AdminProductQueryDto } from "./dto/admin-product-query.dto";
 
-const ADMIN_ROLES = [UserRole.ADMIN, UserRole.SUPER_ADMIN] as const;
+// Callers who can update/remove any product, not just their own — matches
+// the @Roles list on the controller's update()/remove() routes.
+const ADMIN_ROLES = [UserRole.EDITOR, UserRole.ADMIN, UserRole.SUPER_ADMIN] as const;
 
 @Injectable()
 export class ProductsService {

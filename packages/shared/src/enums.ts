@@ -1,6 +1,12 @@
 export enum UserRole {
   BUYER = "BUYER",
   VENDOR = "VENDOR",
+  // Content-management role: products, categories, slides/banners, and
+  // store branding/settings — same access as ADMIN for those, but no
+  // visibility into users, vendors, payments, or wallets, and can't grant
+  // ADMIN/SUPER_ADMIN/EDITOR to anyone. See users.service.ts's
+  // manageableRolesFor for exactly who can assign this role to whom.
+  EDITOR = "EDITOR",
   ADMIN = "ADMIN",
   // Only role that can see/manage the platform wallet and the
   // company/developer/super-admin revenue-split settings — hidden from ADMIN.
