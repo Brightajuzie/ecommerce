@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Image, Platform, Pressable, Text, View, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
+import { UserRole } from "@ikaystores/shared";
+import { useAuthStore } from "../store/authStore";
 import { useTheme } from "../theme/ThemeContext";
 import { useThemedStyles } from "../theme/useThemedStyles";
 
@@ -106,7 +108,46 @@ export function ResponsiveTabBar({ state, descriptors, navigation }: BottomTabBa
       shadowOffset: { width: 0, height: 4 },
       elevation: 4,
     },
+    roleSwitchButton: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 18,
+      backgroundColor: "rgba(255,255,255,0.18)",
+      marginLeft: 8,
+    },
+    roleSwitchText: {
+      color: "#fff",
+      fontSize: 13,
+      fontWeight: "700" as const,
+    },
+    dropdownRoleSwitch: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 10,
+      paddingHorizontal: 20,
+      paddingVertical: 14,
+      borderRadius: 8,
+      marginHorizontal: 8,
+      marginVertical: 4,
+      backgroundColor: colors.surfaceAlt,
+    },
+    dropdownRoleSwitchText: {
+      fontSize: 14,
+      fontWeight: "700" as const,
+      color: theme.primaryColor,
+    },
   }));
+
+  const user = useAuthStore((s) => s.user);
+  const viewAsBuyer = useAuthStore((s) => s.viewAsBuyer);
+  const setViewAsBuyer = useAuthStore((s) => s.setViewAsBuyer);
+  const isAdmin =
+    user?.role === UserRole.ADMIN ||
+    user?.role === UserRole.SUPER_ADMIN ||
+    user?.role === UserRole.EDITOR;
 
   const goTo = (routeName: string, routeKey: string, isFocused: boolean) => {
     const event = navigation.emit({ type: "tabPress", target: routeKey, canPreventDefault: true });
@@ -148,6 +189,9 @@ export function ResponsiveTabBar({ state, descriptors, navigation }: BottomTabBa
     <Pressable
       key={item.route.key}
       onPress={() => goTo(item.route.name, item.route.key, item.isFocused)}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: item.isFocused }}
+      accessibilityLabel={item.label}
       style={[
         layout === "row" && styles.navItemRow,
         layout === "stack" && styles.navItemStack,
@@ -175,6 +219,8 @@ export function ResponsiveTabBar({ state, descriptors, navigation }: BottomTabBa
       style={styles.brandRow}
       onPress={() => goTo(state.routes[0].name, state.routes[0].key, state.index === 0)}
       hitSlop={8}
+      accessibilityRole="button"
+      accessibilityLabel="Ikaystores Home"
     >
       {theme.logoUrl ? (
         <Image source={{ uri: theme.logoUrl }} style={styles.brandLogo} resizeMode="contain" />
@@ -192,7 +238,21 @@ export function ResponsiveTabBar({ state, descriptors, navigation }: BottomTabBa
     return (
       <View style={[styles.barWide, { backgroundColor: theme.primaryColor }]}>
         {Brand}
-        <View style={styles.navItemsRow}>{items.map((item) => renderItem(item, "row"))}</View>
+        <View style={styles.navItemsRow}>
+          {items.map((item) => renderItem(item, "row"))}
+          {isAdmin && (
+            <Pressable
+              style={styles.roleSwitchButton}
+              onPress={() => setViewAsBuyer(!viewAsBuyer)}
+              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityLabel={viewAsBuyer ? "Go to Admin Dashboard" : "View Live Store"}
+            >
+              <Ionicons name={viewAsBuyer ? "grid-outline" : "storefront-outline"} size={15} color="#fff" />
+              <Text style={styles.roleSwitchText}>{viewAsBuyer ? "Dashboard" : "View Store"}</Text>
+            </Pressable>
+          )}
+        </View>
       </View>
     );
   }
@@ -201,14 +261,36 @@ export function ResponsiveTabBar({ state, descriptors, navigation }: BottomTabBa
     <View style={styles.wrapperNarrow}>
       <View style={[styles.barNarrow, { backgroundColor: theme.primaryColor }]}>
         {Brand}
-        <Pressable onPress={() => setMenuOpen((open) => !open)} hitSlop={10} style={styles.hamburgerButton}>
+        <Pressable
+          onPress={() => setMenuOpen((open) => !open)}
+          hitSlop={10}
+          style={styles.hamburgerButton}
+          accessibilityRole="button"
+          accessibilityLabel={menuOpen ? "Close menu" : "Open navigation menu"}
+        >
           <Ionicons name={menuOpen ? "close" : "menu"} size={26} color="#fff" />
         </Pressable>
       </View>
       {menuOpen && (
         <>
           <Pressable style={styles.backdrop} onPress={() => setMenuOpen(false)} />
-          <View style={styles.dropdown}>{dropdownItems.map((item) => renderItem(item, "block"))}</View>
+          <View style={styles.dropdown}>
+            {isAdmin && (
+              <Pressable
+                style={styles.dropdownRoleSwitch}
+                onPress={() => {
+                  setMenuOpen(false);
+                  setViewAsBuyer(!viewAsBuyer);
+                }}
+              >
+                <Ionicons name={viewAsBuyer ? "grid" : "storefront"} size={18} color={theme.primaryColor} />
+                <Text style={styles.dropdownRoleSwitchText}>
+                  {viewAsBuyer ? "Back to Admin Dashboard" : "View Live Store"}
+                </Text>
+              </Pressable>
+            )}
+            {dropdownItems.map((item) => renderItem(item, "block"))}
+          </View>
         </>
       )}
     </View>

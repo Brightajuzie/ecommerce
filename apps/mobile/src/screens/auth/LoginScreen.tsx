@@ -2,13 +2,16 @@ import { useState } from "react";
 import { Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
+import { UserRole } from "@ikaystores/shared";
 import { FormInput } from "../../components/FormInput";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { AuthApi, CartApi } from "../../api/endpoints";
 import { getErrorMessage } from "../../api/errorMessage";
 import { useAuthStore } from "../../store/authStore";
 import { syncGuestCartToServer } from "../../store/guestCartStore";
+import { useTheme } from "../../theme/ThemeContext";
 import { useThemedStyles } from "../../theme/useThemedStyles";
 import type { BuyerStackParamList } from "../../navigation/types";
 
@@ -18,22 +21,55 @@ export function LoginScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<BuyerStackParamList>>();
   const route = useRoute<RouteProp<BuyerStackParamList, "Login">>();
   const queryClient = useQueryClient();
+  const theme = useTheme();
   const setSession = useAuthStore((s) => s.setSession);
+  const setViewAsBuyer = useAuthStore((s) => s.setViewAsBuyer);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const styles = useThemedStyles((colors) => ({
+
+  const styles = useThemedStyles((colors, t) => ({
     flex: { flex: 1 },
-    container: { padding: 24, backgroundColor: colors.surface, flexGrow: 1, justifyContent: "center" as const },
+    container: { padding: 24, backgroundColor: colors.background, flexGrow: 1, justifyContent: "center" as const },
     centeredColumn: { width: "100%" as const, maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" as const },
-    logo: { height: 56, width: 128, marginBottom: 12, alignSelf: "flex-start" as const },
-    subtitle: { fontSize: 16, color: colors.textMuted, marginBottom: 32 },
-    link: { marginTop: 20, textAlign: "center" as const, color: colors.text, fontWeight: "600" as const },
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+      shadowColor: "#000",
+      shadowOpacity: colors.shadowOpacity + 0.02,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 2 },
+    },
+    logo: { height: 48, width: 116, marginBottom: 8, alignSelf: "flex-start" as const },
+    title: { fontSize: 24, fontWeight: "800" as const, color: colors.text, marginBottom: 4 },
+    subtitle: { fontSize: 14, color: colors.textMuted, marginBottom: 20 },
+    errorBanner: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 8,
+      backgroundColor: t.scheme === "dark" ? "#3A1518" : "#FEF2F2",
+      borderWidth: 1,
+      borderColor: t.scheme === "dark" ? "#5B2226" : "#FECACA",
+      borderRadius: 10,
+      padding: 12,
+      marginBottom: 16,
+    },
+    errorBannerText: { flex: 1, color: t.scheme === "dark" ? "#FCA5A5" : "#B91C1C", fontSize: 13, fontWeight: "600" as const },
+    eyeButton: { padding: 4 },
+    linkRow: { marginTop: 24, flexDirection: "row" as const, justifyContent: "center" as const, alignItems: "center" as const, gap: 4 },
+    linkMuted: { color: colors.textMuted, fontSize: 14 },
+    linkAction: { color: theme.primaryColor, fontSize: 14, fontWeight: "700" as const },
   }));
 
   const handleLogin = async () => {
+    setErrorMessage(null);
     if (!email || !password) {
-      Alert.alert("Missing details", "Enter your email and password.");
+      setErrorMessage("Please enter both your email and password.");
       return;
     }
     setLoading(true);
@@ -42,24 +78,22 @@ export function LoginScreen() {
       await setSession(result.accessToken, result.refreshToken, result.user);
       await syncGuestCartToServer();
       if (route.params?.pendingCartItem) {
-        // Best-effort: the item they tried to add before being sent here to
-        // sign in. Don't block a successful login over it (e.g. stock ran out
-        // in the meantime) — they can always re-add it from the product page.
         await CartApi.addItem(route.params.pendingCartItem).catch(() => {});
       }
       queryClient.invalidateQueries({ queryKey: ["cart"] });
 
-      // Navigate first, same as RegisterScreen: don't gate it behind the
-      // welcome alert, since Alert.alert on web is a browser-native dialog
-      // some mobile browsers silently suppress after an awaited call.
+      const isAdmin = [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.EDITOR].includes(result.user.role);
+      if (isAdmin) {
+        setViewAsBuyer(true);
+      }
+
       if (route.params?.redirectTo === "Checkout") {
         navigation.replace("Checkout");
       } else {
         navigation.replace("BuyerTabs");
       }
-      Alert.alert("Welcome back!", `Signed in as ${result.user.firstName}.`);
     } catch (error) {
-      Alert.alert("Login failed", getErrorMessage(error, "Please check your credentials and try again."));
+      setErrorMessage(getErrorMessage(error, "Please check your credentials and try again."));
     } finally {
       setLoading(false);
     }
@@ -72,38 +106,84 @@ export function LoginScreen() {
     >
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.centeredColumn}>
-          <Pressable onPress={() => navigation.navigate("BuyerTabs")} hitSlop={8}>
+          <Pressable
+            onPress={() => navigation.navigate("BuyerTabs")}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Back to Home"
+          >
             <Image
               source={require("../../../assets/logo-green.png")}
               style={styles.logo}
               resizeMode="contain"
             />
           </Pressable>
-          <Text style={styles.subtitle}>Sign in to continue</Text>
+          <Text style={styles.title}>Welcome back</Text>
+          <Text style={styles.subtitle}>Sign in to your account</Text>
 
-          <FormInput
-            label="Email"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            placeholder="you@example.com"
-          />
-          <FormInput
-            label="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            placeholder="••••••••"
-          />
+          {errorMessage && (
+            <View style={styles.errorBanner}>
+              <Ionicons name="alert-circle" size={18} color={theme.colors.danger} />
+              <Text style={styles.errorBannerText}>{errorMessage}</Text>
+            </View>
+          )}
 
-          <PrimaryButton title="Log in" onPress={handleLogin} loading={loading} />
+          <View style={styles.card}>
+            <FormInput
+              label="Email"
+              value={email}
+              onChangeText={(text) => {
+                setEmail(text);
+                if (errorMessage) setErrorMessage(null);
+              }}
+              keyboardType="email-address"
+              placeholder="you@example.com"
+            />
+            <FormInput
+              label="Password"
+              value={password}
+              onChangeText={(text) => {
+                setPassword(text);
+                if (errorMessage) setErrorMessage(null);
+              }}
+              secureTextEntry={!showPassword}
+              placeholder="••••••••"
+              rightElement={
+                <Pressable
+                  onPress={() => setShowPassword((prev) => !prev)}
+                  hitSlop={8}
+                  style={styles.eyeButton}
+                  accessibilityRole="button"
+                  accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+                >
+                  <Ionicons
+                    name={showPassword ? "eye-off-outline" : "eye-outline"}
+                    size={20}
+                    color={theme.colors.textMuted}
+                  />
+                </Pressable>
+              }
+            />
 
-          <Text
-            style={styles.link}
-            onPress={() => navigation.navigate("Register", route.params)}
-          >
-            Don't have an account? Sign up
-          </Text>
+            <PrimaryButton
+              title="Log in"
+              onPress={handleLogin}
+              loading={loading}
+              size="lg"
+              leftIcon="log-in-outline"
+            />
+          </View>
+
+          <View style={styles.linkRow}>
+            <Text style={styles.linkMuted}>Don't have an account?</Text>
+            <Pressable
+              onPress={() => navigation.navigate("Register", route.params)}
+              accessibilityRole="link"
+              accessibilityLabel="Sign up for an account"
+            >
+              <Text style={styles.linkAction}>Sign up</Text>
+            </Pressable>
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

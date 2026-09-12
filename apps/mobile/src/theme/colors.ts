@@ -32,6 +32,13 @@ export interface ThemeColors {
   success: string;
   /** Warning/pending. */
   warning: string;
+  /** Info / in-transit / neutral highlighted states. */
+  info: string;
+  /** Soft status chip fills */
+  successSubtle: string;
+  warningSubtle: string;
+  dangerSubtle: string;
+  infoSubtle: string;
   /** Modal/sheet backdrop. */
   overlay: string;
   /** Image placeholder fill (behind product photos before they load). */
@@ -40,6 +47,16 @@ export interface ThemeColors {
    *  backgrounds, so dark mode leans on `border` for definition instead. */
   shadowOpacity: number;
 }
+
+export const radius = {
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  xxl: 24,
+  pill: 9999,
+} as const;
 
 export const lightColors: ThemeColors = {
   background: "#F9FAFB",
@@ -54,6 +71,11 @@ export const lightColors: ThemeColors = {
   danger: "#DC2626",
   success: "#059669",
   warning: "#D97706",
+  info: "#2563EB",
+  successSubtle: "#DCFCE7",
+  warningSubtle: "#FEF3C7",
+  dangerSubtle: "#FEE2E2",
+  infoSubtle: "#DBEAFE",
   overlay: "rgba(17, 24, 39, 0.5)",
   placeholderBg: "#F0FDF4",
   shadowOpacity: 0.05,
@@ -72,6 +94,11 @@ export const darkColors: ThemeColors = {
   danger: "#F87171",
   success: "#34D399",
   warning: "#FBBF24",
+  info: "#60A5FA",
+  successSubtle: "#0F3D22",
+  warningSubtle: "#3F2D07",
+  dangerSubtle: "#450A0A",
+  infoSubtle: "#132A47",
   overlay: "rgba(0, 0, 0, 0.7)",
   placeholderBg: "#132218",
   shadowOpacity: 0.4,

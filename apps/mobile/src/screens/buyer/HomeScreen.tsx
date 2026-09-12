@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -17,10 +17,12 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import type { CategoryDto, ProductDto } from "@ikaystores/shared";
+import { UserRole } from "@ikaystores/shared";
 import { ProductsApi, CategoriesApi, NotificationsApi } from "../../api/endpoints";
 import { AppDownloadBanner } from "../../components/AppDownloadBanner";
 import { FloatingProduce } from "../../components/FloatingProduce";
 import { Footer } from "../../components/Footer";
+import { Skeleton, ProductCardSkeleton } from "../../components/SkeletonLoader";
 import { SlideCarousel } from "../../components/SlideCarousel";
 import { useAuthStore } from "../../store/authStore";
 import { useTheme } from "../../theme/ThemeContext";
@@ -98,24 +100,71 @@ export function HomeScreen() {
   const navigation = useNavigation<HomeNavigationProp>();
   const theme = useTheme();
   const user = useAuthStore((s) => s.user);
+  const viewAsBuyer = useAuthStore((s) => s.viewAsBuyer);
+  const setViewAsBuyer = useAuthStore((s) => s.setViewAsBuyer);
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const numColumns = columnsForWidth(windowWidth);
   const cardMaxWidthPercent = 100 / numColumns - (numColumns > 2 ? 1.5 : 3);
+
+  // Raw search value drives the input; debounced value drives the query so
+  // we don't fire an API request on every single keystroke.
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const searchInputRef = useRef<TextInput>(null);
-  // Search already runs live as you type — this just gives "press to
-  // search" a real, felt action (submitting via keyboard or tapping the
-  // icon dismisses the keyboard) rather than the icon being purely
-  // decorative with no way to explicitly confirm you're done typing.
   const submitSearch = () => searchInputRef.current?.blur();
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const [categoryId, setCategoryId] = useState<string | undefined>(undefined);
   // "Browse Catalogue" forces the flat, all-products grid even with no
   // search term or category selected — otherwise that empty-filter state
   // would fall through to the grouped-by-category view further down.
   const [catalogueMode, setCatalogueMode] = useState(false);
+
+  const isAdmin =
+    user?.role === UserRole.ADMIN ||
+    user?.role === UserRole.SUPER_ADMIN ||
+    user?.role === UserRole.EDITOR;
+  const isVendor = user?.role === UserRole.VENDOR;
+
   const styles = useThemedStyles((colors) => ({
     container: { flex: 1, backgroundColor: colors.background },
+    // Admin mode banner — shown above the hero when admin views the storefront.
+    adminBar: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      justifyContent: "space-between" as const,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      gap: 10,
+    },
+    adminBarText: {
+      flex: 1,
+      fontSize: 13,
+      fontWeight: "600" as const,
+      color: colors.text,
+    },
+    adminBarButton: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 16,
+      backgroundColor: theme.primaryColor,
+    },
+    adminBarButtonText: {
+      color: "#fff",
+      fontSize: 13,
+      fontWeight: "700" as const,
+    },
     hero: {
       position: "relative" as const,
       overflow: "hidden" as const,
@@ -153,14 +202,14 @@ export function HomeScreen() {
       borderWidth: 1.5,
       borderColor: theme.primaryColor,
     },
-    // Reduced to 70% width (30% narrower) and centered — same on every
-    // platform since this is the one shared style/layout RN renders from
-    // for web, iOS, and Android alike.
+    // Responsive search bar: full width on small screens, capped at 680 px
+    // and centered on wider layouts — no more cramped 70% on a 375 px phone.
     searchBar: {
       flexDirection: "row" as const,
       alignItems: "center" as const,
       alignSelf: "center" as const,
-      width: "70%" as const,
+      width: "100%" as const,
+      maxWidth: 680,
       gap: 8,
       backgroundColor: colors.surface,
       borderRadius: 14,
@@ -175,9 +224,10 @@ export function HomeScreen() {
     searchInput: { flex: 1, fontSize: 14, color: colors.text, padding: 0 },
     quickActions: {
       flexDirection: "row" as const,
-      flexShrink: 0,
+      flexWrap: "wrap" as const,
       alignSelf: "center" as const,
-      width: "70%" as const,
+      width: "100%" as const,
+      maxWidth: 680,
       marginTop: 14,
       gap: 10,
     },
@@ -273,6 +323,25 @@ export function HomeScreen() {
     cardPrice: { fontSize: 14, fontWeight: "800" as const, marginTop: 3 },
     empty: { alignItems: "center" as const, marginTop: 60, gap: 8 },
     emptyText: { color: colors.textMuted },
+    errorCard: {
+      alignItems: "center" as const,
+      marginTop: 60,
+      marginHorizontal: 24,
+      gap: 12,
+      padding: 24,
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    errorText: { color: colors.textMuted, textAlign: "center" as const, lineHeight: 20 },
+    retryButton: {
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+      borderRadius: 20,
+      backgroundColor: theme.primaryColor,
+    },
+    retryButtonText: { color: "#fff", fontWeight: "700" as const, fontSize: 14 },
   }));
 
   const categoriesQuery = useQuery({
@@ -287,11 +356,13 @@ export function HomeScreen() {
     refetchInterval: 15000,
   });
 
+  // debouncedSearch drives the query key — prevents an API call on every
+  // keystroke while still feeling instant once the user pauses typing.
   const productsQuery = useInfiniteQuery({
-    queryKey: ["products", search, categoryId],
+    queryKey: ["products", debouncedSearch, categoryId],
     queryFn: ({ pageParam }) =>
       ProductsApi.browse({
-        search: search || undefined,
+        search: debouncedSearch || undefined,
         categoryId,
         page: pageParam,
         pageSize: PRODUCTS_PAGE_SIZE,
@@ -307,19 +378,21 @@ export function HomeScreen() {
   );
   const categories = categoriesQuery.data ?? [];
 
-  const loadMoreProducts = () => {
+  const loadMoreProducts = useCallback(() => {
     if (productsQuery.hasNextPage && !productsQuery.isFetchingNextPage) {
       productsQuery.fetchNextPage();
     }
-  };
+  }, [productsQuery]);
 
   // With no active filter, group the full catalog into per-category rows
   // (grocery-app style browsing); a selected category, search term, or the
   // "Browse Catalogue" quick action instead shows a single flat grid.
-  const isFiltering = Boolean(search || categoryId || catalogueMode);
+  // Use debouncedSearch so the view doesn't switch layout mid-keystroke.
+  const isFiltering = Boolean(debouncedSearch || categoryId || catalogueMode);
 
   const clearFilters = () => {
     setSearch("");
+    setDebouncedSearch("");
     setCategoryId(undefined);
     setCatalogueMode(false);
   };
@@ -423,6 +496,27 @@ export function HomeScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Admin mode banner — only shown when an admin is browsing the
+          live storefront. Gives a clear visual cue they're in "view store"
+          mode and offers a 1-tap escape back to the dashboard. */}
+      {isAdmin && viewAsBuyer && (
+        <View style={styles.adminBar}>
+          <Ionicons name="shield-checkmark" size={16} color={theme.primaryColor} />
+          <Text style={styles.adminBarText} numberOfLines={1}>
+            👑 Admin Mode — viewing live store
+          </Text>
+          <Pressable
+            style={styles.adminBarButton}
+            onPress={() => setViewAsBuyer(false)}
+            accessibilityRole="button"
+            accessibilityLabel="Go to Admin Dashboard"
+          >
+            <Ionicons name="grid" size={14} color="#fff" />
+            <Text style={styles.adminBarButtonText}>Dashboard</Text>
+          </Pressable>
+        </View>
+      )}
+
       {/* Flat, exactly theme.primaryColor — same as the nav bar directly
           above it, so the two read as one continuous brand-green block
           instead of a bar-then-gradient seam. */}
@@ -482,7 +576,7 @@ export function HomeScreen() {
               onSubmitEditing={submitSearch}
             />
             {search.length > 0 && (
-              <Pressable onPress={() => setSearch("")} hitSlop={8}>
+              <Pressable onPress={() => { setSearch(""); setDebouncedSearch(""); }} hitSlop={8}>
                 <Ionicons name="close-circle" size={18} color={theme.colors.textFaint} />
               </Pressable>
             )}
@@ -495,6 +589,7 @@ export function HomeScreen() {
           style={[styles.quickActionCard, { backgroundColor: CATALOGUE_BG }]}
           onPress={() => {
             setSearch("");
+            setDebouncedSearch("");
             setCategoryId(undefined);
             setCatalogueMode(true);
           }}
@@ -502,20 +597,64 @@ export function HomeScreen() {
           <Ionicons name={CATALOGUE_ICON} size={18} color={CATALOGUE_COLOR} />
           <Text style={[styles.quickActionText, { color: CATALOGUE_COLOR }]}>Browse Catalogue</Text>
         </Pressable>
-        {QUICK_ACTIONS.map((action) => (
+
+        {/* Role-aware secondary quick actions: admins get a 1-tap shortcut
+            back to their dashboard; vendors get their vendor dashboard;
+            buyers/guests get "Become a Vendor" as before. */}
+        {isAdmin ? (
           <Pressable
-            key={action.label}
-            style={[styles.quickActionCard, { backgroundColor: action.bg }]}
-            onPress={() => action.onPress(navigation)}
+            style={[styles.quickActionCard, { backgroundColor: "#EDE9FE" }]}
+            onPress={() => setViewAsBuyer(false)}
           >
-            <Ionicons name={action.icon} size={18} color={action.color} />
-            <Text style={[styles.quickActionText, { color: action.color }]}>{action.label}</Text>
+            <Ionicons name="grid" size={18} color="#6D28D9" />
+            <Text style={[styles.quickActionText, { color: "#6D28D9" }]}>Admin Dashboard</Text>
           </Pressable>
-        ))}
+        ) : isVendor ? (
+          <Pressable
+            style={[styles.quickActionCard, { backgroundColor: "#EDE9FE" }]}
+            onPress={() => setViewAsBuyer(false)}
+          >
+            <Ionicons name="storefront" size={18} color="#6D28D9" />
+            <Text style={[styles.quickActionText, { color: "#6D28D9" }]}>Vendor Dashboard</Text>
+          </Pressable>
+        ) : (
+          <Pressable
+            style={[styles.quickActionCard, { backgroundColor: "#EDE9FE" }]}
+            onPress={() => navigation.navigate("Register", undefined)}
+          >
+            <Ionicons name="storefront" size={18} color="#6D28D9" />
+            <Text style={[styles.quickActionText, { color: "#6D28D9" }]}>Become a Vendor</Text>
+          </Pressable>
+        )}
+
+        <Pressable
+          style={[styles.quickActionCard, { backgroundColor: "#FFEDD5" }]}
+          onPress={() => navigation.navigate("Orders")}
+        >
+          <Ionicons name="receipt" size={18} color="#C2410C" />
+          <Text style={[styles.quickActionText, { color: "#C2410C" }]}>Track my orders</Text>
+        </Pressable>
       </View>
 
       {productsQuery.isLoading ? (
-        <ActivityIndicator style={styles.loading} color={theme.primaryColor} />
+        <View style={[styles.grid, { flexDirection: "row", flexWrap: "wrap" }]}>
+          {Array.from({ length: numColumns * 2 }).map((_, i) => (
+            <ProductCardSkeleton
+              key={i}
+              style={{ maxWidth: `${cardMaxWidthPercent}%`, minWidth: 140 }}
+            />
+          ))}
+        </View>
+      ) : productsQuery.isError ? (
+        <View style={styles.errorCard}>
+          <Ionicons name="cloud-offline-outline" size={36} color={theme.colors.textFaint} />
+          <Text style={styles.errorText}>
+            Couldn't load products. Check your connection and try again.
+          </Text>
+          <Pressable style={styles.retryButton} onPress={() => productsQuery.refetch()}>
+            <Text style={styles.retryButtonText}>Try Again</Text>
+          </Pressable>
+        </View>
       ) : isFiltering ? (
         <FlatList
           key={numColumns}
@@ -528,10 +667,10 @@ export function HomeScreen() {
             <>
               {categoryGridElement}
               <View style={styles.sectionHeader}>
-                <Ionicons name={catalogueMode && !search && !categoryId ? CATALOGUE_ICON : "leaf"} size={16} color={theme.primaryColor} />
+                <Ionicons name={catalogueMode && !debouncedSearch && !categoryId ? CATALOGUE_ICON : "leaf"} size={16} color={theme.primaryColor} />
                 <Text style={[styles.sectionHeaderText, { color: theme.primaryColor }]}>
-                  {search
-                    ? `Results for "${search}"`
+                  {debouncedSearch
+                    ? `Results for "${debouncedSearch}"`
                     : categories.find((c) => c.id === categoryId)?.name ?? "Full catalogue"}
                 </Text>
                 <Pressable style={styles.seeAll} onPress={clearFilters}>
@@ -552,6 +691,9 @@ export function HomeScreen() {
           renderItem={({ item }) => renderProductCard(item, { maxWidth: `${cardMaxWidthPercent}%` }, 500)}
           onEndReached={loadMoreProducts}
           onEndReachedThreshold={0.5}
+          initialNumToRender={8}
+          maxToRenderPerBatch={8}
+          windowSize={5}
           ListFooterComponent={
             <>
               {productsQuery.isFetchingNextPage && (
@@ -615,6 +757,9 @@ export function HomeScreen() {
           )}
           onEndReached={loadMoreProducts}
           onEndReachedThreshold={0.5}
+          initialNumToRender={6}
+          maxToRenderPerBatch={6}
+          windowSize={5}
           ListFooterComponent={
             <>
               {productsQuery.isFetchingNextPage && (

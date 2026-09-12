@@ -217,12 +217,17 @@ export function ProfileScreen() {
         <View style={styles.centeredColumn}>
           <Text style={styles.title}>Profile</Text>
           <Text style={styles.guestPrompt}>Sign in to manage your account and view your orders.</Text>
-          <PrimaryButton title="Sign in" onPress={() => navigation.navigate("Login")} />
+          <PrimaryButton
+            title="Sign in"
+            onPress={() => navigation.navigate("Login")}
+            leftIcon="log-in-outline"
+          />
           <View style={styles.spacer} />
           <PrimaryButton
             title="Create an account"
-            variant="secondary"
+            variant="outline"
             onPress={() => navigation.navigate("Register")}
+            leftIcon="person-add-outline"
           />
           <View style={styles.spacer} />
           {appearanceCard}
@@ -269,12 +274,15 @@ export function ProfileScreen() {
                 {meQuery.data.identityVerified ? "Verified" : "Verify your NIN or BVN in real time"}
               </Text>
             </View>
-            <Text
-              style={[styles.identityAction, { color: theme.primaryColor }]}
+            <Pressable
               onPress={() => navigation.navigate("IdentityVerification")}
+              accessibilityRole="button"
+              accessibilityLabel="Identity verification"
             >
-              {meQuery.data.identityVerified ? "View" : "Verify"}
-            </Text>
+              <Text style={[styles.identityAction, { color: theme.primaryColor }]}>
+                {meQuery.data.identityVerified ? "View" : "Verify"}
+              </Text>
+            </Pressable>
           </View>
         )}
 
@@ -310,7 +318,8 @@ export function ProfileScreen() {
           <>
             <PrimaryButton
               title={viewAsBuyer ? "Back to dashboard" : "View store"}
-              variant="secondary"
+              variant="outline"
+              leftIcon={viewAsBuyer ? "grid-outline" : "storefront-outline"}
               onPress={() => setViewAsBuyer(!viewAsBuyer)}
             />
             <View style={styles.spacer} />
@@ -319,7 +328,12 @@ export function ProfileScreen() {
 
         {appearanceCard}
 
-        <PrimaryButton title="Log out" variant="danger" onPress={() => logout()} />
+        <PrimaryButton
+          title="Log out"
+          variant="danger"
+          leftIcon="log-out-outline"
+          onPress={() => logout()}
+        />
       </View>
     </ScrollView>
   );

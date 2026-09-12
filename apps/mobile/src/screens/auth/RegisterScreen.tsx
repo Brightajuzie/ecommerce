@@ -87,6 +87,7 @@ export function RegisterScreen() {
   // triggered after an awaited call, which left failed registrations
   // looking like nothing happened at all (see the navigation fix above for
   // the same root cause on the success path).
+  const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleRegister = async () => {
@@ -111,27 +112,13 @@ export function RegisterScreen() {
         businessName: asVendor ? businessName : undefined,
         referralCode: referralCode.trim() || undefined,
       });
-      // Setting a VENDOR session flips RootNavigator to VendorNavigator on the next
-      // render (unmounting this screen) — vendors are auto-approved on signup (see
-      // AuthService.register), so this carries a new vendor straight into
-      // VendorTabs, not a pending-review screen.
       await setSession(result.accessToken, result.refreshToken, result.user);
       await syncGuestCartToServer();
       if (route.params?.pendingCartItem) {
-        // Best-effort: the item they tried to add before being sent here to
-        // register. Don't block a successful signup over it (e.g. stock ran
-        // out in the meantime) — they can always re-add it from the product page.
         await CartApi.addItem(route.params.pendingCartItem).catch(() => {});
       }
       queryClient.invalidateQueries({ queryKey: ["cart"] });
 
-      // Navigate first, independent of the confirmation alert below: on web,
-      // Alert.alert renders as a browser-native dialog that some mobile
-      // browsers silently suppress when triggered after an awaited call
-      // (outside the direct click-gesture stack) — gating navigation behind
-      // its "Continue" button meant a suppressed alert left the user stuck
-      // on the register screen with no visible error, even though the
-      // account was created successfully.
       if (route.params?.redirectTo === "Checkout") {
         navigation.replace("Checkout");
       } else {
@@ -157,7 +144,12 @@ export function RegisterScreen() {
     >
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.centeredColumn}>
-          <Pressable onPress={() => navigation.navigate("BuyerTabs")} hitSlop={8}>
+          <Pressable
+            onPress={() => navigation.navigate("BuyerTabs")}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Back to Home"
+          >
             <Image
               source={require("../../../assets/logo-green.png")}
               style={styles.logo}
@@ -174,24 +166,70 @@ export function RegisterScreen() {
           )}
 
           <View style={styles.card}>
-            <FormInput label="First name" value={firstName} onChangeText={setFirstName} />
-            <FormInput label="Last name" value={lastName} onChangeText={setLastName} />
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <View style={{ flex: 1 }}>
+                <FormInput
+                  label="First name"
+                  value={firstName}
+                  onChangeText={(t) => { setFirstName(t); if (errorMessage) setErrorMessage(null); }}
+                  placeholder="John"
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <FormInput
+                  label="Last name"
+                  value={lastName}
+                  onChangeText={(t) => { setLastName(t); if (errorMessage) setErrorMessage(null); }}
+                  placeholder="Doe"
+                />
+              </View>
+            </View>
             <FormInput
               label="Email"
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(t) => { setEmail(t); if (errorMessage) setErrorMessage(null); }}
               keyboardType="email-address"
+              placeholder="you@example.com"
             />
-            <FormInput label="Password" value={password} onChangeText={setPassword} secureTextEntry />
+            <FormInput
+              label="Password"
+              value={password}
+              onChangeText={(t) => { setPassword(t); if (errorMessage) setErrorMessage(null); }}
+              secureTextEntry={!showPassword}
+              placeholder="••••••••"
+              hint="Must be at least 6 characters"
+              rightElement={
+                <Pressable
+                  onPress={() => setShowPassword((prev) => !prev)}
+                  hitSlop={8}
+                  style={{ padding: 4 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+                >
+                  <Ionicons
+                    name={showPassword ? "eye-off-outline" : "eye-outline"}
+                    size={20}
+                    color={theme.colors.textMuted}
+                  />
+                </Pressable>
+              }
+            />
           </View>
 
           <View style={styles.card}>
             <View style={styles.toggleRow}>
               <View style={styles.toggleTextWrap}>
-                <Text style={styles.toggleLabel}>Register as a vendor</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Ionicons name="storefront-outline" size={18} color={theme.primaryColor} />
+                  <Text style={styles.toggleLabel}>Register as a vendor</Text>
+                </View>
                 <Text style={styles.toggleHint}>Sell your own products on Ikaystores</Text>
               </View>
-              <Switch value={asVendor} onValueChange={setAsVendor} />
+              <Switch
+                value={asVendor}
+                onValueChange={setAsVendor}
+                trackColor={{ false: theme.colors.borderStrong, true: theme.primaryColor }}
+              />
             </View>
 
             {asVendor && (
@@ -212,11 +250,24 @@ export function RegisterScreen() {
             />
           </View>
 
-          <PrimaryButton title="Sign up" onPress={handleRegister} loading={loading} />
+          <PrimaryButton
+            title="Sign up"
+            onPress={handleRegister}
+            loading={loading}
+            size="lg"
+            leftIcon="person-add-outline"
+          />
 
-          <Text style={styles.link} onPress={() => navigation.navigate("Login", route.params)}>
-            Already have an account? Log in
-          </Text>
+          <View style={{ marginTop: 24, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 4 }}>
+            <Text style={{ color: theme.colors.textMuted, fontSize: 14 }}>Already have an account?</Text>
+            <Pressable
+              onPress={() => navigation.navigate("Login", route.params)}
+              accessibilityRole="link"
+              accessibilityLabel="Log in to existing account"
+            >
+              <Text style={{ color: theme.primaryColor, fontSize: 14, fontWeight: "700" }}>Log in</Text>
+            </Pressable>
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

@@ -26,21 +26,30 @@ export function ProductDetailScreen() {
   const guestAddItem = useGuestCartStore((s) => s.addItem);
   const [quantity, setQuantity] = useState(1);
   const styles = useThemedStyles((colors) => ({
-    container: { flex: 1, backgroundColor: colors.surface },
-    scrollContent: {},
+    container: { flex: 1, backgroundColor: colors.background },
+    scrollContent: { paddingBottom: 100 },
     center: { flex: 1, alignItems: "center" as const, justifyContent: "center" as const },
     centeredColumn: { width: "100%" as const, maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" as const },
-    imageWrap: { alignItems: "center" as const, paddingTop: 16, backgroundColor: colors.surface },
+    imageWrap: {
+      alignItems: "center" as const,
+      paddingTop: 16,
+      paddingHorizontal: 16,
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
     imageBox: {
       position: "relative" as const,
-      width: "55%" as const,
-      maxWidth: 220,
+      width: "100%" as const,
+      maxWidth: 360,
       borderRadius: 20,
+      overflow: "hidden" as const,
       shadowColor: "#000",
       shadowOpacity: colors.shadowOpacity + 0.04,
       shadowRadius: 14,
       shadowOffset: { width: 0, height: 6 },
       elevation: 3,
+      marginBottom: 16,
     },
     image: {
       width: "100%" as const,
@@ -52,21 +61,21 @@ export function ProductDetailScreen() {
     },
     badge: {
       position: "absolute" as const,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 10,
     },
     badgeNew: { top: 12, left: 12 },
     badgeStock: { top: 12, right: 12, backgroundColor: colors.danger },
     badgeText: { color: "#fff", fontSize: 11, fontWeight: "800" as const },
     body: { padding: 20 },
-    metaRow: { flexDirection: "row" as const, flexWrap: "wrap" as const, gap: 8, marginBottom: 10 },
+    metaRow: { flexDirection: "row" as const, flexWrap: "wrap" as const, gap: 8, marginBottom: 12 },
     metaChip: {
       flexDirection: "row" as const,
       alignItems: "center" as const,
       gap: 5,
       paddingHorizontal: 10,
-      paddingVertical: 5,
+      paddingVertical: 6,
       borderRadius: 14,
       borderWidth: 1,
       borderColor: colors.border,
@@ -74,18 +83,67 @@ export function ProductDetailScreen() {
     },
     metaChipText: { fontSize: 12, fontWeight: "700" as const },
     metaChipTextMuted: { fontSize: 12, fontWeight: "700" as const, color: colors.textMuted },
-    title: { fontSize: 22, fontWeight: "700" as const, color: colors.text },
-    price: { fontSize: 20, fontWeight: "800" as const, marginTop: 8 },
-    description: { fontSize: 15, color: colors.textSecondary, marginTop: 12, lineHeight: 22 },
-    stock: { fontSize: 13, color: colors.textMuted, marginTop: 8 },
-    quantityRow: {
+    title: { fontSize: 24, fontWeight: "800" as const, color: colors.text, lineHeight: 30 },
+    priceRow: { flexDirection: "row" as const, alignItems: "baseline" as const, gap: 8, marginTop: 8 },
+    price: { fontSize: 24, fontWeight: "900" as const },
+    descriptionCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 16,
+      marginTop: 16,
+    },
+    descriptionTitle: { fontSize: 14, fontWeight: "800" as const, color: colors.text, marginBottom: 6 },
+    description: { fontSize: 14, color: colors.textSecondary, lineHeight: 22 },
+    stockRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: 6, marginTop: 12 },
+    stockText: { fontSize: 13, fontWeight: "600" as const },
+    stepperCard: {
       flexDirection: "row" as const,
       alignItems: "center" as const,
-      justifyContent: "center" as const,
-      gap: 20,
-      marginVertical: 20,
+      justifyContent: "space-between" as const,
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 14,
+      marginTop: 16,
     },
-    quantity: { fontSize: 18, fontWeight: "700" as const, minWidth: 30, textAlign: "center" as const, color: colors.text },
+    stepperLabel: { fontSize: 14, fontWeight: "700" as const, color: colors.text },
+    stepperWrap: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 12,
+      backgroundColor: colors.surfaceAlt,
+      borderRadius: 12,
+      padding: 4,
+    },
+    stepButton: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      backgroundColor: colors.surface,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      shadowColor: "#000",
+      shadowOpacity: colors.shadowOpacity,
+      shadowRadius: 2,
+      elevation: 1,
+    },
+    quantityText: { fontSize: 16, fontWeight: "800" as const, minWidth: 28, textAlign: "center" as const, color: colors.text },
+    bottomBar: {
+      backgroundColor: colors.surface,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      paddingHorizontal: 20,
+      paddingVertical: 14,
+      marginTop: 20,
+      borderRadius: 16,
+      shadowColor: "#000",
+      shadowOpacity: colors.shadowOpacity + 0.03,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: -2 },
+    },
     alertBackdrop: {
       flex: 1,
       backgroundColor: colors.overlay,
@@ -219,35 +277,84 @@ export function ProductDetailScreen() {
           )}
 
           <Text style={styles.title}>{product.title}</Text>
-          <Text style={[styles.price, { color: theme.primaryColor }]}>
-            {product.currency} {Number(product.price).toLocaleString()}
-          </Text>
-          <Text style={styles.description}>{product.description}</Text>
-          <Text style={styles.stock}>
-            {product.stock > 0 ? `${product.stock} in stock` : "Out of stock"}
-          </Text>
 
-          <View style={styles.quantityRow}>
-            <PrimaryButton
-              title="-"
-              variant="secondary"
-              onPress={() => setQuantity((q) => Math.max(1, q - 1))}
-            />
-            <Text style={styles.quantity}>{quantity}</Text>
-            <PrimaryButton
-              title="+"
-              variant="secondary"
-              onPress={() => setQuantity((q) => Math.min(product.stock, q + 1))}
-            />
+          <View style={styles.priceRow}>
+            <Text style={[styles.price, { color: theme.primaryColor }]}>
+              {product.currency} {Number(product.price).toLocaleString()}
+            </Text>
           </View>
 
-          <PrimaryButton
-            title="Add to cart"
-            onPress={handleAddToCart}
-            loading={addToCart.isPending}
-            disabled={product.stock === 0}
-          />
+          <View style={styles.stockRow}>
+            <Ionicons
+              name={product.stock > 0 ? "checkmark-circle" : "close-circle"}
+              size={16}
+              color={product.stock > 5 ? theme.colors.success : product.stock > 0 ? theme.colors.warning : theme.colors.danger}
+            />
+            <Text
+              style={[
+                styles.stockText,
+                {
+                  color:
+                    product.stock > 5
+                      ? theme.colors.success
+                      : product.stock > 0
+                      ? theme.colors.warning
+                      : theme.colors.danger,
+                },
+              ]}
+            >
+              {product.stock > 0
+                ? isLowStock
+                  ? `Hurry, only ${product.stock} left in stock!`
+                  : `${product.stock} items available`
+                : "Currently unavailable"}
+            </Text>
+          </View>
 
+          {product.description ? (
+            <View style={styles.descriptionCard}>
+              <Text style={styles.descriptionTitle}>About this item</Text>
+              <Text style={styles.description}>{product.description}</Text>
+            </View>
+          ) : null}
+
+          {product.stock > 0 && (
+            <View style={styles.stepperCard}>
+              <Text style={styles.stepperLabel}>Select quantity</Text>
+              <View style={styles.stepperWrap}>
+                <Pressable
+                  onPress={() => setQuantity((q) => Math.max(1, q - 1))}
+                  style={styles.stepButton}
+                  accessibilityRole="button"
+                  accessibilityLabel="Decrease quantity"
+                  hitSlop={8}
+                >
+                  <Ionicons name="remove" size={18} color={theme.colors.text} />
+                </Pressable>
+                <Text style={styles.quantityText}>{quantity}</Text>
+                <Pressable
+                  onPress={() => setQuantity((q) => Math.min(product.stock, q + 1))}
+                  style={styles.stepButton}
+                  accessibilityRole="button"
+                  accessibilityLabel="Increase quantity"
+                  hitSlop={8}
+                >
+                  <Ionicons name="add" size={18} color={theme.colors.text} />
+                </Pressable>
+              </View>
+            </View>
+          )}
+
+          <View style={{ marginTop: 24 }}>
+            <PrimaryButton
+              title={product.stock === 0 ? "Out of stock" : "Add to cart"}
+              onPress={handleAddToCart}
+              loading={addToCart.isPending}
+              disabled={product.stock === 0}
+              size="lg"
+              leftIcon="cart-outline"
+            />
+          </View>
         </View>
       </View>
 

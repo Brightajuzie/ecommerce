@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Alert, Linking, Platform, Pressable, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../theme/ThemeContext";
@@ -22,18 +23,35 @@ const IOS_APP_URL: string | null = null;
 
 export function AppDownloadBanner() {
   const theme = useTheme();
+  const [dismissed, setDismissed] = useState(false);
+
   const styles = useThemedStyles((colors) => ({
     wrapper: {
+      position: "relative" as const,
       flexDirection: "row" as const,
       flexWrap: "wrap" as const,
       alignItems: "center" as const,
       justifyContent: "space-between" as const,
       gap: 12,
       backgroundColor: colors.surfaceAlt,
-      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 16,
       padding: 16,
+      paddingRight: 36,
       marginHorizontal: 16,
       marginBottom: 16,
+      shadowColor: "#000",
+      shadowOpacity: colors.shadowOpacity,
+      shadowRadius: 4,
+      shadowOffset: { width: 0, height: 1 },
+    },
+    dismissButton: {
+      position: "absolute" as const,
+      top: 10,
+      right: 10,
+      padding: 4,
+      borderRadius: 12,
     },
     textBlock: { flexShrink: 1, minWidth: 180 },
     title: { fontSize: 15, fontWeight: "800" as const, color: colors.text },
@@ -45,7 +63,7 @@ export function AppDownloadBanner() {
       gap: 8,
       paddingHorizontal: 14,
       paddingVertical: 9,
-      borderRadius: 10,
+      borderRadius: 12,
     },
     buttonMuted: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
     buttonCaption: { fontSize: 9, color: "rgba(255,255,255,0.85)", fontWeight: "600" as const },
@@ -54,7 +72,7 @@ export function AppDownloadBanner() {
     buttonLabelMuted: { color: colors.text },
   }));
 
-  if (Platform.OS !== "web") {
+  if (Platform.OS !== "web" || dismissed) {
     return null;
   }
 
@@ -79,6 +97,15 @@ export function AppDownloadBanner() {
 
   return (
     <View style={styles.wrapper}>
+      <Pressable
+        onPress={() => setDismissed(true)}
+        style={styles.dismissButton}
+        accessibilityRole="button"
+        accessibilityLabel="Dismiss download banner"
+        hitSlop={8}
+      >
+        <Ionicons name="close" size={16} color={theme.colors.textMuted} />
+      </Pressable>
       <View style={styles.textBlock}>
         <Text style={styles.title}>Get the Ikaystores app</Text>
         <Text style={styles.subtitle}>Faster browsing, biometric login, and order tracking.</Text>
@@ -87,6 +114,8 @@ export function AppDownloadBanner() {
         <Pressable
           style={[styles.button, { backgroundColor: theme.primaryColor }]}
           onPress={handleAndroidPress}
+          accessibilityRole="button"
+          accessibilityLabel="Download for Android"
         >
           <Ionicons name="logo-android" size={20} color="#fff" />
           <View>
@@ -94,7 +123,12 @@ export function AppDownloadBanner() {
             <Text style={styles.buttonLabel}>Android</Text>
           </View>
         </Pressable>
-        <Pressable style={[styles.button, styles.buttonMuted]} onPress={handleIosPress}>
+        <Pressable
+          style={[styles.button, styles.buttonMuted]}
+          onPress={handleIosPress}
+          accessibilityRole="button"
+          accessibilityLabel="Download for iOS"
+        >
           <Ionicons name="logo-apple" size={20} color={theme.colors.text} />
           <View>
             <Text style={[styles.buttonCaption, styles.buttonCaptionMuted]}>Download for</Text>

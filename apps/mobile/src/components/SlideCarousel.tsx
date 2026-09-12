@@ -17,6 +17,8 @@ import { optimizedImageUrl } from "../utils/image";
 import { useTheme } from "../theme/ThemeContext";
 import { useThemedStyles } from "../theme/useThemedStyles";
 
+import { Skeleton } from "./SkeletonLoader";
+
 const AUTOPLAY_INTERVAL_MS = 4000;
 
 export function SlideCarousel() {
@@ -27,17 +29,17 @@ export function SlideCarousel() {
   const [activeIndex, setActiveIndex] = useState(0);
   const listRef = useRef<FlatList<SlideDto>>(null);
   const styles = useThemedStyles((colors) => ({
-    wrapper: { marginBottom: 16 },
-    slide: { height: 208, borderRadius: 16, overflow: "hidden" as const },
+    wrapper: { marginBottom: 16, marginHorizontal: 16 },
+    slide: { height: 190, borderRadius: 16, overflow: "hidden" as const },
     image: { width: "100%" as const, height: "100%" as const, backgroundColor: colors.border },
     captionOverlay: {
       position: "absolute" as const,
       bottom: 0,
       left: 0,
       right: 0,
-      backgroundColor: "rgba(0,0,0,0.45)",
-      paddingHorizontal: 14,
-      paddingVertical: 10,
+      backgroundColor: "rgba(0,0,0,0.5)",
+      paddingHorizontal: 16,
+      paddingVertical: 12,
     },
     captionText: { color: "#fff", fontWeight: "700" as const, fontSize: 15 },
     dotsRow: {
@@ -51,9 +53,6 @@ export function SlideCarousel() {
     dotActive: { width: 18, backgroundColor: theme.primaryColor },
   }));
 
-  // Auto-advances one slide at a time on a fixed interval — pauses whenever
-  // there's only one (or zero) slides, and re-syncs immediately after a
-  // manual swipe (via onMomentumScrollEnd below) rather than fighting it.
   useEffect(() => {
     if (slides.length < 2 || slideWidth === 0) return;
     const timer = setInterval(() => {
@@ -66,6 +65,18 @@ export function SlideCarousel() {
     return () => clearInterval(timer);
   }, [slides.length, slideWidth]);
 
+  const onWrapperLayout = (event: LayoutChangeEvent) => {
+    setSlideWidth(event.nativeEvent.layout.width);
+  };
+
+  if (slidesQuery.isLoading) {
+    return (
+      <View style={styles.wrapper}>
+        <Skeleton height={190} borderRadius={16} />
+      </View>
+    );
+  }
+
   if (slides.length === 0) {
     return null;
   }
@@ -74,10 +85,6 @@ export function SlideCarousel() {
     if (linkUrl) {
       Linking.openURL(linkUrl).catch(() => {});
     }
-  };
-
-  const onWrapperLayout = (event: LayoutChangeEvent) => {
-    setSlideWidth(event.nativeEvent.layout.width);
   };
 
   const onMomentumScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -104,6 +111,8 @@ export function SlideCarousel() {
               <Pressable
                 style={[styles.slide, { width: slideWidth }]}
                 onPress={() => openSlideLink(item.linkUrl)}
+                accessibilityRole="button"
+                accessibilityLabel={item.title || "Promotional banner"}
               >
                 <Image source={{ uri: optimizedImageUrl(item.imageUrl, slideWidth * 2) }} style={styles.image} />
                 {item.title ? (
@@ -117,7 +126,7 @@ export function SlideCarousel() {
             )}
           />
           {slides.length > 1 && (
-            <View style={styles.dotsRow}>
+            <View style={styles.dotsRow} accessibilityLabel={`Slide ${activeIndex + 1} of ${slides.length}`}>
               {slides.map((slide, index) => (
                 <View key={slide.id} style={[styles.dot, index === activeIndex && styles.dotActive]} />
               ))}

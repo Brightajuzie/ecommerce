@@ -23,6 +23,7 @@ export function AdminDashboardScreen() {
   const navigation = useNavigation<AdminDashboardNavigationProp>();
   const theme = useTheme();
   const isSuperAdmin = useAuthStore((s) => s.user?.role === UserRole.SUPER_ADMIN);
+  const setViewAsBuyer = useAuthStore((s) => s.setViewAsBuyer);
 
   const productsQuery = useQuery({
     queryKey: ["adminDashboardProducts"],
@@ -67,6 +68,31 @@ export function AdminDashboardScreen() {
       marginBottom: 18,
     },
     title: { fontSize: 28, fontWeight: "800" as const, color: colors.text },
+    headerRightActions: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 10,
+    },
+    viewStoreButton: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 20,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      shadowColor: "#000",
+      shadowOpacity: colors.shadowOpacity,
+      shadowRadius: 3,
+      shadowOffset: { width: 0, height: 1 },
+      elevation: 1,
+    },
+    viewStoreButtonText: {
+      fontSize: 13,
+      fontWeight: "700" as const,
+    },
     bellButton: {
       width: 40,
       height: 40,
@@ -174,10 +200,21 @@ export function AdminDashboardScreen() {
         <Text style={styles.greeting}>Overview</Text>
         <View style={styles.titleRow}>
           <Text style={styles.title}>Admin Dashboard</Text>
-          <Pressable style={styles.bellButton} onPress={() => navigation.navigate("Notifications")}>
-            <Ionicons name="notifications" size={20} color={theme.colors.text} />
-            {(unreadNotificationsQuery.data ?? 0) > 0 && <View style={styles.bellDot} />}
-          </Pressable>
+          <View style={styles.headerRightActions}>
+            <Pressable
+              style={styles.viewStoreButton}
+              onPress={() => setViewAsBuyer(true)}
+              accessibilityRole="button"
+              accessibilityLabel="View Storefront"
+            >
+              <Ionicons name="storefront-outline" size={16} color={theme.primaryColor} />
+              <Text style={[styles.viewStoreButtonText, { color: theme.primaryColor }]}>View Store</Text>
+            </Pressable>
+            <Pressable style={styles.bellButton} onPress={() => navigation.navigate("Notifications")}>
+              <Ionicons name="notifications" size={20} color={theme.colors.text} />
+              {(unreadNotificationsQuery.data ?? 0) > 0 && <View style={styles.bellDot} />}
+            </Pressable>
+          </View>
         </View>
 
         {isSuperAdmin && (
@@ -231,6 +268,12 @@ export function AdminDashboardScreen() {
 
         <Text style={styles.sectionLabel}>Quick actions</Text>
         <View style={styles.quickActionsRow}>
+          <Pressable style={styles.quickAction} onPress={() => setViewAsBuyer(true)}>
+            <View style={[styles.quickActionIconWrap, { backgroundColor: "#DCFCE7" }]}>
+              <Ionicons name="storefront" size={18} color="#16A34A" />
+            </View>
+            <Text style={styles.quickActionText}>View store</Text>
+          </Pressable>
           <Pressable style={styles.quickAction} onPress={() => navigation.navigate("PendingVendors")}>
             <View style={styles.quickActionIconWrap}>
               <Ionicons name="checkmark-done" size={18} color={theme.primaryColor} />
