@@ -1,4 +1,4 @@
-import { ActivityIndicator, FlatList, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, Image, Pressable, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -32,7 +32,8 @@ export function NotificationsScreen() {
       alignItems: "center" as const,
       justifyContent: "center" as const,
     },
-    title: { fontSize: 22, fontWeight: "800" as const, color: colors.text },
+    title: { fontSize: 22, fontWeight: "800" as const, color: colors.text, flex: 1 },
+    logo: { height: 28, width: 64 },
     empty: { color: colors.textMuted, textAlign: "center" as const, marginTop: 60 },
     card: {
       flexDirection: "row" as const,
@@ -80,6 +81,16 @@ export function NotificationsScreen() {
             <Ionicons name="arrow-back" size={20} color={theme.colors.text} />
           </Pressable>
           <Text style={styles.title}>Notifications</Text>
+          {/* Stack-pushed screens sit outside AdminTabNavigator, so
+              ResponsiveTabBar's own clickable brand logo isn't on screen
+              here — this recreates "tap the logo to go home". */}
+          <Pressable onPress={() => navigation.navigate("AdminTabs")} hitSlop={8}>
+            <Image
+              source={require("../../../assets/logo-green.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </Pressable>
         </View>
 
         {notificationsQuery.isLoading ? (

@@ -1,4 +1,4 @@
-import { ActivityIndicator, Alert, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Image, Pressable, Text, View } from "react-native";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -41,6 +41,7 @@ export function AdminVendorChatScreen() {
       justifyContent: "center" as const,
     },
     title: { fontSize: 17, fontWeight: "800" as const, color: colors.text, flex: 1 },
+    logo: { height: 28, width: 64 },
     center: { flex: 1, alignItems: "center" as const, justifyContent: "center" as const },
   }));
 
@@ -69,6 +70,16 @@ export function AdminVendorChatScreen() {
         <Text style={styles.title} numberOfLines={1}>
           {businessName}
         </Text>
+        {/* Stack-pushed screens sit outside AdminTabNavigator, so
+            ResponsiveTabBar's own clickable brand logo isn't on screen
+            here — this recreates "tap the logo to go home". */}
+        <Pressable onPress={() => navigation.navigate("AdminTabs")} hitSlop={8}>
+          <Image
+            source={require("../../../assets/logo-green.png")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </Pressable>
       </View>
 
       {messagesQuery.isLoading ? (
