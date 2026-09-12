@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, Switch, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, Switch, Text, View } from "react-native";
 import { useRoute, useNavigation, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Ionicons } from "@expo/vector-icons";
 import { UserRole } from "@ikaystores/shared";
 import { AdminUsersApi } from "../../api/endpoints";
 import { getErrorMessage } from "../../api/errorMessage";
@@ -63,7 +64,17 @@ export function AdminUserFormScreen() {
   const styles = useThemedStyles((colors, t) => ({
     container: { flex: 1, backgroundColor: colors.surface },
     content: { padding: 20, paddingTop: 60, paddingBottom: 40 },
-    title: { fontSize: 24, fontWeight: "800" as const, color: colors.text, marginBottom: 16 },
+    headerRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: 10, marginBottom: 16 },
+    backButton: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.surfaceAlt,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+    },
+    logo: { height: 28, width: 64 },
+    title: { fontSize: 24, fontWeight: "800" as const, color: colors.text, flex: 1 },
     errorBanner: {
       backgroundColor: t.scheme === "dark" ? "#3A1518" : "#FEF2F2",
       borderWidth: 1,
@@ -167,7 +178,19 @@ export function AdminUserFormScreen() {
   if (userId && userQuery.isError) {
     return (
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Edit user</Text>
+        <View style={styles.headerRow}>
+          <Pressable onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={20} color={theme.colors.text} />
+          </Pressable>
+          <Text style={styles.title}>Edit user</Text>
+          <Pressable onPress={() => navigation.navigate("AdminTabs")} hitSlop={8}>
+            <Image
+              source={require("../../../assets/logo-green.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </Pressable>
+        </View>
         <View style={styles.errorBanner}>
           <Text style={styles.errorBannerText}>
             {getErrorMessage(userQuery.error, "Could not load this account.")}
@@ -179,7 +202,22 @@ export function AdminUserFormScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>{userId ? "Edit user" : "Add user"}</Text>
+      <View style={styles.headerRow}>
+        <Pressable onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={20} color={theme.colors.text} />
+        </Pressable>
+        <Text style={styles.title}>{userId ? "Edit user" : "Add user"}</Text>
+        {/* Stack-pushed screens sit outside AdminTabNavigator, so
+            ResponsiveTabBar's own clickable brand logo isn't on screen
+            here — this recreates "tap the logo to go home". */}
+        <Pressable onPress={() => navigation.navigate("AdminTabs")} hitSlop={8}>
+          <Image
+            source={require("../../../assets/logo-green.png")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </Pressable>
+      </View>
 
       {errorMessage && (
         <View style={styles.errorBanner}>

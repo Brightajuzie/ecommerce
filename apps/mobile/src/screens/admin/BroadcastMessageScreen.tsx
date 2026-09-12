@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { Alert, Image, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation } from "@tanstack/react-query";
@@ -33,7 +33,8 @@ export function BroadcastMessageScreen() {
       alignItems: "center" as const,
       justifyContent: "center" as const,
     },
-    title: { fontSize: 22, fontWeight: "800" as const, color: colors.text },
+    title: { fontSize: 22, fontWeight: "800" as const, color: colors.text, flex: 1 },
+    logo: { height: 28, width: 64 },
     hint: { color: colors.textMuted, fontSize: 14, lineHeight: 20, marginBottom: 20 },
     input: {
       borderWidth: 1,
@@ -68,6 +69,16 @@ export function BroadcastMessageScreen() {
             <Ionicons name="arrow-back" size={20} color={theme.colors.text} />
           </Pressable>
           <Text style={styles.title}>Message all vendors</Text>
+          {/* Stack-pushed screens sit outside AdminTabNavigator, so
+              ResponsiveTabBar's own clickable brand logo isn't on screen
+              here — this recreates "tap the logo to go home". */}
+          <Pressable onPress={() => navigation.navigate("AdminTabs")} hitSlop={8}>
+            <Image
+              source={require("../../../assets/logo-green.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </Pressable>
         </View>
         <Text style={styles.hint}>
           Sends one announcement to every vendor's chat with the admin team — they'll see it

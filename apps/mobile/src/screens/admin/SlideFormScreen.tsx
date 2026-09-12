@@ -3,10 +3,12 @@ import { Alert, Image, Pressable, ScrollView, Switch, Text, View } from "react-n
 import { useRoute, useNavigation, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Ionicons } from "@expo/vector-icons";
 import { SlidesApi } from "../../api/endpoints";
 import { pickAndUploadImage, ImagePickerCancelledError } from "../../api/upload";
 import { FormInput } from "../../components/FormInput";
 import { PrimaryButton } from "../../components/PrimaryButton";
+import { useTheme } from "../../theme/ThemeContext";
 import { useThemedStyles } from "../../theme/useThemedStyles";
 import type { AdminStackParamList } from "../../navigation/types";
 
@@ -14,6 +16,7 @@ export function SlideFormScreen() {
   const route = useRoute<RouteProp<AdminStackParamList, "SlideForm">>();
   const navigation = useNavigation<NativeStackNavigationProp<AdminStackParamList>>();
   const queryClient = useQueryClient();
+  const theme = useTheme();
   const slideId = route.params?.slideId;
 
   const slidesQuery = useQuery({ queryKey: ["adminSlides"], queryFn: SlidesApi.listAll });
@@ -27,7 +30,17 @@ export function SlideFormScreen() {
   const styles = useThemedStyles((colors) => ({
     container: { flex: 1, backgroundColor: colors.surface },
     content: { padding: 20, paddingTop: 60, paddingBottom: 40 },
-    title: { fontSize: 24, fontWeight: "800" as const, color: colors.text, marginBottom: 16 },
+    headerRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: 10, marginBottom: 16 },
+    backButton: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.surfaceAlt,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+    },
+    logo: { height: 28, width: 64 },
+    title: { fontSize: 24, fontWeight: "800" as const, color: colors.text, flex: 1 },
     sectionLabel: { fontSize: 14, fontWeight: "700" as const, color: colors.text, marginBottom: 8 },
     preview: { width: "100%" as const, aspectRatio: 2.4, borderRadius: 8, backgroundColor: colors.border, marginBottom: 12 },
     previewPlaceholder: { alignItems: "center" as const, justifyContent: "center" as const },
@@ -97,7 +110,22 @@ export function SlideFormScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>{slideId ? "Edit slide" : "New slide"}</Text>
+      <View style={styles.headerRow}>
+        <Pressable onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={20} color={theme.colors.text} />
+        </Pressable>
+        <Text style={styles.title}>{slideId ? "Edit slide" : "New slide"}</Text>
+        {/* Stack-pushed screens sit outside AdminTabNavigator, so
+            ResponsiveTabBar's own clickable brand logo isn't on screen
+            here — this recreates "tap the logo to go home". */}
+        <Pressable onPress={() => navigation.navigate("AdminTabs")} hitSlop={8}>
+          <Image
+            source={require("../../../assets/logo-green.png")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </Pressable>
+      </View>
 
       <Text style={styles.sectionLabel}>Image</Text>
       {imageUrl ? (
