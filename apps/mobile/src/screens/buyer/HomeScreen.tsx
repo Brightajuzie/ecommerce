@@ -190,6 +190,21 @@ export function HomeScreen() {
       backgroundColor: "rgba(255,255,255,0.18)",
       marginLeft: 10,
     },
+    signInButton: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      backgroundColor: "rgba(255,255,255,0.22)",
+      borderRadius: 16,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      marginLeft: 10,
+      gap: 5,
+    },
+    signInText: {
+      color: "#fff",
+      fontSize: 13,
+      fontWeight: "600" as const,
+    },
     headerActions: { flexDirection: "row" as const, alignItems: "center" as const },
     notificationDot: {
       position: "absolute" as const,
@@ -535,7 +550,7 @@ export function HomeScreen() {
                   so there's nowhere for a personal notification to live
                   until checkout creates one — hidden rather than shown
                   empty. */}
-              {user && (
+              {user ? (
                 <Pressable
                   onPress={() => navigation.navigate("Notifications")}
                   hitSlop={8}
@@ -545,6 +560,17 @@ export function HomeScreen() {
                   {(unreadNotificationsQuery.data ?? 0) > 0 && (
                     <View style={styles.notificationDot} />
                   )}
+                </Pressable>
+              ) : (
+                <Pressable
+                  onPress={() => navigation.navigate("Login")}
+                  hitSlop={8}
+                  style={styles.signInButton}
+                  accessibilityRole="button"
+                  accessibilityLabel="Sign in"
+                >
+                  <Ionicons name="log-in-outline" size={15} color="#fff" />
+                  <Text style={styles.signInText}>Sign in</Text>
                 </Pressable>
               )}
               {/* Quick day/night switch, separate from the fuller Light/Dark/

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { BadGatewayException, Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { v2 as cloudinary } from "cloudinary";
+import { PrismaService } from "../prisma/prisma.service";
 
 const MIME_EXTENSIONS: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -16,28 +17,38 @@ export const LOCAL_UPLOAD_DIR = join(process.cwd(), "uploads");
 @Injectable()
 export class UploadsService {
   private readonly logger = new Logger(UploadsService.name);
-  private cloudinaryConfigured = false;
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly prisma: PrismaService,
+  ) {}
 
-  private isCloudinaryConfigured(): boolean {
-    if (this.cloudinaryConfigured) return true;
+  // DB value (set via the SUPER_ADMIN-only gateway settings screen) takes
+  // priority over the env var, resolved fresh on every call rather than
+  // cached once — same override pattern as FlutterwaveService.getSecretKey,
+  // so an admin turning Cloudinary on/off from the app takes effect
+  // immediately, no redeploy needed. cloudinary.config() itself is cheap
+  // (just sets a module-level object), so re-calling it per upload is fine.
+  private async isCloudinaryConfigured(): Promise<boolean> {
+    const settings = await this.prisma.platformPaymentSettings.findFirst();
 
-    const cloudName = this.configService.get<string>("CLOUDINARY_CLOUD_NAME", "");
-    const apiKey = this.configService.get<string>("CLOUDINARY_API_KEY", "");
-    const apiSecret = this.configService.get<string>("CLOUDINARY_API_SECRET", "");
+    const cloudName =
+      settings?.cloudinaryCloudName || this.configService.get<string>("CLOUDINARY_CLOUD_NAME", "");
+    const apiKey =
+      settings?.cloudinaryApiKey || this.configService.get<string>("CLOUDINARY_API_KEY", "");
+    const apiSecret =
+      settings?.cloudinaryApiSecret || this.configService.get<string>("CLOUDINARY_API_SECRET", "");
 
     if (!cloudName || !apiKey || !apiSecret) {
       return false;
     }
 
     cloudinary.config({ cloud_name: cloudName, api_key: apiKey, api_secret: apiSecret });
-    this.cloudinaryConfigured = true;
     return true;
   }
 
   async uploadImage(buffer: Buffer, mimetype: string): Promise<{ url: string }> {
-    if (this.isCloudinaryConfigured()) {
+    if (await this.isCloudinaryConfigured()) {
       return this.uploadToCloudinary(buffer, mimetype);
     }
 
