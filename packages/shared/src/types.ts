@@ -206,6 +206,12 @@ export interface SettingsDto {
   // SettingsService.get() so checkout can see it without admin access —
   // see PaymentSettingsService for where it's actually written.
   codEnabled: boolean;
+  // Google OAuth Client IDs — configured by SUPER_ADMIN in the admin panel
+  // and merged in by SettingsService.get() so the mobile app can initiate
+  // Google sign-in dynamically.
+  googleClientId?: string | null;
+  googleAndroidClientId?: string | null;
+  googleIosClientId?: string | null;
   updatedAt: string;
 }
 
@@ -301,6 +307,12 @@ export interface GatewaySettingsDto {
   codEnabled: boolean;
   gmailUser: string | null;
   gmailAppPassword: string | null;
+  cloudinaryCloudName: string | null;
+  cloudinaryApiKey: string | null;
+  cloudinaryApiSecret: string | null;
+  googleClientId: string | null;
+  googleAndroidClientId: string | null;
+  googleIosClientId: string | null;
 }
 
 // Admin-facing user record — scoped to BUYER/VENDOR accounts only, see

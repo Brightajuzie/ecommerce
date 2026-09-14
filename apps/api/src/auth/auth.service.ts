@@ -227,7 +227,11 @@ export class AuthService {
       throw new UnauthorizedException("Google account email is not verified");
     }
 
-    const expectedAud = this.configService.get<string>("GOOGLE_CLIENT_ID");
+    const paymentSettings = await this.prisma.platformPaymentSettings.findFirst({
+      select: { googleClientId: true },
+    });
+    const expectedAud =
+      paymentSettings?.googleClientId || this.configService.get<string>("GOOGLE_CLIENT_ID");
     if (expectedAud && tokenInfo.aud !== expectedAud) {
       throw new UnauthorizedException("Google token audience mismatch");
     }

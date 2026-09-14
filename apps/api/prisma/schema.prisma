@@ -547,6 +547,14 @@ model PlatformPaymentSettings {
   cloudinaryCloudName      String?
   cloudinaryApiKey         String?
   cloudinaryApiSecret      String?
+  // Google OAuth API credentials — configured by SUPER_ADMIN in the admin
+  // panel. googleClientId is the Web client ID / token audience used by the
+  // backend to verify ID tokens; googleAndroidClientId and googleIosClientId
+  // are the native client IDs surfaced publicly to the mobile app for
+  // initiating Google sign-in.
+  googleClientId           String?
+  googleAndroidClientId    String?
+  googleIosClientId        String?
   updatedAt                DateTime @updatedAt
 
   @@map("platform_payment_settings")

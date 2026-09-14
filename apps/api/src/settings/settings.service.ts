@@ -9,24 +9,29 @@ export class SettingsService {
   async get() {
     const [existing, paymentSettings] = await Promise.all([
       this.prisma.appSettings.findFirst(),
-      // codEnabled actually lives on PlatformPaymentSettings (managed via
-      // the SUPER_ADMIN-only /payment-settings/gateway routes, alongside
-      // the other gateway config) — merged in read-only here so a buyer at
-      // checkout can see whether "Pay on delivery" is offered without
-      // needing admin-level access to read it directly. update() below
-      // never touches this field, since UpdateSettingsDto doesn't declare
-      // it and the global ValidationPipe's whitelist silently strips
-      // anything undeclared — writes stay exclusively through
-      // PaymentSettingsService.
-      this.prisma.platformPaymentSettings.findFirst({ select: { codEnabled: true } }),
+      // codEnabled and Google OAuth client IDs actually live on
+      // PlatformPaymentSettings (managed via SUPER_ADMIN-only
+      // /payment-settings/gateway routes) — merged in read-only here so the
+      // mobile app and buyers can access them without admin privileges.
+      this.prisma.platformPaymentSettings.findFirst({
+        select: {
+          codEnabled: true,
+          googleClientId: true,
+          googleAndroidClientId: true,
+          googleIosClientId: true,
+        },
+      }),
     ]);
     const codEnabled = paymentSettings?.codEnabled ?? false;
+    const googleClientId = paymentSettings?.googleClientId ?? null;
+    const googleAndroidClientId = paymentSettings?.googleAndroidClientId ?? null;
+    const googleIosClientId = paymentSettings?.googleIosClientId ?? null;
 
     if (existing) {
-      return { ...existing, codEnabled };
+      return { ...existing, codEnabled, googleClientId, googleAndroidClientId, googleIosClientId };
     }
     const created = await this.prisma.appSettings.create({ data: {} });
-    return { ...created, codEnabled };
+    return { ...created, codEnabled, googleClientId, googleAndroidClientId, googleIosClientId };
   }
 
   async update(dto: UpdateSettingsDto) {

@@ -80,6 +80,12 @@ export class PaymentSettingsService {
       codEnabled: settings.codEnabled,
       gmailUser: settings.gmailUser,
       gmailAppPassword: maskSecret(settings.gmailAppPassword),
+      cloudinaryCloudName: settings.cloudinaryCloudName,
+      cloudinaryApiKey: settings.cloudinaryApiKey,
+      cloudinaryApiSecret: maskSecret(settings.cloudinaryApiSecret),
+      googleClientId: settings.googleClientId,
+      googleAndroidClientId: settings.googleAndroidClientId,
+      googleIosClientId: settings.googleIosClientId,
     };
   }
 
@@ -109,6 +115,12 @@ export class PaymentSettingsService {
         codEnabled: dto.codEnabled !== undefined ? dto.codEnabled : undefined,
         gmailUser: dto.gmailUser || undefined,
         gmailAppPassword: dto.gmailAppPassword || undefined,
+        cloudinaryCloudName: dto.cloudinaryCloudName || undefined,
+        cloudinaryApiKey: dto.cloudinaryApiKey || undefined,
+        cloudinaryApiSecret: dto.cloudinaryApiSecret || undefined,
+        googleClientId: dto.googleClientId || undefined,
+        googleAndroidClientId: dto.googleAndroidClientId || undefined,
+        googleIosClientId: dto.googleIosClientId || undefined,
       },
     });
     return this.getGatewaySettings();

@@ -102,6 +102,12 @@ export function PaymentSettingsScreen() {
   const [codEnabled, setCodEnabled] = useState(false);
   const [gmailUser, setGmailUser] = useState("");
   const [gmailAppPassword, setGmailAppPassword] = useState("");
+  const [cloudinaryCloudName, setCloudinaryCloudName] = useState("");
+  const [cloudinaryApiKey, setCloudinaryApiKey] = useState("");
+  const [cloudinaryApiSecret, setCloudinaryApiSecret] = useState("");
+  const [googleClientId, setGoogleClientId] = useState("");
+  const [googleAndroidClientId, setGoogleAndroidClientId] = useState("");
+  const [googleIosClientId, setGoogleIosClientId] = useState("");
 
   useEffect(() => {
     if (settingsQuery.data) {
@@ -124,6 +130,11 @@ export function PaymentSettingsScreen() {
       );
       setCodEnabled(gatewaySettingsQuery.data.codEnabled);
       setGmailUser(gatewaySettingsQuery.data.gmailUser ?? "");
+      setCloudinaryCloudName(gatewaySettingsQuery.data.cloudinaryCloudName ?? "");
+      setCloudinaryApiKey(gatewaySettingsQuery.data.cloudinaryApiKey ?? "");
+      setGoogleClientId(gatewaySettingsQuery.data.googleClientId ?? "");
+      setGoogleAndroidClientId(gatewaySettingsQuery.data.googleAndroidClientId ?? "");
+      setGoogleIosClientId(gatewaySettingsQuery.data.googleIosClientId ?? "");
     }
   }, [gatewaySettingsQuery.data]);
 
@@ -178,14 +189,22 @@ export function PaymentSettingsScreen() {
         codEnabled,
         gmailUser: gmailUser || undefined,
         gmailAppPassword: gmailAppPassword || undefined,
+        cloudinaryCloudName: cloudinaryCloudName || undefined,
+        cloudinaryApiKey: cloudinaryApiKey || undefined,
+        cloudinaryApiSecret: cloudinaryApiSecret || undefined,
+        googleClientId: googleClientId || undefined,
+        googleAndroidClientId: googleAndroidClientId || undefined,
+        googleIosClientId: googleIosClientId || undefined,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["gatewaySettings"] });
+      queryClient.invalidateQueries({ queryKey: ["settings"] });
       setFlwSecretKey("");
       setFlwEncryptionKey("");
       setOpaySecretKey("");
       setDojahSecretKey("");
       setGmailAppPassword("");
+      setCloudinaryApiSecret("");
       Alert.alert("Saved", "Payment gateway settings updated.");
     },
     onError: (error: any) => {
@@ -455,6 +474,104 @@ export function PaymentSettingsScreen() {
               </Text>
             </Pressable>
           )}
+
+          <Text style={styles.subsectionTitle}>
+            Media uploads (Cloudinary){" "}
+            <Text
+              style={{
+                fontSize: 12,
+                fontWeight: "700" as const,
+                color:
+                  gatewaySettingsQuery.data?.cloudinaryCloudName &&
+                  gatewaySettingsQuery.data?.cloudinaryApiKey &&
+                  gatewaySettingsQuery.data?.cloudinaryApiSecret
+                    ? theme.colors.success
+                    : theme.colors.textFaint,
+              }}
+            >
+              {gatewaySettingsQuery.data?.cloudinaryCloudName &&
+              gatewaySettingsQuery.data?.cloudinaryApiKey &&
+              gatewaySettingsQuery.data?.cloudinaryApiSecret
+                ? "● Active"
+                : "○ Not configured"}
+            </Text>
+          </Text>
+          <Text style={styles.sectionHint}>
+            Powers product photo and vendor-document uploads. Activates automatically as soon as
+            all three fields below are saved — no server restart needed. Without this configured,
+            uploads fall back to this server's own disk in development, or fail outright in
+            production (Render's filesystem is wiped on every deploy). Find these three values in
+            your Cloudinary console dashboard.
+          </Text>
+          <FormInput
+            label="Cloud name"
+            value={cloudinaryCloudName}
+            onChangeText={setCloudinaryCloudName}
+            autoCapitalize="none"
+          />
+          <FormInput
+            label="API key"
+            value={cloudinaryApiKey}
+            onChangeText={setCloudinaryApiKey}
+            autoCapitalize="none"
+          />
+          <FormInput
+            label={`API secret${gatewaySettingsQuery.data?.cloudinaryApiSecret ? ` (currently ${gatewaySettingsQuery.data.cloudinaryApiSecret})` : ""}`}
+            value={cloudinaryApiSecret}
+            onChangeText={setCloudinaryApiSecret}
+            autoCapitalize="none"
+            secureTextEntry
+            placeholder="Leave blank to keep unchanged"
+          />
+
+          <Text style={styles.subsectionTitle}>
+            Google OAuth Sign-In{" "}
+            <Text
+              style={{
+                fontSize: 12,
+                fontWeight: "700" as const,
+                color:
+                  gatewaySettingsQuery.data?.googleClientId ||
+                  gatewaySettingsQuery.data?.googleAndroidClientId ||
+                  gatewaySettingsQuery.data?.googleIosClientId
+                    ? theme.colors.success
+                    : theme.colors.textFaint,
+              }}
+            >
+              {gatewaySettingsQuery.data?.googleClientId ||
+              gatewaySettingsQuery.data?.googleAndroidClientId ||
+              gatewaySettingsQuery.data?.googleIosClientId
+                ? "● Active"
+                : "○ Not configured"}
+            </Text>
+          </Text>
+          <Text style={styles.sectionHint}>
+            Allows users and vendors to sign in using Google. Create OAuth 2.0 credentials in the
+            Google Cloud Console (console.cloud.google.com). The Web Client ID is used by the server
+            to verify token authenticity. The Android and iOS Client IDs are surfaced to the mobile app
+            to present the Google sign-in dialog.
+          </Text>
+          <FormInput
+            label="Web / Backend Client ID (Audience)"
+            value={googleClientId}
+            onChangeText={setGoogleClientId}
+            autoCapitalize="none"
+            placeholder="e.g. 12345-xxx.apps.googleusercontent.com"
+          />
+          <FormInput
+            label="Android Client ID"
+            value={googleAndroidClientId}
+            onChangeText={setGoogleAndroidClientId}
+            autoCapitalize="none"
+            placeholder="e.g. 12345-android.apps.googleusercontent.com"
+          />
+          <FormInput
+            label="iOS Client ID"
+            value={googleIosClientId}
+            onChangeText={setGoogleIosClientId}
+            autoCapitalize="none"
+            placeholder="e.g. 12345-ios.apps.googleusercontent.com"
+          />
 
           <Text style={styles.subsectionTitle}>Support</Text>
           <FormInput

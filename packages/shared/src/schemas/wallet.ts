@@ -46,5 +46,11 @@ export const updateGatewaySettingsSchema = z.object({
   codEnabled: z.boolean().optional(),
   gmailUser: z.string().email().optional(),
   gmailAppPassword: z.string().max(200).optional(),
+  cloudinaryCloudName: z.string().max(200).optional(),
+  cloudinaryApiKey: z.string().max(500).optional(),
+  cloudinaryApiSecret: z.string().max(500).optional(),
+  googleClientId: z.string().max(500).optional(),
+  googleAndroidClientId: z.string().max(500).optional(),
+  googleIosClientId: z.string().max(500).optional(),
 });
 export type UpdateGatewaySettingsInput = z.infer<typeof updateGatewaySettingsSchema>;

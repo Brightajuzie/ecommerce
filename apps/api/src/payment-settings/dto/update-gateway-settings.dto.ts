@@ -78,4 +78,40 @@ export class UpdateGatewaySettingsDto {
   @IsString()
   @MaxLength(200)
   gmailAppPassword?: string;
+
+  @ApiPropertyOptional({ description: "Cloudinary cloud name, from the Cloudinary console" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  cloudinaryCloudName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  cloudinaryApiKey?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  cloudinaryApiSecret?: string;
+
+  @ApiPropertyOptional({ description: "Google Web Client ID / backend token audience" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  googleClientId?: string;
+
+  @ApiPropertyOptional({ description: "Google Android Client ID for mobile apps" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  googleAndroidClientId?: string;
+
+  @ApiPropertyOptional({ description: "Google iOS Client ID for mobile apps" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  googleIosClientId?: string;
 }

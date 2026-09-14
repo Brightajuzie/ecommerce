@@ -1,10 +1,10 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import * as Google from "expo-auth-session/providers/google";
 import Constants from "expo-constants";
 import { UserRole } from "@ikaystores/shared";
-import { useQueryClient } from "@tanstack/react-query";
-import { AuthApi, CartApi } from "../api/endpoints";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { AuthApi, CartApi, SettingsApi } from "../api/endpoints";
 import { getErrorMessage } from "../api/errorMessage";
 import { useAuthStore } from "../store/authStore";
 import { syncGuestCartToServer } from "../store/guestCartStore";
@@ -35,12 +35,26 @@ export function GoogleSignInButton({ onError, onSuccess, pendingCartItem }: Prop
 
   const extra = (Constants.expoConfig?.extra ?? {}) as Record<string, string>;
 
+  // Check dynamically configured Google Client IDs from the database via GET /settings,
+  // falling back to statically bundled constants in app.json.
+  const settingsQuery = useQuery({
+    queryKey: ["settings"],
+    queryFn: SettingsApi.get,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const androidClientId =
+    settingsQuery.data?.googleAndroidClientId || extra.googleAndroidClientId;
+  const iosClientId =
+    settingsQuery.data?.googleIosClientId || extra.googleIosClientId;
+  const webClientId =
+    settingsQuery.data?.googleClientId || extra.googleWebClientId;
+
   const [, response, promptAsync] = Google.useIdTokenAuthRequest({
-    androidClientId: extra.googleAndroidClientId,
-    iosClientId: extra.googleIosClientId,
-    // Web client ID is optional — only needed for Expo Go testing on device
-    // without a native build.
-    webClientId: extra.googleWebClientId,
+    androidClientId,
+    iosClientId,
+    // Web client ID is optional — used for token audience and web/Expo Go testing
+    webClientId,
     selectAccount: true,
   });
 
