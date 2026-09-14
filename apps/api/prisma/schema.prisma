@@ -107,14 +107,19 @@ model User {
   id                 String    @id @default(uuid())
   email              String    @unique
   phone              String?
-  passwordHash       String
-  // False only for a guest-checkout account (AuthService.guestCheckout) —
-  // passwordHash there is a random, never-revealed value so the account
-  // can't actually be logged into until AuthService.setPassword flips this
-  // to true. Every other creation path (register, admin-created) sets a
-  // real password up front, so this defaults true rather than needing a
-  // backfill.
+  // Nullable to support OAuth-only accounts (e.g. Google sign-in) that
+  // never set a password. For guest-checkout accounts a random, never-
+  // revealed hash is stored instead; hasPassword: false distinguishes
+  // those from password-less OAuth users.
+  passwordHash       String?
+  // False only for a guest-checkout account (AuthService.guestCheckout) or
+  // an OAuth-only account that hasn't set a password yet. Every other
+  // creation path (register, admin-created) sets a real password up front,
+  // so this defaults true rather than needing a backfill.
   hasPassword        Boolean   @default(true)
+  // Google OAuth — sub (unique per Google account). Null for users who
+  // have never signed in with Google.
+  googleId           String?   @unique
   firstName          String
   lastName           String
   role               UserRole  @default(BUYER)
@@ -534,6 +539,14 @@ model PlatformPaymentSettings {
   // which needs 2-Step Verification enabled on the account first).
   gmailUser                String?
   gmailAppPassword         String?
+  // Cloudinary credentials for image/document uploads — UploadsService
+  // reads these first and falls back to CLOUDINARY_CLOUD_NAME/
+  // CLOUDINARY_API_KEY/CLOUDINARY_API_SECRET env vars when null, same
+  // override pattern as the keys above. Falls back further still to
+  // saving straight to local disk in non-production when neither is set.
+  cloudinaryCloudName      String?
+  cloudinaryApiKey         String?
+  cloudinaryApiSecret      String?
   updatedAt                DateTime @updatedAt
 
   @@map("platform_payment_settings")

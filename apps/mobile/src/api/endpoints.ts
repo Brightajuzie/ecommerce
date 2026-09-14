@@ -15,6 +15,7 @@ import type {
   CreateProductInput,
   CreateSlideInput,
   GatewaySettingsDto,
+  GoogleAuthInput,
   GuestCheckoutInput,
   IdentityVerificationResultDto,
   InitiatePaymentInput,
@@ -63,6 +64,8 @@ export const AuthApi = {
     apiClient.post<AuthTokensDto>("/auth/guest-checkout", input).then((r) => r.data),
   setPassword: (input: SetPasswordInput) =>
     apiClient.post<void>("/auth/set-password", input).then((r) => r.data),
+  googleAuth: (input: GoogleAuthInput) =>
+    apiClient.post<AuthTokensDto>("/auth/google", input).then((r) => r.data),
 };
 
 export const UsersApi = {

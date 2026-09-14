@@ -57,3 +57,10 @@ export const setPasswordSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 export type SetPasswordInput = z.infer<typeof setPasswordSchema>;
+
+// POST /auth/google — mobile sends the raw Google ID token; the backend
+// verifies it directly against Google's tokeninfo endpoint.
+export const googleAuthSchema = z.object({
+  idToken: z.string().min(1),
+});
+export type GoogleAuthInput = z.infer<typeof googleAuthSchema>;

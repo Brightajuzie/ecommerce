@@ -8,6 +8,7 @@ import { ConfigService } from "@nestjs/config";
 import { JwtService, JwtSignOptions } from "@nestjs/jwt";
 import { UserRole, VendorStatus } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
+import axios from "axios";
 import { PrismaService } from "../prisma/prisma.service";
 import { generateReferralCode } from "../users/referral-code.util";
 import { RegisterDto } from "./dto/register.dto";
@@ -151,6 +152,13 @@ export class AuthService {
       throw new UnauthorizedException("Invalid credentials");
     }
 
+    // OAuth-only accounts have no password hash — direct them to Google sign-in.
+    if (!user.passwordHash) {
+      throw new UnauthorizedException(
+        "This account uses Google sign-in. Please use the 'Continue with Google' option.",
+      );
+    }
+
     const passwordMatches = await bcrypt.compare(
       dto.password,
       user.passwordHash,
@@ -180,6 +188,88 @@ export class AuthService {
     }
 
     return this.issueTokens(user.id, user.email, user.role);
+  }
+
+  /**
+   * Verifies a Google ID token, then finds or creates a user for the matching
+   * Google account:
+   *   • existing googleId  → issue tokens immediately
+   *   • matching email     → link the googleId to their account, issue tokens
+   *   • no match           → create a new BUYER account (no password), issue tokens
+   *
+   * Verification uses Google's tokeninfo endpoint (no extra packages needed —
+   * axios is already a project dependency). The `aud` claim is checked against
+   * GOOGLE_CLIENT_ID so tokens minted for other apps are rejected.
+   */
+  async googleLogin(idToken: string) {
+    // Verify token with Google and extract claims.
+    interface GoogleTokenInfo {
+      sub: string;
+      email: string;
+      email_verified: string;
+      given_name?: string;
+      family_name?: string;
+      aud: string;
+    }
+
+    let tokenInfo: GoogleTokenInfo;
+    try {
+      const { data } = await axios.get<GoogleTokenInfo>(
+        "https://oauth2.googleapis.com/tokeninfo",
+        { params: { id_token: idToken } },
+      );
+      tokenInfo = data;
+    } catch {
+      throw new UnauthorizedException("Invalid Google token");
+    }
+
+    if (tokenInfo.email_verified !== "true") {
+      throw new UnauthorizedException("Google account email is not verified");
+    }
+
+    const expectedAud = this.configService.get<string>("GOOGLE_CLIENT_ID");
+    if (expectedAud && tokenInfo.aud !== expectedAud) {
+      throw new UnauthorizedException("Google token audience mismatch");
+    }
+
+    const { sub: googleId, email, given_name, family_name } = tokenInfo;
+
+    // 1. Existing user linked to this Google account — fast path.
+    const byGoogleId = await this.prisma.user.findUnique({
+      where: { googleId },
+    });
+    if (byGoogleId) {
+      if (!byGoogleId.isActive) throw new UnauthorizedException("Account is deactivated");
+      return this.issueTokens(byGoogleId.id, byGoogleId.email, byGoogleId.role);
+    }
+
+    // 2. Email already registered — link the Google account.
+    const byEmail = await this.prisma.user.findUnique({ where: { email } });
+    if (byEmail) {
+      if (!byEmail.isActive) throw new UnauthorizedException("Account is deactivated");
+      const updated = await this.prisma.user.update({
+        where: { id: byEmail.id },
+        data: { googleId },
+      });
+      return this.issueTokens(updated.id, updated.email, updated.role);
+    }
+
+    // 3. Brand-new user — create with no password hash.
+    const referralCode = await this.generateUniqueReferralCode();
+    const newUser = await this.prisma.user.create({
+      data: {
+        email,
+        googleId,
+        firstName: given_name ?? email.split("@")[0],
+        lastName: family_name ?? "",
+        hasPassword: false,
+        role: UserRole.BUYER,
+        referralCode,
+        cart: { create: {} },
+      },
+    });
+
+    return this.issueTokens(newUser.id, newUser.email, newUser.role);
   }
 
   private async generateUniqueReferralCode(): Promise<string> {

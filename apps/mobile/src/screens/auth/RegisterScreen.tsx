@@ -17,6 +17,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { UserRole } from "@ikaystores/shared";
 import { FormInput } from "../../components/FormInput";
 import { PrimaryButton } from "../../components/PrimaryButton";
+import { GoogleSignInButton } from "../../components/GoogleSignInButton";
 import { AuthApi, CartApi } from "../../api/endpoints";
 import { getErrorMessage } from "../../api/errorMessage";
 import { useAuthStore } from "../../store/authStore";
@@ -72,6 +73,14 @@ export function RegisterScreen() {
     toggleLabel: { fontSize: 15, color: colors.text, fontWeight: "700" as const },
     toggleHint: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
     link: { marginTop: 20, textAlign: "center" as const, color: colors.text, fontWeight: "600" as const },
+    dividerRow: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      marginVertical: 20,
+      gap: 10,
+    },
+    dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
+    dividerText: { fontSize: 12, color: colors.textMuted, fontWeight: "500" as const },
   }));
 
   const [firstName, setFirstName] = useState("");
@@ -134,6 +143,14 @@ export function RegisterScreen() {
       setErrorMessage(getErrorMessage(error, "Something went wrong. Please try again."));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = () => {
+    if (route.params?.redirectTo === "Checkout") {
+      navigation.replace("Checkout");
+    } else {
+      navigation.replace("BuyerTabs");
     }
   };
 
@@ -256,6 +273,19 @@ export function RegisterScreen() {
             loading={loading}
             size="lg"
             leftIcon="person-add-outline"
+          />
+
+          {/* — or — */}
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <GoogleSignInButton
+            onError={setErrorMessage}
+            onSuccess={handleGoogleSuccess}
+            pendingCartItem={route.params?.pendingCartItem}
           />
 
           <View style={{ marginTop: 24, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 4 }}>

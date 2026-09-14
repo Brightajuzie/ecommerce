@@ -7,6 +7,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { UserRole } from "@ikaystores/shared";
 import { FormInput } from "../../components/FormInput";
 import { PrimaryButton } from "../../components/PrimaryButton";
+import { GoogleSignInButton } from "../../components/GoogleSignInButton";
 import { AuthApi, CartApi } from "../../api/endpoints";
 import { getErrorMessage } from "../../api/errorMessage";
 import { useAuthStore } from "../../store/authStore";
@@ -64,6 +65,14 @@ export function LoginScreen() {
     linkRow: { marginTop: 24, flexDirection: "row" as const, justifyContent: "center" as const, alignItems: "center" as const, gap: 4 },
     linkMuted: { color: colors.textMuted, fontSize: 14 },
     linkAction: { color: theme.primaryColor, fontSize: 14, fontWeight: "700" as const },
+    dividerRow: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      marginVertical: 20,
+      gap: 10,
+    },
+    dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
+    dividerText: { fontSize: 12, color: colors.textMuted, fontWeight: "500" as const },
   }));
 
   const handleLogin = async () => {
@@ -97,6 +106,17 @@ export function LoginScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGoogleSuccess = (role: UserRole) => {
+    const isAdmin = [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.EDITOR].includes(role);
+    if (route.params?.redirectTo === "Checkout") {
+      navigation.replace("Checkout");
+    } else {
+      navigation.replace("BuyerTabs");
+    }
+    // Admin redirect is handled inside GoogleSignInButton via setViewAsBuyer
+    void isAdmin;
   };
 
   return (
@@ -173,6 +193,19 @@ export function LoginScreen() {
               leftIcon="log-in-outline"
             />
           </View>
+
+          {/* — or — */}
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <GoogleSignInButton
+            onError={setErrorMessage}
+            onSuccess={handleGoogleSuccess}
+            pendingCartItem={route.params?.pendingCartItem}
+          />
 
           <View style={styles.linkRow}>
             <Text style={styles.linkMuted}>Don't have an account?</Text>

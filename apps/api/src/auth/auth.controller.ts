@@ -7,6 +7,7 @@ import { LoginDto } from "./dto/login.dto";
 import { RefreshDto } from "./dto/refresh.dto";
 import { GuestCheckoutDto } from "./dto/guest-checkout.dto";
 import { SetPasswordDto } from "./dto/set-password.dto";
+import { GoogleAuthDto } from "./dto/google-auth.dto";
 import { JwtAuthGuard } from "./guards/jwt-auth.guard";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import type { AuthenticatedUser } from "./types/authenticated-user.type";
@@ -52,5 +53,12 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   refresh(@Body() dto: RefreshDto) {
     return this.authService.refresh(dto.refreshToken);
+  }
+
+  @Throttle(AUTH_THROTTLE)
+  @Post("google")
+  @HttpCode(HttpStatus.OK)
+  googleLogin(@Body() dto: GoogleAuthDto) {
+    return this.authService.googleLogin(dto.idToken);
   }
 }
