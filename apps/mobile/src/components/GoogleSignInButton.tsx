@@ -1,5 +1,12 @@
-import { useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import * as Google from "expo-auth-session/providers/google";
 import Constants from "expo-constants";
 import { UserRole } from "@ikaystores/shared";
@@ -10,50 +17,87 @@ import { useAuthStore } from "../store/authStore";
 import { syncGuestCartToServer } from "../store/guestCartStore";
 import { useTheme } from "../theme/ThemeContext";
 
-interface Props {
-  /** Called with an error string when Google sign-in fails. */
-  onError: (message: string) => void;
-  /** Called after a successful sign-in — use to navigate away. */
-  onSuccess: (role: UserRole) => void;
-  /** Optional extra params that should be sent on the CartApi side-effect. */
-  pendingCartItem?: Parameters<typeof CartApi.addItem>[0];
+function isValidClientId(id?: string | null): id is string {
+  return Boolean(
+    id &&
+      typeof id === "string" &&
+      id.trim().length > 0 &&
+      !id.startsWith("REPLACE_WITH"),
+  );
 }
 
-/**
- * Self-contained "Continue with Google" button.
- *
- * Uses expo-auth-session's Google ID-token flow so the backend can verify
- * the token directly (POST /auth/google) without any extra OAuth handshake.
- * Works in Expo Go for development; requires a native build for production.
- */
-export function GoogleSignInButton({ onError, onSuccess, pendingCartItem }: Props) {
+// ─── Error Boundary ─────────────────────────────────────────────────────────
+// Protects the parent screen (Login/Register) from any runtime exceptions
+// thrown by expo-auth-session or WebBrowser during rendering. If Google auth
+// fails to load on a given platform/environment, the error is swallowed and
+// null is returned, keeping the email/password login form fully accessible.
+
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+}
+
+class GoogleAuthErrorBoundary extends React.Component<
+  ErrorBoundaryProps,
+  ErrorBoundaryState
+> {
+  state: ErrorBoundaryState = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: unknown) {
+    if (__DEV__) {
+      console.warn("GoogleSignIn component error boundary caught:", error);
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback ?? null;
+    }
+    return this.props.children;
+  }
+}
+
+// ─── GoogleAuthButtonInner ──────────────────────────────────────────────────
+// Only mounted when currentPlatformClientId is verified to be a valid string,
+// ensuring invariantClientId in expo-auth-session never throws on render.
+
+interface InnerProps {
+  onError: (message: string) => void;
+  onSuccess: (role: UserRole) => void;
+  pendingCartItem?: Parameters<typeof CartApi.addItem>[0];
+  androidClientId?: string;
+  iosClientId?: string;
+  webClientId?: string;
+  clientId: string;
+}
+
+function GoogleAuthButtonInner({
+  onError,
+  onSuccess,
+  pendingCartItem,
+  androidClientId,
+  iosClientId,
+  webClientId,
+  clientId,
+}: InnerProps) {
   const theme = useTheme();
   const setSession = useAuthStore((s) => s.setSession);
   const setViewAsBuyer = useAuthStore((s) => s.setViewAsBuyer);
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
 
-  const extra = (Constants.expoConfig?.extra ?? {}) as Record<string, string>;
-
-  // Check dynamically configured Google Client IDs from the database via GET /settings,
-  // falling back to statically bundled constants in app.json.
-  const settingsQuery = useQuery({
-    queryKey: ["settings"],
-    queryFn: SettingsApi.get,
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const androidClientId =
-    settingsQuery.data?.googleAndroidClientId || extra.googleAndroidClientId;
-  const iosClientId =
-    settingsQuery.data?.googleIosClientId || extra.googleIosClientId;
-  const webClientId =
-    settingsQuery.data?.googleClientId || extra.googleWebClientId;
-
   const [, response, promptAsync] = Google.useIdTokenAuthRequest({
+    clientId,
     androidClientId,
     iosClientId,
-    // Web client ID is optional — used for token audience and web/Expo Go testing
     webClientId,
     selectAccount: true,
   });
@@ -79,9 +123,11 @@ export function GoogleSignInButton({ onError, onSuccess, pendingCartItem }: Prop
         }
         queryClient.invalidateQueries({ queryKey: ["cart"] });
 
-        const isAdmin = [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.EDITOR].includes(
-          result.user.role,
-        );
+        const isAdmin = [
+          UserRole.ADMIN,
+          UserRole.SUPER_ADMIN,
+          UserRole.EDITOR,
+        ].includes(result.user.role);
         if (isAdmin) setViewAsBuyer(true);
 
         onSuccess(result.user.role);
@@ -96,26 +142,20 @@ export function GoogleSignInButton({ onError, onSuccess, pendingCartItem }: Prop
 
   const handlePress = async () => {
     if (!promptAsync) {
-      onError("Google sign-in is not configured. Please contact support.");
+      onError("Google sign-in is not available. Please try again later.");
       return;
     }
-    onError(""); // Clear any previous error
+    onError("");
     setLoading(true);
     try {
       await promptAsync();
     } catch (err) {
-      onError(getErrorMessage(err, "Could not open Google sign-in. Please try again."));
+      onError(
+        getErrorMessage(err, "Could not open Google sign-in. Please try again."),
+      );
       setLoading(false);
     }
-    // loading will be reset in the useEffect once the response arrives
   };
-
-  // If no client IDs are configured at all (server + app.json), hide the
-  // button entirely — rendering it would crash on web (hook requires at
-  // least one ID) and is meaningless on native too.
-  if (!androidClientId && !iosClientId && !webClientId) {
-    return null;
-  }
 
   return (
     <Pressable
@@ -136,7 +176,6 @@ export function GoogleSignInButton({ onError, onSuccess, pendingCartItem }: Prop
         <ActivityIndicator size="small" color={theme.colors.textMuted} />
       ) : (
         <>
-          {/* Google "G" logo — inline SVG-equivalent using coloured squares as RN rectangles */}
           <GoogleLogo />
           <Text
             style={[styles.label, { color: theme.colors.text }]}
@@ -150,7 +189,113 @@ export function GoogleSignInButton({ onError, onSuccess, pendingCartItem }: Prop
   );
 }
 
-/** Simple Google "G" mark built from coloured View blocks. */
+// ─── GoogleSignInSection ────────────────────────────────────────────────────
+// Safely renders the "or" divider + Google button only when a valid Google
+// OAuth Client ID exists for the current runtime platform. Wrapped in an
+// ErrorBoundary to ensure Login/Register screens NEVER crash if OAuth fails.
+
+export interface GoogleSignInSectionProps {
+  onError: (msg: string) => void;
+  onSuccess: (role: UserRole) => void;
+  pendingCartItem?: Parameters<typeof CartApi.addItem>[0];
+  dividerStyle: object;
+  dividerLineStyle: object;
+  dividerTextStyle: object;
+}
+
+export function GoogleSignInSection({
+  onError,
+  onSuccess,
+  pendingCartItem,
+  dividerStyle,
+  dividerLineStyle,
+  dividerTextStyle,
+}: GoogleSignInSectionProps) {
+  const extra = (Constants.expoConfig?.extra ?? {}) as Record<string, string>;
+
+  const { data: settings, isLoading } = useQuery({
+    queryKey: ["settings"],
+    queryFn: SettingsApi.get,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  if (isLoading) return null;
+
+  const rawAndroid =
+    settings?.googleAndroidClientId || extra.googleAndroidClientId;
+  const rawIos = settings?.googleIosClientId || extra.googleIosClientId;
+  const rawWeb = settings?.googleClientId || extra.googleWebClientId;
+
+  const androidClientId = isValidClientId(rawAndroid) ? rawAndroid.trim() : undefined;
+  const iosClientId = isValidClientId(rawIos) ? rawIos.trim() : undefined;
+  const webClientId = isValidClientId(rawWeb) ? rawWeb.trim() : undefined;
+
+  // Crucial: expo-auth-session's useIdTokenAuthRequest hook requires the
+  // client ID for the CURRENT platform to be defined, otherwise invariantClientId
+  // throws an Error on render and crashes the screen.
+  const currentPlatformClientId = Platform.select({
+    ios: iosClientId,
+    android: androidClientId,
+    default: webClientId,
+  });
+
+  // If no valid client ID is configured for this platform, do not mount the button.
+  if (!currentPlatformClientId) {
+    return null;
+  }
+
+  return (
+    <GoogleAuthErrorBoundary>
+      <View style={dividerStyle}>
+        <View style={dividerLineStyle} />
+        <Text style={dividerTextStyle}>or</Text>
+        <View style={dividerLineStyle} />
+      </View>
+      <GoogleAuthButtonInner
+        clientId={currentPlatformClientId}
+        androidClientId={androidClientId}
+        iosClientId={iosClientId}
+        webClientId={webClientId}
+        onError={onError}
+        onSuccess={onSuccess}
+        pendingCartItem={pendingCartItem}
+      />
+    </GoogleAuthErrorBoundary>
+  );
+}
+
+// Backwards-compatible export for standalone usage
+export function GoogleSignInButton(props: {
+  onError: (msg: string) => void;
+  onSuccess: (role: UserRole) => void;
+  pendingCartItem?: Parameters<typeof CartApi.addItem>[0];
+  androidClientId?: string;
+  iosClientId?: string;
+  webClientId?: string;
+  clientId?: string;
+}) {
+  const effectiveClientId =
+    props.clientId ||
+    Platform.select({
+      ios: props.iosClientId,
+      android: props.androidClientId,
+      default: props.webClientId,
+    });
+
+  if (!isValidClientId(effectiveClientId)) {
+    return null;
+  }
+
+  return (
+    <GoogleAuthErrorBoundary>
+      <GoogleAuthButtonInner
+        {...props}
+        clientId={effectiveClientId}
+      />
+    </GoogleAuthErrorBoundary>
+  );
+}
+
 function GoogleLogo() {
   return (
     <View style={logoStyles.container} accessibilityElementsHidden>

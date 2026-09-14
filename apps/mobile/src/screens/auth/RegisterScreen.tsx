@@ -13,13 +13,12 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import Constants from "expo-constants";
+import { useQueryClient } from "@tanstack/react-query";
 import { UserRole } from "@ikaystores/shared";
 import { FormInput } from "../../components/FormInput";
 import { PrimaryButton } from "../../components/PrimaryButton";
-import { GoogleSignInButton } from "../../components/GoogleSignInButton";
-import { AuthApi, CartApi, SettingsApi } from "../../api/endpoints";
+import { GoogleSignInSection } from "../../components/GoogleSignInButton";
+import { AuthApi, CartApi } from "../../api/endpoints";
 import { getErrorMessage } from "../../api/errorMessage";
 import { useAuthStore } from "../../store/authStore";
 import { syncGuestCartToServer } from "../../store/guestCartStore";
@@ -298,59 +297,5 @@ export function RegisterScreen() {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
-  );
-}
-
-// ─── GoogleSignInSection ────────────────────────────────────────────────────
-// Same guard as in LoginScreen: only mounts GoogleSignInButton (and the "or"
-// divider) after settings resolve AND at least one Google client ID exists.
-
-interface GoogleSignInSectionProps {
-  onError: (msg: string) => void;
-  onSuccess: (role: UserRole) => void;
-  pendingCartItem?: Parameters<typeof CartApi.addItem>[0];
-  dividerStyle: object;
-  dividerLineStyle: object;
-  dividerTextStyle: object;
-}
-
-function GoogleSignInSection({
-  onError,
-  onSuccess,
-  pendingCartItem,
-  dividerStyle,
-  dividerLineStyle,
-  dividerTextStyle,
-}: GoogleSignInSectionProps) {
-  const extra = (Constants.expoConfig?.extra ?? {}) as Record<string, string>;
-
-  const { data: settings, isLoading } = useQuery({
-    queryKey: ["settings"],
-    queryFn: SettingsApi.get,
-    staleTime: 5 * 60 * 1000,
-  });
-
-  if (isLoading) return null;
-
-  const hasGoogleId =
-    !!(settings?.googleAndroidClientId || extra.googleAndroidClientId) ||
-    !!(settings?.googleIosClientId || extra.googleIosClientId) ||
-    !!(settings?.googleClientId || extra.googleWebClientId);
-
-  if (!hasGoogleId) return null;
-
-  return (
-    <>
-      <View style={dividerStyle}>
-        <View style={dividerLineStyle} />
-        <Text style={dividerTextStyle}>or</Text>
-        <View style={dividerLineStyle} />
-      </View>
-      <GoogleSignInButton
-        onError={onError}
-        onSuccess={onSuccess}
-        pendingCartItem={pendingCartItem}
-      />
-    </>
   );
 }

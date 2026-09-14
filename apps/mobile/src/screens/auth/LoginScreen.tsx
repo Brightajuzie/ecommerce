@@ -3,13 +3,12 @@ import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, Vie
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import Constants from "expo-constants";
+import { useQueryClient } from "@tanstack/react-query";
 import { UserRole } from "@ikaystores/shared";
 import { FormInput } from "../../components/FormInput";
 import { PrimaryButton } from "../../components/PrimaryButton";
-import { GoogleSignInButton } from "../../components/GoogleSignInButton";
-import { AuthApi, CartApi, SettingsApi } from "../../api/endpoints";
+import { GoogleSignInSection } from "../../components/GoogleSignInButton";
+import { AuthApi, CartApi } from "../../api/endpoints";
 import { getErrorMessage } from "../../api/errorMessage";
 import { useAuthStore } from "../../store/authStore";
 import { syncGuestCartToServer } from "../../store/guestCartStore";
@@ -221,63 +220,5 @@ export function LoginScreen() {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
-  );
-}
-
-// ─── GoogleSignInSection ────────────────────────────────────────────────────
-// Checks whether any Google client ID is configured (from DB or app.json)
-// before mounting GoogleSignInButton. This prevents expo-auth-session's
-// useIdTokenAuthRequest hook from throwing on web when all IDs are undefined,
-// which would crash the entire LoginScreen and make it not display at all.
-
-interface GoogleSignInSectionProps {
-  onError: (msg: string) => void;
-  onSuccess: (role: UserRole) => void;
-  pendingCartItem?: Parameters<typeof CartApi.addItem>[0];
-  dividerStyle: object;
-  dividerLineStyle: object;
-  dividerTextStyle: object;
-}
-
-function GoogleSignInSection({
-  onError,
-  onSuccess,
-  pendingCartItem,
-  dividerStyle,
-  dividerLineStyle,
-  dividerTextStyle,
-}: GoogleSignInSectionProps) {
-  const extra = (Constants.expoConfig?.extra ?? {}) as Record<string, string>;
-
-  const { data: settings, isLoading } = useQuery({
-    queryKey: ["settings"],
-    queryFn: SettingsApi.get,
-    staleTime: 5 * 60 * 1000,
-  });
-
-  // While loading, don't mount the hook-bearing component yet.
-  if (isLoading) return null;
-
-  const hasGoogleId =
-    !!(settings?.googleAndroidClientId || extra.googleAndroidClientId) ||
-    !!(settings?.googleIosClientId || extra.googleIosClientId) ||
-    !!(settings?.googleClientId || extra.googleWebClientId);
-
-  // No client IDs at all — hide both divider and button.
-  if (!hasGoogleId) return null;
-
-  return (
-    <>
-      <View style={dividerStyle}>
-        <View style={dividerLineStyle} />
-        <Text style={dividerTextStyle}>or</Text>
-        <View style={dividerLineStyle} />
-      </View>
-      <GoogleSignInButton
-        onError={onError}
-        onSuccess={onSuccess}
-        pendingCartItem={pendingCartItem}
-      />
-    </>
   );
 }

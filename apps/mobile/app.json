@@ -59,9 +59,7 @@
     "extra": {
       "eas": {
         "projectId": "dab8d0aa-a66b-4eb5-a8ac-3e7998bba905"
-      },
-      "googleAndroidClientId": "REPLACE_WITH_ANDROID_CLIENT_ID",
-      "googleIosClientId": "REPLACE_WITH_IOS_CLIENT_ID"
+      }
     },
     "owner": "brightajuzie"
   }
