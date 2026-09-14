@@ -95,6 +95,10 @@ export function GoogleSignInButton({ onError, onSuccess, pendingCartItem }: Prop
   }, [response]);
 
   const handlePress = async () => {
+    if (!promptAsync) {
+      onError("Google sign-in is not configured. Please contact support.");
+      return;
+    }
     onError(""); // Clear any previous error
     setLoading(true);
     try {
@@ -105,6 +109,13 @@ export function GoogleSignInButton({ onError, onSuccess, pendingCartItem }: Prop
     }
     // loading will be reset in the useEffect once the response arrives
   };
+
+  // If no client IDs are configured at all (server + app.json), hide the
+  // button entirely — rendering it would crash on web (hook requires at
+  // least one ID) and is meaningless on native too.
+  if (!androidClientId && !iosClientId && !webClientId) {
+    return null;
+  }
 
   return (
     <Pressable
