@@ -2,6 +2,7 @@ import {
   NotificationType,
   OrderStatus,
   PaymentProvider,
+  PaymentStatus,
   ProductStatus,
   UserRole,
   VendorOrderStatus,
@@ -178,6 +179,36 @@ export interface OrderDto {
   paymentProvider: PaymentProvider | null;
   paymentReference: string | null;
   vendorOrders: VendorOrderDto[];
+  createdAt: string;
+}
+
+// Admin "Transactions" screen only — every order platform-wide, with the
+// buyer/vendor/payment detail a plain OrderDto doesn't carry (that one is
+// scoped to "my own order", where the caller already knows who they are).
+export interface AdminOrderPaymentDto {
+  id: string;
+  provider: PaymentProvider;
+  status: PaymentStatus;
+  amount: number;
+  createdAt: string;
+}
+
+export interface AdminOrderVendorOrderDto extends VendorOrderDto {
+  vendor: { businessName: string };
+}
+
+export interface AdminOrderDto {
+  id: string;
+  buyer: { firstName: string; lastName: string; email: string; phone: string | null };
+  address: { label: string; line1: string; city: string; state: string };
+  deliveryFee: number;
+  totalAmount: number;
+  currency: string;
+  status: OrderStatus;
+  paymentProvider: PaymentProvider | null;
+  paymentReference: string | null;
+  vendorOrders: AdminOrderVendorOrderDto[];
+  payments: AdminOrderPaymentDto[];
   createdAt: string;
 }
 

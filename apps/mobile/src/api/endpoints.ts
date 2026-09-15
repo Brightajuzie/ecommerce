@@ -1,6 +1,7 @@
 import type {
   AddressDto,
   AdminCreateUserInput,
+  AdminOrderDto,
   AdminProductDto,
   AdminUpdateUserInput,
   AdminUserDto,
@@ -23,6 +24,7 @@ import type {
   LoginInput,
   NotificationDto,
   OrderDto,
+  OrderStatus,
   PaginatedResult,
   PlatformPaymentSettingsDto,
   ProductDto,
@@ -137,6 +139,27 @@ export const OrdersApi = {
   vendorOrders: () => apiClient.get<VendorOrderDto[]>("/orders/vendor").then((r) => r.data),
   updateVendorOrderStatus: (vendorOrderId: string, input: UpdateVendorOrderStatusInput) =>
     apiClient.patch(`/orders/vendor/${vendorOrderId}/status`, input).then((r) => r.data),
+};
+
+export interface AdminOrdersQuery {
+  status?: OrderStatus;
+  search?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export const AdminOrdersApi = {
+  list: (params: AdminOrdersQuery) =>
+    apiClient.get<PaginatedResult<AdminOrderDto>>("/orders/admin", { params }).then((r) => r.data),
+  // Blob response — the screen turns this into a browser download (web) or
+  // tells the admin to use the web panel (native, no file-system support
+  // wired up for this yet). See AdminTransactionsScreen.
+  export: (params: AdminOrdersQuery & { format: "xlsx" | "pdf" }) =>
+    apiClient
+      .get<Blob>("/orders/admin/export", { params, responseType: "blob" })
+      .then((r) => r.data),
 };
 
 export const PaymentsApi = {

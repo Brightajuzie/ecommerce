@@ -3,11 +3,12 @@ import { PaymentSettingsModule } from "../payment-settings/payment-settings.modu
 import { WalletsModule } from "../wallets/wallets.module";
 import { OrdersController } from "./orders.controller";
 import { OrdersService } from "./orders.service";
+import { OrdersExportService } from "./orders-export.service";
 
 @Module({
   imports: [PaymentSettingsModule, WalletsModule],
   controllers: [OrdersController],
-  providers: [OrdersService],
+  providers: [OrdersService, OrdersExportService],
   exports: [OrdersService],
 })
 export class OrdersModule {}
