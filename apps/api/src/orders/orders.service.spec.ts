@@ -20,7 +20,7 @@ interface MockPrisma {
   appSettings: { findFirst: jest.Mock };
   order: { create: jest.Mock; findUniqueOrThrow: jest.Mock };
   vendorOrder: { create: jest.Mock };
-  product: { update: jest.Mock };
+  product: { updateMany: jest.Mock };
   cartItem: { deleteMany: jest.Mock };
   $transaction: jest.Mock;
 }
@@ -49,7 +49,9 @@ describe("OrdersService.checkout", () => {
       appSettings: { findFirst: jest.fn().mockResolvedValue({ deliveryFee: 0 }) },
       order: { create: jest.fn(), findUniqueOrThrow: jest.fn() },
       vendorOrder: { create: jest.fn() },
-      product: { update: jest.fn() },
+      // Defaults to "won the race" (matched a row and decremented it) —
+      // the one test covering the lost-race path overrides this.
+      product: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
       cartItem: { deleteMany: jest.fn() },
       $transaction: jest.fn(),
     };
@@ -246,5 +248,43 @@ describe("OrdersService.checkout", () => {
     });
     const vendorOrderData = prisma.vendorOrder.create.mock.calls[0][0].data as VendorOrderCreateData;
     expect(vendorOrderData.subtotal).toBe(2000);
+  });
+
+  it("rejects the checkout if a concurrent order already claimed the last stock inside the transaction", async () => {
+    prisma.address.findUnique.mockResolvedValue({
+      id: "addr-1",
+      userId: "buyer-1",
+    });
+    prisma.cart.findUnique.mockResolvedValue({
+      id: "cart-1",
+      items: [
+        {
+          productId: "p1",
+          quantity: 1,
+          priceAtAdd: 1000,
+          product: {
+            id: "p1",
+            title: "Last One",
+            stock: 1,
+            vendorId: "vendor-A",
+            currency: "NGN",
+            vendor: { commissionRate: 10 },
+          },
+        },
+      ],
+    });
+    prisma.vendorOrder.create.mockResolvedValue({});
+    prisma.order.create.mockResolvedValue({ id: "order-1" });
+    // The pre-transaction stock check (stock: 1 >= quantity: 1) passes, but
+    // another checkout won the race and already dropped stock to 0 by the
+    // time this transaction's conditional update runs — count: 0 signals that.
+    prisma.product.updateMany.mockResolvedValue({ count: 0 });
+    prisma.$transaction.mockImplementation(
+      async (cb: (tx: MockPrisma) => Promise<unknown>) => cb(prisma),
+    );
+
+    await expect(
+      service.checkout("buyer-1", { addressId: "addr-1" }),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 });

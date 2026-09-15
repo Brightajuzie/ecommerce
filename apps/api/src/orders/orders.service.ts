@@ -49,6 +49,11 @@ export class OrdersService {
         );
       }
     }
+    // Re-checked with a conditional decrement inside the transaction below
+    // (WHERE stock >= quantity) — this earlier check is just a fast-path
+    // rejection with a specific product name; it can't by itself prevent two
+    // concurrent checkouts from both passing it and then both decrementing,
+    // which is the actual race the in-transaction guard closes.
 
     const itemsByVendor = new Map<string, typeof cart.items>();
     for (const item of cart.items) {
@@ -77,7 +82,8 @@ export class OrdersService {
     const developerSharePercent = Number(paymentSettings.developerSharePercent);
     const superAdminFeePercent = Number(paymentSettings.superAdminFeePercent);
 
-    const order = await this.prisma.$transaction(async (tx) => {
+    const order = await this.prisma.$transaction(
+      async (tx) => {
       const createdOrder = await tx.order.create({
         data: {
           buyerId: userId,
@@ -130,11 +136,27 @@ export class OrdersService {
           },
         });
 
-        for (const item of items) {
-          await tx.product.update({
-            where: { id: item.productId },
-            data: { stock: { decrement: item.quantity } },
-          });
+        // updateMany + a stock >= quantity guard (rather than a plain
+        // update() with decrement) closes the race between this and any
+        // other concurrent checkout of the same product: only one of them
+        // can win the conditional update once stock is too low, and the
+        // other gets a count of 0 here instead of driving stock negative.
+        // Run in parallel — each targets a different product row, so
+        // there's no cross-item contention, and it keeps the whole
+        // transaction well inside its timeout even for a large cart.
+        const decrements = await Promise.all(
+          items.map((item) =>
+            tx.product.updateMany({
+              where: { id: item.productId, stock: { gte: item.quantity } },
+              data: { stock: { decrement: item.quantity } },
+            }),
+          ),
+        );
+        const raceLoser = items.find((_, i) => decrements[i].count === 0);
+        if (raceLoser) {
+          throw new BadRequestException(
+            `Insufficient stock for "${raceLoser.product.title}"`,
+          );
         }
       }
 
@@ -144,7 +166,15 @@ export class OrdersService {
         where: { id: createdOrder.id },
         include: ORDER_INCLUDE,
       });
-    });
+      },
+      // Prisma's default interactive-transaction timeout is 5s, which this
+      // multi-step transaction (order + per-vendor writes + stock updates)
+      // can exceed under ordinary pooled-connection latency, well before
+      // anything is actually wrong — surfacing as "Transaction already
+      // closed... timeout was 5000 ms" and failing checkout outright.
+      // Generous but bounded headroom instead of Prisma's default.
+      { maxWait: 10000, timeout: 20000 },
+    );
 
     return order;
   }
@@ -250,6 +280,6 @@ export class OrdersService {
       );
 
       return updated;
-    });
+    }, { maxWait: 10000, timeout: 15000 });
   }
 }
