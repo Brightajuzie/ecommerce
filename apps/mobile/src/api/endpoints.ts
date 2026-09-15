@@ -153,12 +153,14 @@ export interface AdminOrdersQuery {
 export const AdminOrdersApi = {
   list: (params: AdminOrdersQuery) =>
     apiClient.get<PaginatedResult<AdminOrderDto>>("/orders/admin", { params }).then((r) => r.data),
-  // Blob response — the screen turns this into a browser download (web) or
-  // tells the admin to use the web panel (native, no file-system support
-  // wired up for this yet). See AdminTransactionsScreen.
+  // arraybuffer rather than blob — React Native's networking stack handles
+  // ArrayBuffer far more reliably than Blob, and it converts cleanly to
+  // both a web Blob (new Blob([buf])) and a Uint8Array for expo-file-system
+  // (new Uint8Array(buf)), so one response type covers both platforms. See
+  // AdminTransactionsScreen for how each turns it into a saved/shared file.
   export: (params: AdminOrdersQuery & { format: "xlsx" | "pdf" }) =>
     apiClient
-      .get<Blob>("/orders/admin/export", { params, responseType: "blob" })
+      .get<ArrayBuffer>("/orders/admin/export", { params, responseType: "arraybuffer" })
       .then((r) => r.data),
 };
 

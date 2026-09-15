@@ -11,6 +11,8 @@ import {
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
+import { File, Paths } from "expo-file-system";
+import * as Sharing from "expo-sharing";
 import { OrderStatus } from "@ikaystores/shared";
 import type { AdminOrderDto } from "@ikaystores/shared";
 import { AdminOrdersApi } from "../../api/endpoints";
@@ -48,32 +50,59 @@ const STATUS_FILTERS: (OrderStatus | "ALL")[] = [
   OrderStatus.FAILED,
 ];
 
-// Triggers a real browser download on web (blob -> object URL -> a hidden
+const MIME_TYPES: Record<"xlsx" | "pdf", string> = {
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  pdf: "application/pdf",
+};
+// Apple's Uniform Type Identifier — expo-sharing needs this on iOS in
+// addition to (Android's) mimeType to offer the right share-sheet targets.
+const IOS_UTIS: Record<"xlsx" | "pdf", string> = {
+  xlsx: "org.openxmlformats.spreadsheetml.sheet",
+  pdf: "com.adobe.pdf",
+};
+
+// Web: real browser download (arraybuffer -> Blob -> object URL -> a hidden
 // <a download> click) — accessed via globalThis rather than importing DOM
 // lib types, since this project's tsconfig targets React Native, not the
-// browser. Native has no file-system/sharing wired up for this yet, so it
-// falls back to an honest "use the web panel" message instead of a silent
-// failure.
-function downloadBlob(blob: Blob, filename: string) {
-  if (Platform.OS !== "web") {
-    Alert.alert("Export", "Exporting is currently available from the web admin panel.");
+// browser.
+// Native: written to the app's cache directory via expo-file-system's
+// modern File API (accepts a Uint8Array directly, no base64 round-trip
+// needed), then handed to expo-sharing's share sheet so the admin picks
+// where it actually goes (Files, email, WhatsApp, etc.) — there's no such
+// thing as a browser "Downloads folder" on a native app.
+async function saveExport(data: ArrayBuffer, filename: string, format: "xlsx" | "pdf") {
+  if (Platform.OS === "web") {
+    const blob = new Blob([data], { type: MIME_TYPES[format] });
+    const g = globalThis as unknown as {
+      document: {
+        createElement: (tag: string) => HTMLAnchorElement;
+        body: { appendChild: (n: unknown) => void; removeChild: (n: unknown) => void };
+      };
+      URL: { createObjectURL: (b: Blob) => string; revokeObjectURL: (u: string) => void };
+    };
+    const url = g.URL.createObjectURL(blob);
+    const link = g.document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    g.document.body.appendChild(link);
+    link.click();
+    g.document.body.removeChild(link);
+    g.URL.revokeObjectURL(url);
     return;
   }
-  const g = globalThis as unknown as {
-    document: {
-      createElement: (tag: string) => HTMLAnchorElement;
-      body: { appendChild: (n: unknown) => void; removeChild: (n: unknown) => void };
-    };
-    URL: { createObjectURL: (b: Blob) => string; revokeObjectURL: (u: string) => void };
-  };
-  const url = g.URL.createObjectURL(blob);
-  const link = g.document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  g.document.body.appendChild(link);
-  link.click();
-  g.document.body.removeChild(link);
-  g.URL.revokeObjectURL(url);
+
+  const file = new File(Paths.cache, filename);
+  file.write(new Uint8Array(data));
+
+  if (!(await Sharing.isAvailableAsync())) {
+    Alert.alert("Saved", `${filename} was saved, but sharing isn't available on this device.`);
+    return;
+  }
+  await Sharing.shareAsync(file.uri, {
+    mimeType: MIME_TYPES[format],
+    UTI: IOS_UTIS[format],
+    dialogTitle: filename,
+  });
 }
 
 export function AdminTransactionsScreen() {
@@ -189,14 +218,14 @@ export function AdminTransactionsScreen() {
   const handleExport = async (format: "xlsx" | "pdf") => {
     setExporting(format);
     try {
-      const blob = await AdminOrdersApi.export({
+      const data = await AdminOrdersApi.export({
         search: search || undefined,
         status: status === "ALL" ? undefined : status,
         from: from || undefined,
         to: to || undefined,
         format,
       });
-      downloadBlob(blob, `ikaystores-orders.${format}`);
+      await saveExport(data, `ikaystores-orders.${format}`, format);
     } catch (error) {
       Alert.alert("Could not export", getErrorMessage(error, "Please try again."));
     } finally {
