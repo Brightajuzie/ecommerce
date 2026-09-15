@@ -10,6 +10,7 @@ import { StoreSettingsScreen } from "../screens/admin/StoreSettingsScreen";
 import { SlidesScreen } from "../screens/admin/SlidesScreen";
 import { WithdrawalsScreen } from "../screens/admin/WithdrawalsScreen";
 import { PaymentSettingsScreen } from "../screens/admin/PaymentSettingsScreen";
+import { AdminTransactionsScreen } from "../screens/admin/AdminTransactionsScreen";
 import { ProfileScreen } from "../screens/buyer/ProfileScreen";
 import { useAuthStore } from "../store/authStore";
 import { useTheme } from "../theme/ThemeContext";
@@ -27,6 +28,7 @@ const TAB_ICONS: Record<keyof AdminTabParamList, keyof typeof Ionicons.glyphMap>
   Slides: "images",
   Withdrawals: "cash",
   Payments: "card",
+  Transactions: "receipt",
   Profile: "person",
 };
 
@@ -35,8 +37,8 @@ const TAB_ICONS: Record<keyof AdminTabParamList, keyof typeof Ionicons.glyphMap>
 // platform/super-admin wallet section from regular ADMIN. EDITOR is
 // content-only (see UsersService.manageableRolesFor on the backend, which
 // enforces the same boundary server-side): no Vendors, Users, Withdrawals,
-// or Payments tabs, and no Dashboard either since its stats/quick-actions
-// are entirely about those. It lands on Products instead.
+// Payments, or Transactions tabs, and no Dashboard either since its
+// stats/quick-actions are entirely about those. It lands on Products instead.
 export function AdminTabNavigator() {
   const theme = useTheme();
   const isEditor = useAuthStore((s) => s.user?.role === UserRole.EDITOR);
@@ -64,6 +66,7 @@ export function AdminTabNavigator() {
       <Tab.Screen name="Slides" component={SlidesScreen} />
       {!isEditor && <Tab.Screen name="Withdrawals" component={WithdrawalsScreen} />}
       {!isEditor && <Tab.Screen name="Payments" component={PaymentSettingsScreen} />}
+      {!isEditor && <Tab.Screen name="Transactions" component={AdminTransactionsScreen} />}
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );

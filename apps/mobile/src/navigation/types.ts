@@ -70,5 +70,6 @@ export type AdminTabParamList = {
   // PaymentSettingsScreen (platform wallet, gateway credentials) are hidden
   // from regular ADMIN. See UserRole.SUPER_ADMIN.
   Payments: undefined;
+  Transactions: undefined;
   Profile: undefined;
 };

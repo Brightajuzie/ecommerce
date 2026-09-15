@@ -10,10 +10,26 @@ import { PaymentSettingsService } from "../payment-settings/payment-settings.ser
 import { WalletsService } from "../wallets/wallets.service";
 import { CheckoutDto } from "./dto/checkout.dto";
 import { UpdateVendorOrderStatusDto } from "./dto/update-vendor-order-status.dto";
+import { AdminOrdersQueryDto } from "./dto/admin-orders-query.dto";
 
 const ORDER_INCLUDE = {
   vendorOrders: { include: { items: true } },
 } satisfies Prisma.OrderInclude;
+
+// Every field the admin transactions screen (and its export) needs to show
+// per order — one buyer, delivery address, every vendor's sub-order with
+// items, and every payment attempt (INITIATED/FAILED ones included, not
+// just the successful one, so a failed gateway attempt is still visible).
+const ADMIN_ORDER_INCLUDE = {
+  buyer: { select: { firstName: true, lastName: true, email: true, phone: true } },
+  address: true,
+  vendorOrders: {
+    include: { items: true, vendor: { select: { businessName: true } } },
+  },
+  payments: { orderBy: { createdAt: "desc" } },
+} satisfies Prisma.OrderInclude;
+
+export type AdminOrder = Prisma.OrderGetPayload<{ include: typeof ADMIN_ORDER_INCLUDE }>;
 
 @Injectable()
 export class OrdersService {
@@ -281,5 +297,68 @@ export class OrdersService {
 
       return updated;
     }, { maxWait: 10000, timeout: 15000 });
+  }
+
+  private buildAdminOrdersWhere(query: AdminOrdersQueryDto): Prisma.OrderWhereInput {
+    const where: Prisma.OrderWhereInput = {};
+    if (query.status) {
+      where.status = query.status;
+    }
+    if (query.search) {
+      where.buyer = {
+        OR: [
+          { firstName: { contains: query.search, mode: "insensitive" } },
+          { lastName: { contains: query.search, mode: "insensitive" } },
+          { email: { contains: query.search, mode: "insensitive" } },
+        ],
+      };
+    }
+    if (query.from || query.to) {
+      where.createdAt = {
+        ...(query.from && { gte: new Date(query.from) }),
+        // End-of-day, not midnight — a `to` of today's date should still
+        // include orders placed today, not exclude everything after 00:00.
+        ...(query.to && { lte: new Date(`${query.to}T23:59:59.999Z`) }),
+      };
+    }
+    return where;
+  }
+
+  // Every order on the platform, any buyer — see WithdrawalsController-style
+  // ADMIN/SUPER_ADMIN gating on the controller side; this method itself
+  // trusts the caller is already authorized.
+  async findAllForAdmin(query: AdminOrdersQueryDto) {
+    const where = this.buildAdminOrdersWhere(query);
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 20;
+
+    const [data, total] = await Promise.all([
+      this.prisma.order.findMany({
+        where,
+        include: ADMIN_ORDER_INCLUDE,
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.order.count({ where }),
+    ]);
+
+    return { data, page, pageSize, total };
+  }
+
+  // Same filters as findAllForAdmin but unpaginated (capped) — feeds the
+  // Excel/PDF export, which needs every matching row, not one page of them.
+  async findAllForAdminExport(query: AdminOrdersQueryDto): Promise<AdminOrder[]> {
+    const where = this.buildAdminOrdersWhere(query);
+    return this.prisma.order.findMany({
+      where,
+      include: ADMIN_ORDER_INCLUDE,
+      orderBy: { createdAt: "desc" },
+      // A sane ceiling rather than truly unbounded — an admin exporting a
+      // filtered slice (by status/date) will rarely hit this; one exporting
+      // literally everything gets the most recent 10,000 rather than an
+      // unbounded query that could take the DB (and this request) down.
+      take: 10000,
+    });
   }
 }
