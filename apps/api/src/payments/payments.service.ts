@@ -151,6 +151,10 @@ export class PaymentsService {
       },
     });
 
+    // Array-form $transaction (not the interactive callback form) — sent as
+    // one batch to the query engine rather than held open across awaited
+    // app code, so it isn't subject to the interactive-transaction timeout
+    // that the checkout() transaction needed hardening against.
     await this.prisma.$transaction([
       this.prisma.order.update({
         where: { id: order.id },
@@ -259,6 +263,8 @@ export class PaymentsService {
       return;
     }
 
+    // Array-form $transaction, same note as initiateCod() above — not
+    // subject to the interactive-transaction timeout.
     await this.prisma.$transaction([
       this.prisma.payment.update({
         where: { id: payment.id },
@@ -298,7 +304,11 @@ export class PaymentsService {
   private async notifyOrderConfirmed(orderId: string) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
-      include: { buyer: true },
+      include: {
+        buyer: true,
+        address: true,
+        vendorOrders: { include: { items: true } },
+      },
     });
     if (!order) {
       return;
@@ -327,17 +337,60 @@ export class PaymentsService {
       order.id,
     );
 
+    const items = order.vendorOrders.flatMap((vo) => vo.items);
+    const subtotal = items.reduce((sum, item) => sum + Number(item.price) * item.quantity, 0);
+    const money = (n: number) => `${order.currency} ${n.toLocaleString()}`;
+    const orderDate = order.createdAt.toLocaleString("en-NG", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+
+    const itemRowsText = items
+      .map((item) => `  ${item.quantity} x ${item.title} — ${money(Number(item.price) * item.quantity)}`)
+      .join("\n");
+    const itemRowsHtml = items
+      .map(
+        (item) => `<tr>
+          <td style="padding:6px 0;">${item.title}</td>
+          <td style="padding:6px 0;text-align:center;">${item.quantity}</td>
+          <td style="padding:6px 0;text-align:right;">${money(Number(item.price) * item.quantity)}</td>
+        </tr>`,
+      )
+      .join("");
+
     await this.emailService.send({
       to: order.buyer.email,
-      subject: "Your Ikaystores order is confirmed",
+      subject: `Receipt — order #${orderNumber} confirmed`,
       text:
         `Hi ${order.buyer.firstName},\n\n` +
-        `Order #${orderNumber} (${amount}) is confirmed. ${buyerMessage}\n\n` +
+        `${buyerMessage}\n\n` +
+        `RECEIPT — Order #${orderNumber}\n` +
+        `Date: ${orderDate}\n` +
+        `Payment: ${order.paymentProvider ?? "N/A"}\n\n` +
+        `${itemRowsText}\n\n` +
+        `Subtotal: ${money(subtotal)}\n` +
+        `Delivery fee: ${money(Number(order.deliveryFee))}\n` +
+        `Total: ${amount}\n\n` +
+        `Delivering to:\n${order.address.label} — ${order.address.line1}, ${order.address.city}, ${order.address.state}\n\n` +
         `— Ikaystores`,
       html:
+        `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;">` +
         `<p>Hi ${order.buyer.firstName},</p>` +
-        `<p>Order <strong>#${orderNumber}</strong> (${amount}) is confirmed. ${buyerMessage}</p>` +
-        `<p>— Ikaystores</p>`,
+        `<p>${buyerMessage}</p>` +
+        `<h3 style="margin-bottom:4px;">Receipt — Order #${orderNumber}</h3>` +
+        `<p style="color:#666;font-size:13px;margin-top:0;">${orderDate} &middot; Paid via ${order.paymentProvider ?? "N/A"}</p>` +
+        `<table style="width:100%;border-collapse:collapse;border-top:1px solid #ddd;border-bottom:1px solid #ddd;">` +
+        `<thead><tr style="color:#666;font-size:12px;text-align:left;">` +
+        `<th style="padding:6px 0;">Item</th><th style="text-align:center;">Qty</th><th style="text-align:right;">Amount</th>` +
+        `</tr></thead><tbody>${itemRowsHtml}</tbody></table>` +
+        `<table style="width:100%;margin-top:8px;">` +
+        `<tr><td>Subtotal</td><td style="text-align:right;">${money(subtotal)}</td></tr>` +
+        `<tr><td>Delivery fee</td><td style="text-align:right;">${money(Number(order.deliveryFee))}</td></tr>` +
+        `<tr><td style="font-weight:bold;padding-top:6px;">Total</td><td style="text-align:right;font-weight:bold;padding-top:6px;">${amount}</td></tr>` +
+        `</table>` +
+        `<p style="margin-top:16px;"><strong>Delivering to:</strong><br/>${order.address.label} — ${order.address.line1}, ${order.address.city}, ${order.address.state}</p>` +
+        `<p>— Ikaystores</p>` +
+        `</div>`,
     });
   }
 
