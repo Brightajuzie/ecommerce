@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { Alert, Image, Pressable, ScrollView, Switch, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, Switch, Text, View } from "react-native";
 import { useRoute, useNavigation, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { SlidesApi } from "../../api/endpoints";
+import { getErrorMessage } from "../../api/errorMessage";
 import { pickAndUploadImage, ImagePickerCancelledError } from "../../api/upload";
 import { FormInput } from "../../components/FormInput";
 import { PrimaryButton } from "../../components/PrimaryButton";
@@ -27,10 +28,27 @@ export function SlideFormScreen() {
   const [linkUrl, setLinkUrl] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const styles = useThemedStyles((colors) => ({
+  // Rendered inline rather than via Alert.alert — see ProductFormScreen for
+  // the same fix and why: Alert.alert can be silently suppressed on some
+  // mobile web browsers, which would otherwise leave a failed upload with
+  // no visible feedback at all.
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const styles = useThemedStyles((colors, t) => ({
     container: { flex: 1, backgroundColor: colors.surface },
     content: { padding: 20, paddingTop: 60, paddingBottom: 40 },
     headerRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: 10, marginBottom: 16 },
+    errorBanner: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 8,
+      backgroundColor: t.scheme === "dark" ? "#3A1518" : "#FEF2F2",
+      borderWidth: 1,
+      borderColor: t.scheme === "dark" ? "#5B2226" : "#FECACA",
+      borderRadius: 8,
+      padding: 12,
+      marginBottom: 16,
+    },
+    errorBannerText: { flex: 1, color: t.scheme === "dark" ? "#FCA5A5" : "#B91C1C", fontSize: 13, fontWeight: "600" as const },
     backButton: {
       width: 36,
       height: 36,
@@ -74,13 +92,14 @@ export function SlideFormScreen() {
   }, [existingSlide]);
 
   const handleUpload = async () => {
+    setErrorMessage(null);
     setUploading(true);
     try {
       const url = await pickAndUploadImage("banner");
       setImageUrl(url);
     } catch (error) {
       if (!(error instanceof ImagePickerCancelledError)) {
-        Alert.alert("Upload failed", "Could not upload that image. Please try again.");
+        setErrorMessage(getErrorMessage(error, "Could not upload that image. Please try again."));
       }
     } finally {
       setUploading(false);
@@ -104,7 +123,7 @@ export function SlideFormScreen() {
       navigation.goBack();
     },
     onError: (error: any) => {
-      Alert.alert("Could not save slide", error?.response?.data?.message ?? "Please try again.");
+      setErrorMessage(getErrorMessage(error, "Could not save slide. Please try again."));
     },
   });
 
@@ -126,6 +145,13 @@ export function SlideFormScreen() {
           />
         </Pressable>
       </View>
+
+      {errorMessage && (
+        <View style={styles.errorBanner}>
+          <Ionicons name="alert-circle" size={18} color={theme.colors.danger} />
+          <Text style={styles.errorBannerText}>{errorMessage}</Text>
+        </View>
+      )}
 
       <Text style={styles.sectionLabel}>Image</Text>
       {imageUrl ? (

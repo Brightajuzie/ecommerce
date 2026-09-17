@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, Image, ScrollView, Text, View } from "react-native";
+import { Image, ScrollView, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -35,6 +35,11 @@ export function VendorPendingScreen() {
   const [uploadingField, setUploadingField] = useState<DocumentField | null>(null);
   const [skippedIdentity, setSkippedIdentity] = useState(false);
   const [skippedLiveness, setSkippedLiveness] = useState(false);
+  // Rendered inline rather than via Alert.alert — see ProductFormScreen for
+  // the same fix and why: Alert.alert can be silently suppressed on some
+  // mobile web browsers, which would otherwise leave a failed document
+  // upload with no visible feedback at all.
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!userId) return;
@@ -53,11 +58,23 @@ export function VendorPendingScreen() {
     else setSkippedLiveness(true);
     if (userId) secureStorage.setItem(skipStorageKey(kind, userId), "1");
   };
-  const styles = useThemedStyles((colors) => ({
+  const styles = useThemedStyles((colors, t) => ({
     container: { flex: 1, backgroundColor: colors.background },
     content: { padding: 24, paddingTop: 80 },
     title: { fontSize: 22, fontWeight: "800" as const, color: colors.text, marginBottom: 12, textAlign: "center" as const },
     body: { fontSize: 15, color: colors.textMuted, textAlign: "center" as const, marginBottom: 24, lineHeight: 22 },
+    errorBanner: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 8,
+      backgroundColor: t.scheme === "dark" ? "#3A1518" : "#FEF2F2",
+      borderWidth: 1,
+      borderColor: t.scheme === "dark" ? "#5B2226" : "#FECACA",
+      borderRadius: 8,
+      padding: 12,
+      marginBottom: 20,
+    },
+    errorBannerText: { flex: 1, color: t.scheme === "dark" ? "#FCA5A5" : "#B91C1C", fontSize: 13, fontWeight: "600" as const },
     card: {
       backgroundColor: colors.surface,
       borderRadius: 14,
@@ -111,24 +128,19 @@ export function VendorPendingScreen() {
       queryClient.invalidateQueries({ queryKey: ["vendorMe"] });
     },
     onError: (error: any) => {
-      Alert.alert(
-        "Could not save document",
-        error?.response?.data?.message ?? "Please try again.",
-      );
+      setErrorMessage(getErrorMessage(error, "Could not save document. Please try again."));
     },
   });
 
   const handleUpload = async (field: DocumentField) => {
+    setErrorMessage(null);
     setUploadingField(field);
     try {
       const url = await pickAndUploadImage("document");
       saveDocument.mutate({ field, url });
     } catch (error) {
       if (!(error instanceof ImagePickerCancelledError)) {
-        Alert.alert(
-          "Upload failed",
-          getErrorMessage(error, "Could not upload that photo. Please try again."),
-        );
+        setErrorMessage(getErrorMessage(error, "Could not upload that photo. Please try again."));
       }
     } finally {
       setUploadingField(null);
@@ -153,6 +165,13 @@ export function VendorPendingScreen() {
           ? "Your vendor account has been suspended by an admin. Contact support if you believe this is a mistake."
           : "Your vendor account is pending approval. You'll be able to list products and manage orders once an admin approves your application."}
       </Text>
+
+      {errorMessage && (
+        <View style={styles.errorBanner}>
+          <Ionicons name="alert-circle" size={18} color={theme.colors.danger} />
+          <Text style={styles.errorBannerText}>{errorMessage}</Text>
+        </View>
+      )}
 
       <View style={styles.card}>
         <View style={styles.cardHeader}>
