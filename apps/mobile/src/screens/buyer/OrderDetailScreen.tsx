@@ -1,4 +1,5 @@
-import { ActivityIndicator, FlatList, Pressable, Text, View } from "react-native";
+import { useRef } from "react";
+import { ActivityIndicator, FlatList, Platform, Pressable, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -11,6 +12,7 @@ import { PrimaryButton } from "../../components/PrimaryButton";
 import { useAuthStore } from "../../store/authStore";
 import { useTheme } from "../../theme/ThemeContext";
 import { useThemedStyles } from "../../theme/useThemedStyles";
+import { openBlankTab, redirectTab } from "../../utils/payment";
 import type { BuyerStackParamList } from "../../navigation/types";
 
 const MAX_CONTENT_WIDTH = 700;
@@ -134,17 +136,38 @@ export function OrderDetailScreen() {
   // PENDING_PAYMENT with no other way to finish it — the backend already
   // allows re-calling /payments/initiate for any order still in that
   // status, this just exposes it in the UI.
+  // Opened synchronously in handleRetryPayment, inside the button's own
+  // click — see utils/payment.ts for why it can't wait until retryPayment's
+  // (async) onSuccess.
+  const pendingTabRef = useRef<ReturnType<typeof openBlankTab>>(null);
+
   const retryPayment = useMutation({
     mutationFn: () =>
       PaymentsApi.initiate({ orderId: route.params.orderId, provider: PaymentProvider.FLUTTERWAVE }),
     onSuccess: (payment) => {
       // Always present for a FLUTTERWAVE initiate (only COD omits it) — the
       // check just satisfies the now-optional type, not a real runtime case.
-      if (payment.checkoutUrl) {
+      if (!payment.checkoutUrl) {
+        return;
+      }
+      if (Platform.OS === "web") {
+        // See utils/payment.ts — react-native-webview has no web build.
+        // Already on OrderDetail, whose own polling (below) picks up PAID
+        // once the gateway's webhook lands, so there's nothing further to
+        // navigate to here.
+        redirectTab(pendingTabRef.current, payment.checkoutUrl);
+      } else {
         navigation.navigate("PaymentWebView", { checkoutUrl: payment.checkoutUrl, orderId: route.params.orderId });
       }
     },
   });
+
+  const handleRetryPayment = () => {
+    if (Platform.OS === "web") {
+      pendingTabRef.current = openBlankTab();
+    }
+    retryPayment.mutate();
+  };
 
   if (orderQuery.isLoading || !orderQuery.data) {
     return (
@@ -230,7 +253,7 @@ export function OrderDetailScreen() {
                 )}
                 <PrimaryButton
                   title="Complete payment"
-                  onPress={() => retryPayment.mutate()}
+                  onPress={handleRetryPayment}
                   loading={retryPayment.isPending}
                 />
               </View>
