@@ -61,6 +61,17 @@ const COMPRESSION_STEPS: { width: number; quality: number }[] = [
   { width: 450, quality: 0.35 },
 ];
 
+// Best-effort — deleting a stale intermediate file is just cache hygiene,
+// never worth failing the upload over if it doesn't work.
+function deleteQuietly(uri: string) {
+  if (Platform.OS === "web") return; // blob: URLs, nothing on disk to clean up
+  try {
+    new ExpoFile(uri).delete();
+  } catch {
+    // ignore
+  }
+}
+
 /**
  * Resizes and re-compresses an image until it fits under the server's
  * upload cap. expo-image-picker's own `quality` option only controls JPEG
@@ -70,6 +81,16 @@ const COMPRESSION_STEPS: { width: number; quality: number }[] = [
  * failing outright against uploads.controller.ts's 200KB limit. Skips
  * entirely if the original is already small enough (e.g. a screenshot or
  * an already-compressed image), to avoid a pointless quality hit.
+ *
+ * Each step is independently try/caught and any file it produced is
+ * deleted before moving on — a lower-spec/low-storage phone (common
+ * among this app's vendors) can genuinely fail to decode/re-encode a
+ * large original at all (out of memory) rather than just producing a
+ * file that's still too big, and without this a single failed attempt
+ * used to abort the whole upload instead of falling through to a
+ * cheaper, smaller attempt that might actually succeed. Cleaning up each
+ * superseded attempt's file also matters more on a phone that's already
+ * low on storage than it would elsewhere.
  */
 async function compressImageUnderLimit(
   uri: string,
@@ -79,25 +100,58 @@ async function compressImageUnderLimit(
     return { uri, mimeType: "image/jpeg" };
   }
 
-  let lastUri = uri;
-  for (const { width, quality } of COMPRESSION_STEPS) {
-    const context = ImageManipulator.manipulate(uri);
-    context.resize({ width, height: null });
-    const rendered = await context.renderAsync();
-    const result = await rendered.saveAsync({ format: SaveFormat.JPEG, compress: quality });
-    lastUri = result.uri;
+  let lastGoodUri: string | null = null;
+  let anyStepSucceeded = false;
 
-    const size = await getFileSize(result.uri);
-    if (size <= MAX_UPLOAD_BYTES) {
-      return { uri: result.uri, mimeType: "image/jpeg" };
+  for (const { width, quality } of COMPRESSION_STEPS) {
+    try {
+      const context = ImageManipulator.manipulate(uri);
+      context.resize({ width, height: null });
+      const rendered = await context.renderAsync();
+      const result = await rendered.saveAsync({ format: SaveFormat.JPEG, compress: quality });
+      anyStepSucceeded = true;
+
+      const size = await getFileSize(result.uri);
+      if (size <= MAX_UPLOAD_BYTES) {
+        if (lastGoodUri) deleteQuietly(lastGoodUri);
+        return { uri: result.uri, mimeType: "image/jpeg" };
+      }
+
+      // Still too big — keep it only as the fallback-of-last-resort below,
+      // discarding whatever the previous (larger) attempt produced.
+      if (lastGoodUri) deleteQuietly(lastGoodUri);
+      lastGoodUri = result.uri;
+    } catch (error) {
+      // This step couldn't even run (commonly out-of-memory decoding a
+      // large original on a constrained device) — fall through to the
+      // next, cheaper step rather than aborting the whole upload.
+      if (__DEV__) {
+        console.warn(`Image compression step (width=${width}) failed, trying a smaller one`, error);
+      }
     }
   }
 
-  // Every step tried and still over the limit (an unusually dense/large
-  // source image) — hand over the smallest version we managed anyway
-  // rather than give up; the server rejects it with a clear message if
-  // it's genuinely still too big, which beats never attempting the upload.
-  return { uri: lastUri, mimeType: "image/jpeg" };
+  if (lastGoodUri) {
+    // Every step ran but stayed over the limit (an unusually dense/large
+    // source image) — hand over the smallest version we managed anyway
+    // rather than give up; the server rejects it with a clear message if
+    // it's genuinely still too big, which beats never attempting the upload.
+    return { uri: lastGoodUri, mimeType: "image/jpeg" };
+  }
+
+  if (!anyStepSucceeded) {
+    // Every single step threw — genuinely couldn't process this image on
+    // this device (out of memory/storage, or a corrupt file), not just
+    // "still too large". A distinct message so the buyer/vendor knows a
+    // different photo is the fix, not just retrying the same one.
+    throw new Error(
+      "This device couldn't process that photo. Try a smaller photo, or free up some storage and try again.",
+    );
+  }
+
+  // Unreachable in practice (anyStepSucceeded implies lastGoodUri was set),
+  // but keeps this function's return type honest without a `!`.
+  return { uri, mimeType: "image/jpeg" };
 }
 
 // React Native's own FormData polyfill (native iOS/Android) special-cases a
