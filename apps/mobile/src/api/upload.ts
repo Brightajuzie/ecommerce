@@ -22,7 +22,7 @@ export type UploadType = "product" | "document" | "banner" | "logo";
 type WebFile = { name: string; type: string };
 type WebDoc = {
   createElement: (tag: string) => {
-    style: { display: string };
+    style: Record<string, string>;
     setAttribute: (name: string, value: string) => void;
     click: () => void;
     addEventListener: (event: string, handler: () => void) => void;
@@ -40,31 +40,54 @@ type WebDoc = {
 // silently ignore a synthetic one — no error thrown, the picker just never
 // opens. Calling the real element.click() method here, synchronously
 // within the same tap that triggered pickImage/captureSelfieBase64, works
-// everywhere including mobile web. `capture` (e.g. "user" for the front
-// camera) is only a hint mobile browsers may honor to open the camera
-// directly instead of the gallery; desktop ignores it and shows a normal
-// file picker, same fallback expo-image-picker's own capture handling has.
+// everywhere including mobile web. Using an offscreen styled element rather
+// than `display: none` is required because mobile Safari ignores .click()
+// on display: none elements.
+// `capture` (e.g. "user" for the front camera) is only a hint mobile
+// browsers may honor to open the camera directly instead of the gallery;
+// desktop ignores it and shows a normal file picker.
 function pickFileWeb(capture?: string): Promise<WebFile | null> {
   const doc = (globalThis as unknown as { document: WebDoc }).document;
   return new Promise((resolve, reject) => {
     const input = doc.createElement("input");
     input.setAttribute("type", "file");
     input.setAttribute("accept", "image/*");
-    input.style.display = "none";
+    input.style.position = "fixed";
+    input.style.top = "-9999px";
+    input.style.left = "-9999px";
+    input.style.opacity = "0";
+    input.style.pointerEvents = "none";
+    input.style.width = "1px";
+    input.style.height = "1px";
     if (capture) input.setAttribute("capture", capture);
+
+    let resolved = false;
+    const cleanup = () => {
+      try {
+        doc.body.removeChild(input);
+      } catch {
+        // ignore if already removed
+      }
+    };
+
     input.addEventListener("change", () => {
-      resolve(input.files?.[0] ?? null);
-      doc.body.removeChild(input);
+      if (resolved) return;
+      resolved = true;
+      const file = input.files?.[0] ?? null;
+      cleanup();
+      resolve(file);
     });
     input.addEventListener("cancel", () => {
+      if (resolved) return;
+      resolved = true;
+      cleanup();
       resolve(null);
-      doc.body.removeChild(input);
     });
     doc.body.appendChild(input);
     try {
       input.click();
     } catch (error) {
-      doc.body.removeChild(input);
+      cleanup();
       reject(error);
     }
   });
@@ -146,12 +169,89 @@ const COMPRESSION_STEPS: { width: number; quality: number }[] = [
 // Best-effort — deleting a stale intermediate file is just cache hygiene,
 // never worth failing the upload over if it doesn't work.
 function deleteQuietly(uri: string) {
-  if (Platform.OS === "web") return; // blob: URLs, nothing on disk to clean up
+  if (Platform.OS === "web") {
+    try {
+      (globalThis as unknown as { URL?: { revokeObjectURL?: (u: string) => void } }).URL?.revokeObjectURL?.(uri);
+    } catch {
+      // ignore
+    }
+    return;
+  }
   try {
     new ExpoFile(uri).delete();
   } catch {
     // ignore
   }
+}
+
+/**
+ * Compresses an image on the web platform using native browser HTML5 Canvas.
+ * Bypasses expo-image-manipulator's web action which uses a single-threaded
+ * CPU-bound pixel loop (Hermite resample) that can freeze/crash mobile browsers
+ * on multi-megapixel photos, and avoids CORS issues when setting crossOrigin
+ * on local blob: URLs in Safari.
+ */
+function compressImageWeb(
+  uri: string,
+  width: number,
+  quality: number,
+): Promise<{ uri: string; size: number }> {
+  return new Promise((resolve, reject) => {
+    const ImgCtor = (globalThis as unknown as { Image?: new () => HTMLImageElement }).Image;
+    if (!ImgCtor) {
+      reject(new Error("Image constructor not available"));
+      return;
+    }
+    const img = new ImgCtor();
+    img.onload = () => {
+      try {
+        const sourceWidth = img.naturalWidth || img.width;
+        const sourceHeight = img.naturalHeight || img.height;
+        if (!sourceWidth || !sourceHeight) {
+          reject(new Error("Invalid image dimensions"));
+          return;
+        }
+        const scale = Math.min(1, width / sourceWidth);
+        const targetWidth = Math.round(sourceWidth * scale);
+        const targetHeight = Math.round(sourceHeight * scale);
+
+        const doc = (globalThis as unknown as { document: Document }).document;
+        const canvas = doc.createElement("canvas");
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("Canvas context unavailable"));
+          return;
+        }
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error("Failed to encode compressed image"));
+              return;
+            }
+            const blobUrl = (
+              globalThis as unknown as { URL: { createObjectURL: (b: Blob) => string } }
+            ).URL.createObjectURL(blob);
+            resolve({
+              uri: blobUrl,
+              size: blob.size,
+            });
+          },
+          "image/jpeg",
+          quality,
+        );
+      } catch (err) {
+        reject(err);
+      }
+    };
+    img.onerror = () => reject(new Error("Could not load image for compression"));
+    img.src = uri;
+  });
 }
 
 /**
@@ -187,22 +287,32 @@ async function compressImageUnderLimit(
 
   for (const { width, quality } of COMPRESSION_STEPS) {
     try {
-      const context = ImageManipulator.manipulate(uri);
-      context.resize({ width, height: null });
-      const rendered = await context.renderAsync();
-      const result = await rendered.saveAsync({ format: SaveFormat.JPEG, compress: quality });
+      let compressedUri: string;
+      let size: number;
+
+      if (Platform.OS === "web") {
+        const res = await compressImageWeb(uri, width, quality);
+        compressedUri = res.uri;
+        size = res.size;
+      } else {
+        const context = ImageManipulator.manipulate(uri);
+        context.resize({ width });
+        const rendered = await context.renderAsync();
+        const result = await rendered.saveAsync({ format: SaveFormat.JPEG, compress: quality });
+        compressedUri = result.uri;
+        size = await getFileSize(result.uri);
+      }
       anyStepSucceeded = true;
 
-      const size = await getFileSize(result.uri);
       if (size <= MAX_UPLOAD_BYTES) {
         if (lastGoodUri) deleteQuietly(lastGoodUri);
-        return { uri: result.uri, mimeType: "image/jpeg" };
+        return { uri: compressedUri, mimeType: "image/jpeg" };
       }
 
       // Still too big — keep it only as the fallback-of-last-resort below,
       // discarding whatever the previous (larger) attempt produced.
       if (lastGoodUri) deleteQuietly(lastGoodUri);
-      lastGoodUri = result.uri;
+      lastGoodUri = compressedUri;
     } catch (error) {
       // This step couldn't even run (commonly out-of-memory decoding a
       // large original on a constrained device) — fall through to the
@@ -323,7 +433,8 @@ export async function pickAndUploadImage(
 ): Promise<string> {
   const asset = await pickImage();
   const { uri, mimeType } = await compressImageUnderLimit(asset.uri);
-  const name = asset.fileName ?? `photo-${Date.now()}.jpg`;
+  const rawName = asset.fileName ?? `photo-${Date.now()}.jpg`;
+  const name = rawName.replace(/\.[^.]+$/, "") + ".jpg";
 
   // React Native's FormData accepts this { uri, name, type } shape for file fields;
   // axios/XHR sets the multipart boundary header automatically for FormData bodies.
@@ -333,8 +444,14 @@ export async function pickAndUploadImage(
     formData.append("type", type);
   }
 
+  // On web, explicitly setting "Content-Type": "multipart/form-data" overrides
+  // the browser's automatic boundary parameter generation (stripping the
+  // boundary=... part), which causes Multer to reject the request with
+  // "Multipart: Boundary not found" or "No file was uploaded". Leaving it
+  // undefined on web lets Axios and the browser set the proper Content-Type
+  // with multipart boundary.
   const response = await apiClient.post<UploadResultDto>("/uploads/image", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
+    headers: Platform.OS === "web" ? undefined : { "Content-Type": "multipart/form-data" },
     onUploadProgress: onProgress
       ? (event) => {
           if (event.total) {
