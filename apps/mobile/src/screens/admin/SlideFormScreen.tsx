@@ -9,6 +9,7 @@ import { getErrorMessage } from "../../api/errorMessage";
 import { pickAndUploadImage, ImagePickerCancelledError } from "../../api/upload";
 import { FormInput } from "../../components/FormInput";
 import { PrimaryButton } from "../../components/PrimaryButton";
+import { UploadProgressBar } from "../../components/UploadProgressBar";
 import { useTheme } from "../../theme/ThemeContext";
 import { useThemedStyles } from "../../theme/useThemedStyles";
 import type { AdminStackParamList } from "../../navigation/types";
@@ -28,6 +29,7 @@ export function SlideFormScreen() {
   const [linkUrl, setLinkUrl] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   // Rendered inline rather than via Alert.alert — see ProductFormScreen for
   // the same fix and why: Alert.alert can be silently suppressed on some
   // mobile web browsers, which would otherwise leave a failed upload with
@@ -72,6 +74,7 @@ export function SlideFormScreen() {
       marginBottom: 20,
     },
     uploadButtonText: { color: colors.text, fontWeight: "600" as const },
+    uploadProgressWrap: { marginTop: -12, marginBottom: 20, maxWidth: 200 },
     disabled: { opacity: 0.5 },
     toggleRow: {
       flexDirection: "row" as const,
@@ -93,9 +96,10 @@ export function SlideFormScreen() {
 
   const handleUpload = async () => {
     setErrorMessage(null);
+    setUploadProgress(0);
     setUploading(true);
     try {
-      const url = await pickAndUploadImage("banner");
+      const url = await pickAndUploadImage("banner", setUploadProgress);
       setImageUrl(url);
     } catch (error) {
       if (!(error instanceof ImagePickerCancelledError)) {
@@ -170,6 +174,11 @@ export function SlideFormScreen() {
           {uploading ? "Uploading…" : imageUrl ? "Replace image" : "Upload image"}
         </Text>
       </Pressable>
+      {uploading && (
+        <View style={styles.uploadProgressWrap}>
+          <UploadProgressBar percent={uploadProgress} />
+        </View>
+      )}
 
       <FormInput label="Title (optional)" value={title} onChangeText={setTitle} />
       <FormInput

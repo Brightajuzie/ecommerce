@@ -10,6 +10,7 @@ import { getErrorMessage } from "../../api/errorMessage";
 import { pickAndUploadImage, ImagePickerCancelledError } from "../../api/upload";
 import { FormInput } from "../../components/FormInput";
 import { PrimaryButton } from "../../components/PrimaryButton";
+import { UploadProgressBar } from "../../components/UploadProgressBar";
 import { useTheme } from "../../theme/ThemeContext";
 import { useThemedStyles } from "../../theme/useThemedStyles";
 import { optimizedImageUrl } from "../../utils/image";
@@ -53,6 +54,7 @@ export function ProductFormScreen() {
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [status, setStatus] = useState<ProductStatus>(ProductStatus.ACTIVE);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   // Rendered inline rather than via Alert.alert — on web, Alert.alert can
   // be silently suppressed by some mobile browsers (same fix already
   // applied to RegisterScreen and other forms in this app), which would
@@ -110,6 +112,7 @@ export function ProductFormScreen() {
     photoCount: { fontSize: 13, fontWeight: "700" as const, color: colors.textMuted },
     photoHint: { fontSize: 12, color: colors.textFaint, marginBottom: 10 },
     photoRow: { flexDirection: "row" as const, flexWrap: "wrap" as const, gap: 10 },
+    uploadProgressWrap: { marginTop: 12 },
     thumbnailWrap: { position: "relative" as const },
     thumbnail: { width: 76, height: 76, borderRadius: 10, backgroundColor: colors.placeholderBg },
     removeBadge: {
@@ -164,9 +167,10 @@ export function ProductFormScreen() {
   const handleAddPhoto = async () => {
     if (images.length >= MAX_PRODUCT_IMAGES) return;
     setErrorMessage(null);
+    setUploadProgress(0);
     setUploading(true);
     try {
-      const url = await pickAndUploadImage("product");
+      const url = await pickAndUploadImage("product", setUploadProgress);
       setImages((prev) => [...prev, url]);
     } catch (error) {
       if (!(error instanceof ImagePickerCancelledError)) {
@@ -298,6 +302,11 @@ export function ProductFormScreen() {
               </Pressable>
             )}
           </View>
+          {uploading && (
+            <View style={styles.uploadProgressWrap}>
+              <UploadProgressBar percent={uploadProgress} />
+            </View>
+          )}
         </View>
 
         <View style={styles.card}>
