@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { VendorStatus } from "@ikaystores/shared";
 import { UsersApi, VendorsApi } from "../../api/endpoints";
+import { getErrorMessage } from "../../api/errorMessage";
 import { pickAndUploadImage, ImagePickerCancelledError } from "../../api/upload";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { useAuthStore } from "../../store/authStore";
@@ -124,7 +125,10 @@ export function VendorPendingScreen() {
       saveDocument.mutate({ field, url });
     } catch (error) {
       if (!(error instanceof ImagePickerCancelledError)) {
-        Alert.alert("Upload failed", "Could not upload that photo. Please try again.");
+        Alert.alert(
+          "Upload failed",
+          getErrorMessage(error, "Could not upload that photo. Please try again."),
+        );
       }
     } finally {
       setUploadingField(null);
