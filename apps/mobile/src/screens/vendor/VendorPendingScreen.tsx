@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Image, ScrollView, Text, View } from "react-native";
+import { Image, Platform, ScrollView, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -7,9 +7,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { VendorStatus } from "@ikaystores/shared";
 import { UsersApi, VendorsApi } from "../../api/endpoints";
 import { getErrorMessage } from "../../api/errorMessage";
-import { pickAndUploadImage, ImagePickerCancelledError } from "../../api/upload";
+import { pickAndUploadImage, uploadWebFile, ImagePickerCancelledError } from "../../api/upload";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { UploadProgressBar } from "../../components/UploadProgressBar";
+import { WebFileInputOverlay } from "../../components/WebFileInputOverlay";
 import { useAuthStore } from "../../store/authStore";
 import { secureStorage } from "../../store/secureStorage";
 import { useTheme } from "../../theme/ThemeContext";
@@ -134,6 +135,22 @@ export function VendorPendingScreen() {
     },
   });
 
+  const handleWebFileSelect = async (field: DocumentField, file: File) => {
+    setErrorMessage(null);
+    setUploadProgress(0);
+    setUploadingField(field);
+    try {
+      const url = await uploadWebFile(file, "document", setUploadProgress);
+      saveDocument.mutate({ field, url });
+    } catch (error) {
+      if (!(error instanceof ImagePickerCancelledError)) {
+        setErrorMessage(getErrorMessage(error, "Could not upload that photo. Please try again."));
+      }
+    } finally {
+      setUploadingField(null);
+    }
+  };
+
   const handleUpload = async (field: DocumentField) => {
     setErrorMessage(null);
     setUploadProgress(0);
@@ -251,6 +268,7 @@ export function VendorPendingScreen() {
           uploading={uploadingField === "businessRegistrationDocUrl"}
           progress={uploadProgress}
           onUpload={() => handleUpload("businessRegistrationDocUrl")}
+          onWebSelect={(file) => handleWebFileSelect("businessRegistrationDocUrl", file)}
           colors={theme.colors}
           actionColor={theme.primaryColor}
         />
@@ -261,6 +279,7 @@ export function VendorPendingScreen() {
           uploading={uploadingField === "governmentIdDocUrl"}
           progress={uploadProgress}
           onUpload={() => handleUpload("governmentIdDocUrl")}
+          onWebSelect={(file) => handleWebFileSelect("governmentIdDocUrl", file)}
           colors={theme.colors}
           actionColor={theme.primaryColor}
         />
@@ -278,6 +297,7 @@ function DocumentRow({
   uploading,
   progress,
   onUpload,
+  onWebSelect,
   colors,
   actionColor,
 }: {
@@ -287,6 +307,7 @@ function DocumentRow({
   uploading: boolean;
   progress: number;
   onUpload: () => void;
+  onWebSelect: (file: File) => void;
   colors: ThemeColors;
   actionColor: string;
 }) {
@@ -319,12 +340,19 @@ function DocumentRow({
       <View style={styles.docBody}>
         <Text style={styles.docLabel}>{label}</Text>
         <Text style={styles.docHint}>{hint}</Text>
-        <Text
-          style={{ fontSize: 13, fontWeight: "700", color: actionColor, marginTop: 4 }}
-          onPress={uploading ? undefined : onUpload}
-        >
-          {uploading ? "Uploading…" : url ? "Replace" : "Upload"}
-        </Text>
+        <View style={{ alignSelf: "flex-start", position: "relative" }}>
+          <Text
+            style={{ fontSize: 13, fontWeight: "700", color: actionColor, marginTop: 4 }}
+            onPress={uploading || Platform.OS === "web" ? undefined : onUpload}
+          >
+            {uploading ? "Uploading…" : url ? "Replace" : "Upload"}
+          </Text>
+          <WebFileInputOverlay
+            disabled={uploading}
+            accept="image/jpeg,image/png,application/pdf,image/*"
+            onChange={onWebSelect}
+          />
+        </View>
         {uploading && (
           <View style={styles.docProgress}>
             <UploadProgressBar percent={progress} />

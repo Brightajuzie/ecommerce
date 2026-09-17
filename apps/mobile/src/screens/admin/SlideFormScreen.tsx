@@ -1,15 +1,16 @@
 import { useEffect, useState } from "react";
-import { Image, Pressable, ScrollView, Switch, Text, View } from "react-native";
+import { Image, Platform, Pressable, ScrollView, Switch, Text, View } from "react-native";
 import { useRoute, useNavigation, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { SlidesApi } from "../../api/endpoints";
 import { getErrorMessage } from "../../api/errorMessage";
-import { pickAndUploadImage, ImagePickerCancelledError } from "../../api/upload";
+import { pickAndUploadImage, uploadWebFile, ImagePickerCancelledError } from "../../api/upload";
 import { FormInput } from "../../components/FormInput";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { UploadProgressBar } from "../../components/UploadProgressBar";
+import { WebFileInputOverlay } from "../../components/WebFileInputOverlay";
 import { useTheme } from "../../theme/ThemeContext";
 import { useThemedStyles } from "../../theme/useThemedStyles";
 import type { AdminStackParamList } from "../../navigation/types";
@@ -94,6 +95,22 @@ export function SlideFormScreen() {
     }
   }, [existingSlide]);
 
+  const handleWebFileSelect = async (file: File) => {
+    setErrorMessage(null);
+    setUploadProgress(0);
+    setUploading(true);
+    try {
+      const url = await uploadWebFile(file, "banner", setUploadProgress);
+      setImageUrl(url);
+    } catch (error) {
+      if (!(error instanceof ImagePickerCancelledError)) {
+        setErrorMessage(getErrorMessage(error, "Could not upload that image. Please try again."));
+      }
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleUpload = async () => {
     setErrorMessage(null);
     setUploadProgress(0);
@@ -166,13 +183,14 @@ export function SlideFormScreen() {
         </View>
       )}
       <Pressable
-        style={[styles.uploadButton, uploading && styles.disabled]}
-        onPress={handleUpload}
+        style={[styles.uploadButton, uploading && styles.disabled, { position: "relative", overflow: "hidden" }]}
+        onPress={Platform.OS === "web" ? undefined : handleUpload}
         disabled={uploading}
       >
         <Text style={styles.uploadButtonText}>
           {uploading ? "Uploading…" : imageUrl ? "Replace image" : "Upload image"}
         </Text>
+        <WebFileInputOverlay disabled={uploading} onChange={handleWebFileSelect} />
       </Pressable>
       {uploading && (
         <View style={styles.uploadProgressWrap}>

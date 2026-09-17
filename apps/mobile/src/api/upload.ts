@@ -427,10 +427,103 @@ export async function captureSelfieBase64(): Promise<string> {
  * by axios's real onUploadProgress, not a fake animated placeholder. See
  * components/UploadProgressBar.
  */
+/**
+ * Uploads a Web File (e.g. directly from a native <input type="file"> event).
+ * Compresses large photos down to land safely under the server's 200KB cap
+ * via browser canvas, and posts via FormData without overriding Content-Type
+ * so the browser generates the required multipart boundary.
+ */
+export async function uploadWebFile(
+  file: File,
+  type?: UploadType,
+  onProgress?: (percent: number) => void,
+): Promise<string> {
+  let uploadBlob: Blob = file;
+
+  if (file.size > MAX_UPLOAD_BYTES) {
+    let lastGoodBlob: Blob | null = null;
+    let anySuccess = false;
+
+    for (const { width, quality } of COMPRESSION_STEPS) {
+      try {
+        const res = await compressImageWeb(URL.createObjectURL(file), width, quality);
+        anySuccess = true;
+        const blobResp = await fetch(res.uri);
+        const blob = await blobResp.blob();
+        deleteQuietly(res.uri);
+
+        if (res.size <= MAX_UPLOAD_BYTES) {
+          uploadBlob = blob;
+          lastGoodBlob = null;
+          break;
+        }
+        lastGoodBlob = blob;
+      } catch (error) {
+        if (__DEV__) {
+          console.warn(`Compression step width=${width} failed`, error);
+        }
+      }
+    }
+
+    if (lastGoodBlob) {
+      uploadBlob = lastGoodBlob;
+    } else if (!anySuccess) {
+      throw new Error(
+        "This device couldn't process that photo. Try a smaller photo, or free up some storage and try again.",
+      );
+    }
+  }
+
+  const rawName = file.name || `photo-${Date.now()}.jpg`;
+  const name = rawName.replace(/\.[^.]+$/, "") + ".jpg";
+
+  const formFile = new File([uploadBlob], name, { type: "image/jpeg" });
+  const formData = new FormData();
+  formData.append("file", formFile);
+  if (type) {
+    formData.append("type", type);
+  }
+
+  const response = await apiClient.post<UploadResultDto>("/uploads/image", formData, {
+    onUploadProgress: onProgress
+      ? (event) => {
+          if (event.total) {
+            onProgress(Math.round((event.loaded / event.total) * 100));
+          }
+        }
+      : undefined,
+  });
+
+  return response.data.url;
+}
+
+/**
+ * Opens the system image picker, compresses the selected photo down to fit
+ * the server's upload cap, and uploads it — returning the hosted (enhanced)
+ * image URL. Throws ImagePickerCancelledError if the user backs out without
+ * picking anything.
+ *
+ * `type: "product"` gets UploadsService's ecommerce-standard treatment
+ * (square pad on a white background, on top of the usual improve/sharpen)
+ * — leave it unset for anything that shouldn't be forced into a square
+ * white frame: KYC documents, banner slides, the store logo.
+ *
+ * `onProgress`, if given, is called with 0-100 as the actual HTTP upload
+ * (not the pick/compress steps before it, which have no comparable
+ * byte-level progress to report and are normally fast) advances — driven
+ * by axios's real onUploadProgress, not a fake animated placeholder. See
+ * components/UploadProgressBar.
+ */
 export async function pickAndUploadImage(
   type?: UploadType,
   onProgress?: (percent: number) => void,
 ): Promise<string> {
+  if (Platform.OS === "web") {
+    const file = await pickFileWeb();
+    if (!file) throw new ImagePickerCancelledError();
+    return uploadWebFile(file as unknown as File, type, onProgress);
+  }
+
   const asset = await pickImage();
   const { uri, mimeType } = await compressImageUnderLimit(asset.uri);
   const rawName = asset.fileName ?? `photo-${Date.now()}.jpg`;
@@ -444,14 +537,8 @@ export async function pickAndUploadImage(
     formData.append("type", type);
   }
 
-  // On web, explicitly setting "Content-Type": "multipart/form-data" overrides
-  // the browser's automatic boundary parameter generation (stripping the
-  // boundary=... part), which causes Multer to reject the request with
-  // "Multipart: Boundary not found" or "No file was uploaded". Leaving it
-  // undefined on web lets Axios and the browser set the proper Content-Type
-  // with multipart boundary.
   const response = await apiClient.post<UploadResultDto>("/uploads/image", formData, {
-    headers: Platform.OS === "web" ? undefined : { "Content-Type": "multipart/form-data" },
+    headers: { "Content-Type": "multipart/form-data" },
     onUploadProgress: onProgress
       ? (event) => {
           if (event.total) {

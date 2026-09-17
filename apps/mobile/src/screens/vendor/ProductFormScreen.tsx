@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, Image, Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, Image, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { useRoute, useNavigation, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -7,10 +7,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { ProductStatus } from "@ikaystores/shared";
 import { ProductsApi, CategoriesApi } from "../../api/endpoints";
 import { getErrorMessage } from "../../api/errorMessage";
-import { pickAndUploadImage, ImagePickerCancelledError } from "../../api/upload";
+import { pickAndUploadImage, uploadWebFile, ImagePickerCancelledError } from "../../api/upload";
 import { FormInput } from "../../components/FormInput";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { UploadProgressBar } from "../../components/UploadProgressBar";
+import { WebFileInputOverlay } from "../../components/WebFileInputOverlay";
 import { useTheme } from "../../theme/ThemeContext";
 import { useThemedStyles } from "../../theme/useThemedStyles";
 import { optimizedImageUrl } from "../../utils/image";
@@ -138,6 +139,8 @@ export function ProductFormScreen() {
       justifyContent: "center" as const,
       gap: 4,
       padding: 4,
+      position: "relative" as const,
+      overflow: "hidden" as const,
     },
     addPhotoText: { fontSize: 10, color: colors.textMuted, textAlign: "center" as const, fontWeight: "600" as const },
     disabled: { opacity: 0.5 },
@@ -163,6 +166,23 @@ export function ProductFormScreen() {
       setStatus(p.status);
     }
   }, [productQuery.data]);
+
+  const handleWebFileSelect = async (file: File) => {
+    if (images.length >= MAX_PRODUCT_IMAGES) return;
+    setErrorMessage(null);
+    setUploadProgress(0);
+    setUploading(true);
+    try {
+      const url = await uploadWebFile(file, "product", setUploadProgress);
+      setImages((prev) => [...prev, url]);
+    } catch (error) {
+      if (!(error instanceof ImagePickerCancelledError)) {
+        setErrorMessage(getErrorMessage(error, "Could not upload that photo. Please try again."));
+      }
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleAddPhoto = async () => {
     if (images.length >= MAX_PRODUCT_IMAGES) return;
@@ -294,11 +314,12 @@ export function ProductFormScreen() {
             {images.length < MAX_PRODUCT_IMAGES && (
               <Pressable
                 style={[styles.addPhotoButton, uploading && styles.disabled]}
-                onPress={handleAddPhoto}
+                onPress={Platform.OS === "web" ? undefined : handleAddPhoto}
                 disabled={uploading}
               >
                 <Ionicons name="camera" size={20} color={theme.colors.textMuted} />
                 <Text style={styles.addPhotoText}>{uploading ? "Uploading…" : "Add photo"}</Text>
+                <WebFileInputOverlay disabled={uploading} onChange={handleWebFileSelect} />
               </Pressable>
             )}
           </View>

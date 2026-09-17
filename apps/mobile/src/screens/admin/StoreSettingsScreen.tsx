@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Image, Pressable, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Image, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { SettingsApi } from "../../api/endpoints";
 import { getErrorMessage } from "../../api/errorMessage";
-import { pickAndUploadImage, ImagePickerCancelledError } from "../../api/upload";
+import { pickAndUploadImage, uploadWebFile, ImagePickerCancelledError } from "../../api/upload";
 import { FormInput } from "../../components/FormInput";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { UploadProgressBar } from "../../components/UploadProgressBar";
+import { WebFileInputOverlay } from "../../components/WebFileInputOverlay";
 import { useTheme } from "../../theme/ThemeContext";
 import { useThemedStyles } from "../../theme/useThemedStyles";
 
@@ -90,6 +91,22 @@ export function StoreSettingsScreen() {
     }
   }, [settingsQuery.data]);
 
+  const handleWebLogoSelect = async (file: File) => {
+    setErrorMessage(null);
+    setUploadProgress(0);
+    setUploadingLogo(true);
+    try {
+      const url = await uploadWebFile(file, "logo", setUploadProgress);
+      setLogoUrl(url);
+    } catch (error) {
+      if (!(error instanceof ImagePickerCancelledError)) {
+        setErrorMessage(getErrorMessage(error, "Could not upload the logo. Please try again."));
+      }
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
   const handleUploadLogo = async () => {
     setErrorMessage(null);
     setUploadProgress(0);
@@ -158,13 +175,14 @@ export function StoreSettingsScreen() {
           </View>
         )}
         <Pressable
-          style={[styles.uploadButton, uploadingLogo && styles.disabled]}
-          onPress={handleUploadLogo}
+          style={[styles.uploadButton, uploadingLogo && styles.disabled, { position: "relative", overflow: "hidden" }]}
+          onPress={Platform.OS === "web" ? undefined : handleUploadLogo}
           disabled={uploadingLogo}
         >
           <Text style={styles.uploadButtonText}>
             {uploadingLogo ? "Uploading…" : logoUrl ? "Replace logo" : "Upload logo"}
           </Text>
+          <WebFileInputOverlay disabled={uploadingLogo} onChange={handleWebLogoSelect} />
         </Pressable>
       </View>
       {uploadingLogo && (
