@@ -14,7 +14,7 @@ import { MulterError } from "multer";
 // 500 "Internal server error" below, giving no hint that the fix is just
 // "pick a smaller file" rather than a real server fault.
 const MULTER_ERROR_MESSAGES: Partial<Record<MulterError["code"], string>> = {
-  LIMIT_FILE_SIZE: "That file is too large — the limit is 150KB.",
+  LIMIT_FILE_SIZE: "That file is too large — the limit is 200KB.",
   LIMIT_UNEXPECTED_FILE: "Unexpected file field.",
 };
 

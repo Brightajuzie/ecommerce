@@ -121,7 +121,7 @@ export function VendorPendingScreen() {
   const handleUpload = async (field: DocumentField) => {
     setUploadingField(field);
     try {
-      const url = await pickAndUploadImage();
+      const url = await pickAndUploadImage("document");
       saveDocument.mutate({ field, url });
     } catch (error) {
       if (!(error instanceof ImagePickerCancelledError)) {

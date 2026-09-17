@@ -47,9 +47,13 @@ export class UploadsService {
     return true;
   }
 
-  async uploadImage(buffer: Buffer, mimetype: string): Promise<{ url: string }> {
+  async uploadImage(
+    buffer: Buffer,
+    mimetype: string,
+    type?: string,
+  ): Promise<{ url: string }> {
     if (await this.isCloudinaryConfigured()) {
-      return this.uploadToCloudinary(buffer, mimetype);
+      return this.uploadToCloudinary(buffer, mimetype, type);
     }
 
     // Local-disk fallback is dev-only. Most hosts (this app runs on Render)
@@ -73,27 +77,51 @@ export class UploadsService {
     return this.saveLocally(buffer, mimetype);
   }
 
-  private uploadToCloudinary(buffer: Buffer, mimetype: string): Promise<{ url: string }> {
+  private uploadToCloudinary(
+    buffer: Buffer,
+    mimetype: string,
+    type?: string,
+  ): Promise<{ url: string }> {
     // A PDF (business registration certs, government IDs sometimes come as
     // one) isn't a photo — the improve/sharpen/quality effects below are
     // meaningless for it, and resource_type "image" would try to rasterize
     // just its first page. "raw" stores it byte-for-byte instead.
     const isPdf = mimetype === "application/pdf";
+    // Only a product photo gets the square-pad-on-white treatment below —
+    // forcing that same square white-background crop onto a KYC document,
+    // a homepage banner slide, or the store logo would just look broken,
+    // so every other caller of POST /uploads/image (which don't pass
+    // type: "product") keeps the plain improve/sharpen/quality pipeline
+    // that was already here.
+    const isProductPhoto = type === "product";
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder: "ikaystores",
           resource_type: isPdf ? "raw" : "image",
           ...(!isPdf && {
-            transformation: [
-              { effect: "improve" },
-              // Product/document photos are usually phone-camera shots viewed
-              // at a fraction of their native size — a mild sharpen keeps
-              // edges/text crisp after that downscale instead of looking soft.
-              { effect: "sharpen" },
-              { quality: "auto:best", fetch_format: "auto" },
-              { width: 2000, height: 2000, crop: "limit" },
-            ],
+            transformation: isProductPhoto
+              ? [
+                  { effect: "improve" },
+                  { effect: "sharpen" },
+                  // Standard ecommerce product-listing presentation: a
+                  // consistent square frame with the product padded onto a
+                  // plain white background, rather than whatever aspect
+                  // ratio/crop the vendor's original phone photo happened
+                  // to have — this is what makes a grid of product photos
+                  // from different vendors look uniform side by side.
+                  { width: 1200, height: 1200, crop: "pad", background: "white" },
+                  { quality: "auto:best", fetch_format: "auto" },
+                ]
+              : [
+                  { effect: "improve" },
+                  // Product/document photos are usually phone-camera shots viewed
+                  // at a fraction of their native size — a mild sharpen keeps
+                  // edges/text crisp after that downscale instead of looking soft.
+                  { effect: "sharpen" },
+                  { quality: "auto:best", fetch_format: "auto" },
+                  { width: 2000, height: 2000, crop: "limit" },
+                ],
           }),
         },
         (error, result) => {

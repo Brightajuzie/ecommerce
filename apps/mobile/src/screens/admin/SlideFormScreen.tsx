@@ -76,7 +76,7 @@ export function SlideFormScreen() {
   const handleUpload = async () => {
     setUploading(true);
     try {
-      const url = await pickAndUploadImage();
+      const url = await pickAndUploadImage("banner");
       setImageUrl(url);
     } catch (error) {
       if (!(error instanceof ImagePickerCancelledError)) {

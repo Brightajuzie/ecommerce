@@ -15,7 +15,9 @@ export class ImagePickerCancelledError extends Error {}
 // MAX_FILE_SIZE_BYTES — that's the hard server-side cap (multer rejects
 // anything over it before this app's code even runs), this is the client
 // doing its best to land safely under it before ever sending the request.
-const MAX_UPLOAD_BYTES = 150 * 1024;
+const MAX_UPLOAD_BYTES = 200 * 1024;
+
+export type UploadType = "product" | "document" | "banner" | "logo";
 
 async function pickImage(): Promise<ImagePicker.ImagePickerAsset> {
   const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -51,12 +53,12 @@ async function getFileSize(uri: string): Promise<number> {
 // — re-compressing an already-compressed JPEG compounds quality loss for
 // no benefit, since we're not reusing any of the earlier work anyway.
 const COMPRESSION_STEPS: { width: number; quality: number }[] = [
-  { width: 1600, quality: 0.7 },
-  { width: 1200, quality: 0.6 },
-  { width: 900, quality: 0.5 },
-  { width: 700, quality: 0.4 },
-  { width: 500, quality: 0.35 },
-  { width: 350, quality: 0.3 },
+  { width: 1600, quality: 0.75 },
+  { width: 1300, quality: 0.65 },
+  { width: 1000, quality: 0.55 },
+  { width: 800, quality: 0.45 },
+  { width: 600, quality: 0.4 },
+  { width: 450, quality: 0.35 },
 ];
 
 /**
@@ -65,7 +67,7 @@ const COMPRESSION_STEPS: { width: number; quality: number }[] = [
  * compression ratio, not pixel dimensions — a modern phone photo run
  * through that alone is routinely several MB, several times over
  * MAX_UPLOAD_BYTES, so without this step most real-world picks were
- * failing outright against uploads.controller.ts's 150KB limit. Skips
+ * failing outright against uploads.controller.ts's 200KB limit. Skips
  * entirely if the original is already small enough (e.g. a screenshot or
  * an already-compressed image), to avoid a pointless quality hit.
  */
@@ -167,8 +169,13 @@ export async function captureSelfieBase64(): Promise<string> {
  * the server's upload cap, and uploads it — returning the hosted (enhanced)
  * image URL. Throws ImagePickerCancelledError if the user backs out without
  * picking anything.
+ *
+ * `type: "product"` gets UploadsService's ecommerce-standard treatment
+ * (square pad on a white background, on top of the usual improve/sharpen)
+ * — leave it unset for anything that shouldn't be forced into a square
+ * white frame: KYC documents, banner slides, the store logo.
  */
-export async function pickAndUploadImage(): Promise<string> {
+export async function pickAndUploadImage(type?: UploadType): Promise<string> {
   const asset = await pickImage();
   const { uri, mimeType } = await compressImageUnderLimit(asset.uri);
   const name = asset.fileName ?? `photo-${Date.now()}.jpg`;
@@ -177,6 +184,9 @@ export async function pickAndUploadImage(): Promise<string> {
   // axios/XHR sets the multipart boundary header automatically for FormData bodies.
   const formData = new FormData();
   formData.append("file", await uriToFormFile(uri, name, mimeType));
+  if (type) {
+    formData.append("type", type);
+  }
 
   const response = await apiClient.post<UploadResultDto>("/uploads/image", formData, {
     headers: { "Content-Type": "multipart/form-data" },
