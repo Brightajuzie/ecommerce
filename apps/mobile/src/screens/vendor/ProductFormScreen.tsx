@@ -146,7 +146,7 @@ export function ProductFormScreen() {
     if (images.length >= MAX_PRODUCT_IMAGES) return;
     setUploading(true);
     try {
-      const url = await pickAndUploadImage();
+      const url = await pickAndUploadImage("product");
       setImages((prev) => [...prev, url]);
     } catch (error) {
       if (!(error instanceof ImagePickerCancelledError)) {

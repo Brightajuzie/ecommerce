@@ -2,6 +2,7 @@ import { join, basename } from "node:path";
 import { existsSync } from "node:fs";
 import {
   BadRequestException,
+  Body,
   Controller,
   Get,
   NotFoundException,
@@ -18,7 +19,10 @@ import type { Response } from "express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { UploadsService, LOCAL_UPLOAD_DIR } from "./uploads.service";
 
-const MAX_FILE_SIZE_BYTES = 150 * 1024;
+// Kept in sync with MAX_UPLOAD_BYTES in apps/mobile/src/api/upload.ts,
+// which compresses down to fit this before ever sending the request — and
+// with the "That file is too large" message in all-exceptions.filter.ts.
+const MAX_FILE_SIZE_BYTES = 200 * 1024;
 const ALLOWED_MIME_TYPES = new Set([
   "image/jpeg",
   "image/png",
@@ -39,7 +43,15 @@ export class UploadsController {
       limits: { fileSize: MAX_FILE_SIZE_BYTES },
     }),
   )
-  async uploadImage(@UploadedFile() file: Express.Multer.File) {
+  async uploadImage(
+    @UploadedFile() file: Express.Multer.File,
+    // Optional multipart field, not validated by a DTO/ValidationPipe (this
+    // route only ever receives multipart form-data, which Nest doesn't run
+    // through the global ValidationPipe the way a JSON body is) — an
+    // unrecognized value just falls through to the default (non-product)
+    // transformation in UploadsService, so there's no unsafe case here.
+    @Body("type") type?: string,
+  ) {
     if (!file) {
       throw new BadRequestException("No file was uploaded");
     }
@@ -48,7 +60,7 @@ export class UploadsController {
         "Only JPEG, PNG, or PDF files are allowed",
       );
     }
-    return this.uploadsService.uploadImage(file.buffer, file.mimetype);
+    return this.uploadsService.uploadImage(file.buffer, file.mimetype, type);
   }
 
   // Public (no auth) — serves the local-disk fallback used when Cloudinary

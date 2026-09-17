@@ -71,7 +71,7 @@ export function StoreSettingsScreen() {
   const handleUploadLogo = async () => {
     setUploadingLogo(true);
     try {
-      const url = await pickAndUploadImage();
+      const url = await pickAndUploadImage("logo");
       setLogoUrl(url);
     } catch (error) {
       if (!(error instanceof ImagePickerCancelledError)) {
