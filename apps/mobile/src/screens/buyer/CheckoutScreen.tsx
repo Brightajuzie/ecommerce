@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, Text, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { ActivityIndicator, FlatList, Platform, Pressable, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -13,6 +13,7 @@ import { FormInput } from "../../components/FormInput";
 import { useAuthStore } from "../../store/authStore";
 import { useTheme } from "../../theme/ThemeContext";
 import { useThemedStyles } from "../../theme/useThemedStyles";
+import { openBlankTab, redirectTab } from "../../utils/payment";
 import type { BuyerStackParamList } from "../../navigation/types";
 
 const MAX_CONTENT_WIDTH = 700;
@@ -135,6 +136,11 @@ export function CheckoutScreen() {
     },
   });
 
+  // Opened synchronously in handlePayNow, inside the button's own click —
+  // see utils/payment.ts for why it can't wait until placeOrder's (async)
+  // onSuccess.
+  const pendingTabRef = useRef<ReturnType<typeof openBlankTab>>(null);
+
   const placeOrder = useMutation({
     mutationFn: async () => {
       if (!selectedAddressId) throw new Error("Select a delivery address first.");
@@ -144,7 +150,14 @@ export function CheckoutScreen() {
     },
     onSuccess: ({ order, payment }) => {
       queryClient.invalidateQueries({ queryKey: ["cart"] });
-      if (payment.checkoutUrl) {
+      if (payment.checkoutUrl && Platform.OS === "web") {
+        // See utils/payment.ts — react-native-webview has no web build at
+        // all, so a real new tab (not an in-app WebView) is the only option
+        // there; OrderDetailScreen's own polling picks up PAID once the
+        // gateway's webhook lands, whichever tab the buyer finishes in.
+        redirectTab(pendingTabRef.current, payment.checkoutUrl);
+        navigation.replace("OrderDetail", { orderId: order.id });
+      } else if (payment.checkoutUrl) {
         navigation.navigate("PaymentWebView", { checkoutUrl: payment.checkoutUrl, orderId: order.id });
       } else {
         // Pay on delivery — the order's already confirmed server-side
@@ -153,6 +166,16 @@ export function CheckoutScreen() {
       }
     },
   });
+
+  const handlePayNow = () => {
+    // Only Flutterwave/Opay ever produce a checkoutUrl to redirect this tab
+    // to — opening one for COD would just leave a permanently-blank tab
+    // sitting there, since redirectTab never runs when there's no URL.
+    if (Platform.OS === "web" && provider !== PaymentProvider.COD) {
+      pendingTabRef.current = openBlankTab();
+    }
+    placeOrder.mutate();
+  };
 
   // Rendered inline rather than via Alert.alert (see RegisterScreen for the
   // same fix and why): on web, Alert.alert can be silently suppressed by
@@ -372,7 +395,7 @@ export function CheckoutScreen() {
         ) : (
           <PrimaryButton
             title="Pay now"
-            onPress={() => placeOrder.mutate()}
+            onPress={handlePayNow}
             disabled={!selectedAddressId}
           />
         )}
