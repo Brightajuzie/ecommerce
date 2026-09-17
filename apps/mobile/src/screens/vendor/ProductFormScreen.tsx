@@ -53,10 +53,29 @@ export function ProductFormScreen() {
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [status, setStatus] = useState<ProductStatus>(ProductStatus.ACTIVE);
   const [uploading, setUploading] = useState(false);
-  const styles = useThemedStyles((colors) => ({
+  // Rendered inline rather than via Alert.alert — on web, Alert.alert can
+  // be silently suppressed by some mobile browsers (same fix already
+  // applied to RegisterScreen and other forms in this app), which would
+  // otherwise leave a failed photo upload completely invisible: the
+  // upload genuinely fails, but nothing on screen ever shows it,
+  // indistinguishable from tapping "Add photo" just doing nothing.
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const styles = useThemedStyles((colors, t) => ({
     container: { flex: 1, backgroundColor: colors.background },
     content: { paddingTop: 60, paddingBottom: 32 },
     centeredColumn: { width: "100%" as const, maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" as const, paddingHorizontal: 20 },
+    errorBanner: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 8,
+      backgroundColor: t.scheme === "dark" ? "#3A1518" : "#FEF2F2",
+      borderWidth: 1,
+      borderColor: t.scheme === "dark" ? "#5B2226" : "#FECACA",
+      borderRadius: 8,
+      padding: 12,
+      marginBottom: 14,
+    },
+    errorBannerText: { flex: 1, color: t.scheme === "dark" ? "#FCA5A5" : "#B91C1C", fontSize: 13, fontWeight: "600" as const },
     headerRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: 10, marginBottom: 16 },
     backButton: {
       width: 36,
@@ -144,16 +163,14 @@ export function ProductFormScreen() {
 
   const handleAddPhoto = async () => {
     if (images.length >= MAX_PRODUCT_IMAGES) return;
+    setErrorMessage(null);
     setUploading(true);
     try {
       const url = await pickAndUploadImage("product");
       setImages((prev) => [...prev, url]);
     } catch (error) {
       if (!(error instanceof ImagePickerCancelledError)) {
-        Alert.alert(
-          "Upload failed",
-          getErrorMessage(error, "Could not upload that photo. Please try again."),
-        );
+        setErrorMessage(getErrorMessage(error, "Could not upload that photo. Please try again."));
       }
     } finally {
       setUploading(false);
@@ -186,7 +203,7 @@ export function ProductFormScreen() {
       navigation.goBack();
     },
     onError: (error: any) => {
-      Alert.alert("Could not save product", error?.response?.data?.message ?? "Please try again.");
+      setErrorMessage(getErrorMessage(error, "Could not save product. Please try again."));
     },
   });
 
@@ -208,6 +225,13 @@ export function ProductFormScreen() {
           </Pressable>
           <Text style={styles.title}>{productId ? "Edit product" : "New product"}</Text>
         </View>
+
+        {errorMessage && (
+          <View style={styles.errorBanner}>
+            <Ionicons name="alert-circle" size={18} color={theme.colors.danger} />
+            <Text style={styles.errorBannerText}>{errorMessage}</Text>
+          </View>
+        )}
 
         <View style={styles.card}>
           <FormInput label="Title" value={title} onChangeText={setTitle} />

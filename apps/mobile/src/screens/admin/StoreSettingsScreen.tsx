@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, Text, View } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Ionicons } from "@expo/vector-icons";
 import { SettingsApi } from "../../api/endpoints";
+import { getErrorMessage } from "../../api/errorMessage";
 import { pickAndUploadImage, ImagePickerCancelledError } from "../../api/upload";
 import { FormInput } from "../../components/FormInput";
 import { PrimaryButton } from "../../components/PrimaryButton";
@@ -25,11 +27,23 @@ export function StoreSettingsScreen() {
   const queryClient = useQueryClient();
   const theme = useTheme();
   const settingsQuery = useQuery({ queryKey: ["settings"], queryFn: SettingsApi.get });
-  const styles = useThemedStyles((colors) => ({
+  const styles = useThemedStyles((colors, t) => ({
     container: { flex: 1, backgroundColor: colors.surface },
     center: { flex: 1, alignItems: "center" as const, justifyContent: "center" as const },
     content: { padding: 20, paddingTop: 60, paddingBottom: 40 },
     title: { fontSize: 28, fontWeight: "800" as const, color: colors.text, marginBottom: 16 },
+    errorBanner: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 8,
+      backgroundColor: t.scheme === "dark" ? "#3A1518" : "#FEF2F2",
+      borderWidth: 1,
+      borderColor: t.scheme === "dark" ? "#5B2226" : "#FECACA",
+      borderRadius: 8,
+      padding: 12,
+      marginBottom: 16,
+    },
+    errorBannerText: { flex: 1, color: t.scheme === "dark" ? "#FCA5A5" : "#B91C1C", fontSize: 13, fontWeight: "600" as const },
     sectionLabel: { fontSize: 14, fontWeight: "700" as const, color: colors.text, marginBottom: 8, marginTop: 4 },
     logoRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: 16, marginBottom: 20 },
     logoPreview: { width: 72, height: 72, borderRadius: 8, backgroundColor: colors.border },
@@ -57,6 +71,11 @@ export function StoreSettingsScreen() {
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [referralBonusAmount, setReferralBonusAmount] = useState("500");
   const [deliveryFee, setDeliveryFee] = useState("0");
+  // Rendered inline rather than via Alert.alert — see ProductFormScreen for
+  // the same fix and why: Alert.alert can be silently suppressed on some
+  // mobile web browsers, which would otherwise leave a failed logo upload
+  // with no visible feedback at all.
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (settingsQuery.data) {
@@ -69,13 +88,14 @@ export function StoreSettingsScreen() {
   }, [settingsQuery.data]);
 
   const handleUploadLogo = async () => {
+    setErrorMessage(null);
     setUploadingLogo(true);
     try {
       const url = await pickAndUploadImage("logo");
       setLogoUrl(url);
     } catch (error) {
       if (!(error instanceof ImagePickerCancelledError)) {
-        Alert.alert("Upload failed", "Could not upload the logo. Please try again.");
+        setErrorMessage(getErrorMessage(error, "Could not upload the logo. Please try again."));
       }
     } finally {
       setUploadingLogo(false);
@@ -96,7 +116,7 @@ export function StoreSettingsScreen() {
       Alert.alert("Saved", "Storefront settings updated.");
     },
     onError: (error: any) => {
-      Alert.alert("Could not save", error?.response?.data?.message ?? "Please try again.");
+      setErrorMessage(getErrorMessage(error, "Could not save. Please try again."));
     },
   });
 
@@ -116,6 +136,13 @@ export function StoreSettingsScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Store settings</Text>
+
+      {errorMessage && (
+        <View style={styles.errorBanner}>
+          <Ionicons name="alert-circle" size={18} color={theme.colors.danger} />
+          <Text style={styles.errorBannerText}>{errorMessage}</Text>
+        </View>
+      )}
 
       <Text style={styles.sectionLabel}>Logo</Text>
       <View style={styles.logoRow}>
