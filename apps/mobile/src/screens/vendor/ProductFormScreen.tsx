@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { ProductStatus } from "@ikaystores/shared";
 import { ProductsApi, CategoriesApi } from "../../api/endpoints";
+import { getErrorMessage } from "../../api/errorMessage";
 import { pickAndUploadImage, ImagePickerCancelledError } from "../../api/upload";
 import { FormInput } from "../../components/FormInput";
 import { PrimaryButton } from "../../components/PrimaryButton";
@@ -149,7 +150,10 @@ export function ProductFormScreen() {
       setImages((prev) => [...prev, url]);
     } catch (error) {
       if (!(error instanceof ImagePickerCancelledError)) {
-        Alert.alert("Upload failed", "Could not upload that photo. Please try again.");
+        Alert.alert(
+          "Upload failed",
+          getErrorMessage(error, "Could not upload that photo. Please try again."),
+        );
       }
     } finally {
       setUploading(false);
