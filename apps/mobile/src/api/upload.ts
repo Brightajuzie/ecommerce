@@ -19,7 +19,89 @@ const MAX_UPLOAD_BYTES = 200 * 1024;
 
 export type UploadType = "product" | "document" | "banner" | "logo";
 
-async function pickImage(): Promise<ImagePicker.ImagePickerAsset> {
+type WebFile = { name: string; type: string };
+type WebDoc = {
+  createElement: (tag: string) => {
+    style: { display: string };
+    setAttribute: (name: string, value: string) => void;
+    click: () => void;
+    addEventListener: (event: string, handler: () => void) => void;
+    files: WebFile[] | null;
+  };
+  body: { appendChild: (n: unknown) => void; removeChild: (n: unknown) => void };
+};
+
+// Bypasses expo-image-picker's own web implementation on purpose.
+// ExponentImagePicker.web.ts opens its hidden <input type="file"> via
+// `input.dispatchEvent(new MouseEvent("click"))` — a *synthetic*,
+// untrusted click (event.isTrusted is false). Desktop browsers are often
+// lenient enough to still honor that for opening a file picker, but mobile
+// Safari and many Android WebViews require a genuinely trusted click and
+// silently ignore a synthetic one — no error thrown, the picker just never
+// opens. Calling the real element.click() method here, synchronously
+// within the same tap that triggered pickImage/captureSelfieBase64, works
+// everywhere including mobile web. `capture` (e.g. "user" for the front
+// camera) is only a hint mobile browsers may honor to open the camera
+// directly instead of the gallery; desktop ignores it and shows a normal
+// file picker, same fallback expo-image-picker's own capture handling has.
+function pickFileWeb(capture?: string): Promise<WebFile | null> {
+  const doc = (globalThis as unknown as { document: WebDoc }).document;
+  return new Promise((resolve, reject) => {
+    const input = doc.createElement("input");
+    input.setAttribute("type", "file");
+    input.setAttribute("accept", "image/*");
+    input.style.display = "none";
+    if (capture) input.setAttribute("capture", capture);
+    input.addEventListener("change", () => {
+      resolve(input.files?.[0] ?? null);
+      doc.body.removeChild(input);
+    });
+    input.addEventListener("cancel", () => {
+      resolve(null);
+      doc.body.removeChild(input);
+    });
+    doc.body.appendChild(input);
+    try {
+      input.click();
+    } catch (error) {
+      doc.body.removeChild(input);
+      reject(error);
+    }
+  });
+}
+
+function webFileUrl(file: unknown): string {
+  return (globalThis as unknown as { URL: { createObjectURL: (f: unknown) => string } }).URL
+    .createObjectURL(file);
+}
+
+function webFileToBase64(file: unknown): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const FileReaderCtor = (globalThis as unknown as { FileReader: new () => {
+      onload: () => void;
+      onerror: () => void;
+      readAsDataURL: (f: unknown) => void;
+      result: string;
+    } }).FileReader;
+    const reader = new FileReaderCtor();
+    reader.onload = () => {
+      // Strip the "data:image/jpeg;base64," prefix — callers want the raw
+      // base64 payload, matching what expo-image-picker's own base64
+      // option returns natively.
+      resolve(reader.result.split(",")[1] ?? "");
+    };
+    reader.onerror = () => reject(new Error("Couldn't read that photo. Please try again."));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function pickImage(): Promise<{ uri: string; fileName?: string | null }> {
+  if (Platform.OS === "web") {
+    const file = await pickFileWeb();
+    if (!file) throw new ImagePickerCancelledError();
+    return { uri: webFileUrl(file), fileName: file.name };
+  }
+
   const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!permission.granted) {
     throw new Error("Photo library permission is required to pick an image.");
@@ -180,23 +262,23 @@ async function uriToFormFile(uri: string, name: string, type: string): Promise<B
  * pickAndUploadImage below. Throws ImagePickerCancelledError if the user
  * backs out without taking a photo.
  *
- * Per https://docs.expo.dev/versions/v57.0.0/sdk/imagepicker/, on web
- * launchCameraAsync "must be called immediately in a user interaction like
- * a button press, otherwise the browser will block the request without a
- * warning" — and requestCameraPermissionsAsync "does nothing on web"
- * anyway, since it's the browser's own getUserMedia permission prompt that
- * gates access there, not Expo's. Awaiting that no-op call first (as this
- * used to) burns the click's transient user-activation window, so the
- * camera silently never opens. Native platforms don't have that
- * restriction, and there the explicit request still surfaces a clearer
- * error than a bare camera-launch failure would.
+ * On web, uses the same pickFileWeb helper as pickImage (with a "user"
+ * capture hint for the front camera) rather than
+ * ImagePicker.launchCameraAsync — see pickFileWeb's own comment for why:
+ * expo-image-picker's web implementation opens its file input with a
+ * synthetic (untrusted) click event, which mobile Safari/Chrome silently
+ * ignore, so the camera/picker never opened there at all.
  */
 export async function captureSelfieBase64(): Promise<string> {
-  if (Platform.OS !== "web") {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      throw new Error("Camera permission is required for the liveness check.");
-    }
+  if (Platform.OS === "web") {
+    const file = await pickFileWeb("user");
+    if (!file) throw new ImagePickerCancelledError();
+    return webFileToBase64(file);
+  }
+
+  const permission = await ImagePicker.requestCameraPermissionsAsync();
+  if (!permission.granted) {
+    throw new Error("Camera permission is required for the liveness check.");
   }
 
   const result = await ImagePicker.launchCameraAsync({
