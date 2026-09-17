@@ -7,7 +7,22 @@ import {
   Text,
   View,
 } from "react-native";
-import * as Google from "expo-auth-session/providers/google";
+// Capital "Google" — the installed package's actual file is
+// providers/Google.js, not providers/google.js. Windows/macOS's default
+// case-insensitive filesystem resolves the lowercase path fine in local
+// dev, which is exactly why this was invisible here; a case-sensitive
+// filesystem (Linux — what EAS's cloud build runners and this project's
+// own CI both use) fails to resolve it at all, breaking the production
+// bundle outright.
+import * as Google from "expo-auth-session/providers/Google";
+import * as WebBrowser from "expo-web-browser";
+
+// Required by expo-auth-session on web — without it, the popup opened by
+// promptAsync() never signals back to the tab that opened it once Google
+// redirects, so the auth session hangs instead of resolving. Module-scope
+// (not inside a component) so it registers as early as possible, before
+// any prompt could plausibly be in flight. A no-op on native.
+WebBrowser.maybeCompleteAuthSession();
 import Constants from "expo-constants";
 import { UserRole } from "@ikaystores/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";

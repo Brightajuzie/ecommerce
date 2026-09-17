@@ -227,12 +227,24 @@ export class AuthService {
       throw new UnauthorizedException("Google account email is not verified");
     }
 
+    // The token's `aud` claim is whichever OAuth client actually requested
+    // it — the mobile app hands expo-auth-session all three (web/Android/
+    // iOS) client IDs at once (see GoogleSignInButton.tsx) and it picks the
+    // one for the current platform, so a token minted from the Android app
+    // legitimately carries the Android client ID as `aud`, never the web
+    // one. Checking against only googleClientId (web) would reject every
+    // real native sign-in outright — valid if it matches ANY configured
+    // platform's client ID.
     const paymentSettings = await this.prisma.platformPaymentSettings.findFirst({
-      select: { googleClientId: true },
+      select: { googleClientId: true, googleAndroidClientId: true, googleIosClientId: true },
     });
-    const expectedAud =
-      paymentSettings?.googleClientId || this.configService.get<string>("GOOGLE_CLIENT_ID");
-    if (expectedAud && tokenInfo.aud !== expectedAud) {
+    const expectedAudiences = [
+      paymentSettings?.googleClientId || this.configService.get<string>("GOOGLE_CLIENT_ID"),
+      paymentSettings?.googleAndroidClientId ||
+        this.configService.get<string>("GOOGLE_ANDROID_CLIENT_ID"),
+      paymentSettings?.googleIosClientId || this.configService.get<string>("GOOGLE_IOS_CLIENT_ID"),
+    ].filter((aud): aud is string => Boolean(aud));
+    if (expectedAudiences.length > 0 && !expectedAudiences.includes(tokenInfo.aud)) {
       throw new UnauthorizedException("Google token audience mismatch");
     }
 
