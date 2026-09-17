@@ -310,8 +310,17 @@ export async function captureSelfieBase64(): Promise<string> {
  * (square pad on a white background, on top of the usual improve/sharpen)
  * — leave it unset for anything that shouldn't be forced into a square
  * white frame: KYC documents, banner slides, the store logo.
+ *
+ * `onProgress`, if given, is called with 0-100 as the actual HTTP upload
+ * (not the pick/compress steps before it, which have no comparable
+ * byte-level progress to report and are normally fast) advances — driven
+ * by axios's real onUploadProgress, not a fake animated placeholder. See
+ * components/UploadProgressBar.
  */
-export async function pickAndUploadImage(type?: UploadType): Promise<string> {
+export async function pickAndUploadImage(
+  type?: UploadType,
+  onProgress?: (percent: number) => void,
+): Promise<string> {
   const asset = await pickImage();
   const { uri, mimeType } = await compressImageUnderLimit(asset.uri);
   const name = asset.fileName ?? `photo-${Date.now()}.jpg`;
@@ -326,6 +335,13 @@ export async function pickAndUploadImage(type?: UploadType): Promise<string> {
 
   const response = await apiClient.post<UploadResultDto>("/uploads/image", formData, {
     headers: { "Content-Type": "multipart/form-data" },
+    onUploadProgress: onProgress
+      ? (event) => {
+          if (event.total) {
+            onProgress(Math.round((event.loaded / event.total) * 100));
+          }
+        }
+      : undefined,
   });
 
   return response.data.url;

@@ -7,6 +7,7 @@ import { getErrorMessage } from "../../api/errorMessage";
 import { pickAndUploadImage, ImagePickerCancelledError } from "../../api/upload";
 import { FormInput } from "../../components/FormInput";
 import { PrimaryButton } from "../../components/PrimaryButton";
+import { UploadProgressBar } from "../../components/UploadProgressBar";
 import { useTheme } from "../../theme/ThemeContext";
 import { useThemedStyles } from "../../theme/useThemedStyles";
 
@@ -56,6 +57,7 @@ export function StoreSettingsScreen() {
       backgroundColor: colors.surfaceAlt,
     },
     uploadButtonText: { color: colors.text, fontWeight: "600" as const },
+    uploadProgressWrap: { marginTop: -12, marginBottom: 20, maxWidth: 200 },
     disabled: { opacity: 0.5 },
     swatchRow: { flexDirection: "row" as const, flexWrap: "wrap" as const, gap: 10, marginBottom: 12 },
     swatch: { width: 32, height: 32, borderRadius: 16, borderWidth: 2, borderColor: "transparent" },
@@ -69,6 +71,7 @@ export function StoreSettingsScreen() {
   const [secondaryColor, setSecondaryColor] = useState("#4B5563");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [referralBonusAmount, setReferralBonusAmount] = useState("500");
   const [deliveryFee, setDeliveryFee] = useState("0");
   // Rendered inline rather than via Alert.alert — see ProductFormScreen for
@@ -89,9 +92,10 @@ export function StoreSettingsScreen() {
 
   const handleUploadLogo = async () => {
     setErrorMessage(null);
+    setUploadProgress(0);
     setUploadingLogo(true);
     try {
-      const url = await pickAndUploadImage("logo");
+      const url = await pickAndUploadImage("logo", setUploadProgress);
       setLogoUrl(url);
     } catch (error) {
       if (!(error instanceof ImagePickerCancelledError)) {
@@ -163,6 +167,11 @@ export function StoreSettingsScreen() {
           </Text>
         </Pressable>
       </View>
+      {uploadingLogo && (
+        <View style={styles.uploadProgressWrap}>
+          <UploadProgressBar percent={uploadProgress} />
+        </View>
+      )}
 
       <Text style={styles.sectionLabel}>Primary color</Text>
       <View style={styles.swatchRow}>

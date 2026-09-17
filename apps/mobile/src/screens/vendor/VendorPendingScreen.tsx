@@ -9,6 +9,7 @@ import { UsersApi, VendorsApi } from "../../api/endpoints";
 import { getErrorMessage } from "../../api/errorMessage";
 import { pickAndUploadImage, ImagePickerCancelledError } from "../../api/upload";
 import { PrimaryButton } from "../../components/PrimaryButton";
+import { UploadProgressBar } from "../../components/UploadProgressBar";
 import { useAuthStore } from "../../store/authStore";
 import { secureStorage } from "../../store/secureStorage";
 import { useTheme } from "../../theme/ThemeContext";
@@ -33,6 +34,7 @@ export function VendorPendingScreen() {
   const queryClient = useQueryClient();
   const theme = useTheme();
   const [uploadingField, setUploadingField] = useState<DocumentField | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [skippedIdentity, setSkippedIdentity] = useState(false);
   const [skippedLiveness, setSkippedLiveness] = useState(false);
   // Rendered inline rather than via Alert.alert — see ProductFormScreen for
@@ -134,9 +136,10 @@ export function VendorPendingScreen() {
 
   const handleUpload = async (field: DocumentField) => {
     setErrorMessage(null);
+    setUploadProgress(0);
     setUploadingField(field);
     try {
-      const url = await pickAndUploadImage("document");
+      const url = await pickAndUploadImage("document", setUploadProgress);
       saveDocument.mutate({ field, url });
     } catch (error) {
       if (!(error instanceof ImagePickerCancelledError)) {
@@ -246,6 +249,7 @@ export function VendorPendingScreen() {
           hint="e.g. CAC certificate"
           url={vendorQuery.data?.businessRegistrationDocUrl ?? null}
           uploading={uploadingField === "businessRegistrationDocUrl"}
+          progress={uploadProgress}
           onUpload={() => handleUpload("businessRegistrationDocUrl")}
           colors={theme.colors}
           actionColor={theme.primaryColor}
@@ -255,6 +259,7 @@ export function VendorPendingScreen() {
           hint="National ID, driver's license, or passport"
           url={vendorQuery.data?.governmentIdDocUrl ?? null}
           uploading={uploadingField === "governmentIdDocUrl"}
+          progress={uploadProgress}
           onUpload={() => handleUpload("governmentIdDocUrl")}
           colors={theme.colors}
           actionColor={theme.primaryColor}
@@ -271,6 +276,7 @@ function DocumentRow({
   hint,
   url,
   uploading,
+  progress,
   onUpload,
   colors,
   actionColor,
@@ -279,6 +285,7 @@ function DocumentRow({
   hint: string;
   url: string | null;
   uploading: boolean;
+  progress: number;
   onUpload: () => void;
   colors: ThemeColors;
   actionColor: string;
@@ -297,6 +304,7 @@ function DocumentRow({
     docBody: { flex: 1 },
     docLabel: { fontSize: 14, fontWeight: "700" as const, color: c.text },
     docHint: { fontSize: 12, color: c.textFaint, marginTop: 2 },
+    docProgress: { marginTop: 6, maxWidth: 160 },
   }));
 
   return (
@@ -317,6 +325,11 @@ function DocumentRow({
         >
           {uploading ? "Uploading…" : url ? "Replace" : "Upload"}
         </Text>
+        {uploading && (
+          <View style={styles.docProgress}>
+            <UploadProgressBar percent={progress} />
+          </View>
+        )}
       </View>
       {url && !uploading && <Ionicons name="checkmark-circle" size={20} color={colors.success} />}
     </View>
