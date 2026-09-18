@@ -7,14 +7,21 @@ import {
   Text,
   View,
 } from "react-native";
-// Capital "Google" — the installed package's actual file is
-// providers/Google.js, not providers/google.js. Windows/macOS's default
-// case-insensitive filesystem resolves the lowercase path fine in local
-// dev, which is exactly why this was invisible here; a case-sensitive
-// filesystem (Linux — what EAS's cloud build runners and this project's
-// own CI both use) fails to resolve it at all, breaking the production
-// bundle outright.
-import * as Google from "expo-auth-session/providers/Google";
+// Lowercase "google" — confirmed live by actually running Metro's web
+// bundler and reading its error, not just `ls`'ing node_modules. The
+// package's PUBLIC subpath is a tiny re-export shim at providers/google.js
+// ("export * from '../build/providers/Google'"); the capital-G file only
+// exists inside build/providers/, one level deeper, which isn't what this
+// import path points at. A previous fix here changed this to capital
+// "Google", reasoning from `ls build/providers/` alone that the capital
+// file was the real one — but Metro's Haste module map matches path case
+// exactly regardless of the OS filesystem's own case sensitivity, so
+// "providers/Google" never actually resolved against the real
+// "providers/google.js" file: it silently 500'd Metro's web bundle outright
+// (verified by fetching the dev-server bundle URL directly), which is why
+// the mobile *web* app failed to load at all — not just Google sign-in —
+// for every commit between that fix and this one.
+import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
 
 // Required by expo-auth-session on web — without it, the popup opened by
