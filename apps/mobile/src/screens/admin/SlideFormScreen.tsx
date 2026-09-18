@@ -9,10 +9,12 @@ import { getErrorMessage } from "../../api/errorMessage";
 import { pickAndUploadImage, uploadWebFile, ImagePickerCancelledError } from "../../api/upload";
 import { FormInput } from "../../components/FormInput";
 import { PrimaryButton } from "../../components/PrimaryButton";
+import { StatusBanner } from "../../components/StatusBanner";
 import { UploadProgressBar } from "../../components/UploadProgressBar";
 import { WebFileInputOverlay } from "../../components/WebFileInputOverlay";
 import { useTheme } from "../../theme/ThemeContext";
 import { useThemedStyles } from "../../theme/useThemedStyles";
+import { useUploadFeedback } from "../../hooks/useUploadFeedback";
 import type { AdminStackParamList } from "../../navigation/types";
 
 export function SlideFormScreen() {
@@ -31,27 +33,14 @@ export function SlideFormScreen() {
   const [isActive, setIsActive] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  // Rendered inline rather than via Alert.alert — see ProductFormScreen for
-  // the same fix and why: Alert.alert can be silently suppressed on some
-  // mobile web browsers, which would otherwise leave a failed upload with
-  // no visible feedback at all.
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const styles = useThemedStyles((colors, t) => ({
+  // Error AND success feedback rendered inline via <StatusBanner> — see
+  // ProductFormScreen for why (Alert.alert can be silently suppressed on
+  // some mobile web browsers).
+  const { errorMessage, successMessage, setErrorMessage, onStart, onSuccess } = useUploadFeedback();
+  const styles = useThemedStyles((colors) => ({
     container: { flex: 1, backgroundColor: colors.surface },
     content: { padding: 20, paddingTop: 60, paddingBottom: 40 },
     headerRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: 10, marginBottom: 16 },
-    errorBanner: {
-      flexDirection: "row" as const,
-      alignItems: "center" as const,
-      gap: 8,
-      backgroundColor: t.scheme === "dark" ? "#3A1518" : "#FEF2F2",
-      borderWidth: 1,
-      borderColor: t.scheme === "dark" ? "#5B2226" : "#FECACA",
-      borderRadius: 8,
-      padding: 12,
-      marginBottom: 16,
-    },
-    errorBannerText: { flex: 1, color: t.scheme === "dark" ? "#FCA5A5" : "#B91C1C", fontSize: 13, fontWeight: "600" as const },
     backButton: {
       width: 36,
       height: 36,
@@ -96,12 +85,13 @@ export function SlideFormScreen() {
   }, [existingSlide]);
 
   const handleWebFileSelect = async (file: File) => {
-    setErrorMessage(null);
+    onStart();
     setUploadProgress(0);
     setUploading(true);
     try {
-      const url = await uploadWebFile(file, "banner", setUploadProgress);
-      setImageUrl(url);
+      const result = await uploadWebFile(file, "banner", setUploadProgress);
+      setImageUrl(result.url);
+      onSuccess(result, "Slide image uploaded");
     } catch (error) {
       if (!(error instanceof ImagePickerCancelledError)) {
         setErrorMessage(getErrorMessage(error, "Could not upload that image. Please try again."));
@@ -112,12 +102,13 @@ export function SlideFormScreen() {
   };
 
   const handleUpload = async () => {
-    setErrorMessage(null);
+    onStart();
     setUploadProgress(0);
     setUploading(true);
     try {
-      const url = await pickAndUploadImage("banner", setUploadProgress);
-      setImageUrl(url);
+      const result = await pickAndUploadImage("banner", setUploadProgress);
+      setImageUrl(result.url);
+      onSuccess(result, "Slide image uploaded");
     } catch (error) {
       if (!(error instanceof ImagePickerCancelledError)) {
         setErrorMessage(getErrorMessage(error, "Could not upload that image. Please try again."));
@@ -167,12 +158,8 @@ export function SlideFormScreen() {
         </Pressable>
       </View>
 
-      {errorMessage && (
-        <View style={styles.errorBanner}>
-          <Ionicons name="alert-circle" size={18} color={theme.colors.danger} />
-          <Text style={styles.errorBannerText}>{errorMessage}</Text>
-        </View>
-      )}
+      {errorMessage && <StatusBanner type="error" message={errorMessage} />}
+      {successMessage && <StatusBanner type="success" message={successMessage} />}
 
       <Text style={styles.sectionLabel}>Image</Text>
       {imageUrl ? (

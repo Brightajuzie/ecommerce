@@ -10,11 +10,13 @@ import { getErrorMessage } from "../../api/errorMessage";
 import { pickAndUploadImage, uploadWebFile, ImagePickerCancelledError } from "../../api/upload";
 import { FormInput } from "../../components/FormInput";
 import { PrimaryButton } from "../../components/PrimaryButton";
+import { StatusBanner } from "../../components/StatusBanner";
 import { UploadProgressBar } from "../../components/UploadProgressBar";
 import { WebFileInputOverlay } from "../../components/WebFileInputOverlay";
 import { useTheme } from "../../theme/ThemeContext";
 import { useThemedStyles } from "../../theme/useThemedStyles";
 import { optimizedImageUrl } from "../../utils/image";
+import { useUploadFeedback } from "../../hooks/useUploadFeedback";
 
 const MAX_CONTENT_WIDTH = 700;
 // At least 1 so a listing is never imageless, capped at 4 to keep listings
@@ -56,29 +58,17 @@ export function ProductFormScreen() {
   const [status, setStatus] = useState<ProductStatus>(ProductStatus.ACTIVE);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  // Rendered inline rather than via Alert.alert — on web, Alert.alert can
-  // be silently suppressed by some mobile browsers (same fix already
-  // applied to RegisterScreen and other forms in this app), which would
-  // otherwise leave a failed photo upload completely invisible: the
-  // upload genuinely fails, but nothing on screen ever shows it,
-  // indistinguishable from tapping "Add photo" just doing nothing.
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const styles = useThemedStyles((colors, t) => ({
+  // Error AND success feedback are rendered inline via <StatusBanner> rather
+  // than Alert.alert — on web, Alert.alert can be silently suppressed by
+  // some mobile browsers (same fix already applied to RegisterScreen and
+  // other forms in this app), which would otherwise leave a failed photo
+  // upload completely invisible, and a completed one with no confirmation
+  // beyond the thumbnail silently appearing.
+  const { errorMessage, successMessage, setErrorMessage, onStart, onSuccess } = useUploadFeedback();
+  const styles = useThemedStyles((colors) => ({
     container: { flex: 1, backgroundColor: colors.background },
     content: { paddingTop: 60, paddingBottom: 32 },
     centeredColumn: { width: "100%" as const, maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" as const, paddingHorizontal: 20 },
-    errorBanner: {
-      flexDirection: "row" as const,
-      alignItems: "center" as const,
-      gap: 8,
-      backgroundColor: t.scheme === "dark" ? "#3A1518" : "#FEF2F2",
-      borderWidth: 1,
-      borderColor: t.scheme === "dark" ? "#5B2226" : "#FECACA",
-      borderRadius: 8,
-      padding: 12,
-      marginBottom: 14,
-    },
-    errorBannerText: { flex: 1, color: t.scheme === "dark" ? "#FCA5A5" : "#B91C1C", fontSize: 13, fontWeight: "600" as const },
     headerRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: 10, marginBottom: 16 },
     backButton: {
       width: 36,
@@ -169,12 +159,13 @@ export function ProductFormScreen() {
 
   const handleWebFileSelect = async (file: File) => {
     if (images.length >= MAX_PRODUCT_IMAGES) return;
-    setErrorMessage(null);
+    onStart();
     setUploadProgress(0);
     setUploading(true);
     try {
-      const url = await uploadWebFile(file, "product", setUploadProgress);
-      setImages((prev) => [...prev, url]);
+      const result = await uploadWebFile(file, "product", setUploadProgress);
+      setImages((prev) => [...prev, result.url]);
+      onSuccess(result);
     } catch (error) {
       if (!(error instanceof ImagePickerCancelledError)) {
         setErrorMessage(getErrorMessage(error, "Could not upload that photo. Please try again."));
@@ -186,12 +177,13 @@ export function ProductFormScreen() {
 
   const handleAddPhoto = async () => {
     if (images.length >= MAX_PRODUCT_IMAGES) return;
-    setErrorMessage(null);
+    onStart();
     setUploadProgress(0);
     setUploading(true);
     try {
-      const url = await pickAndUploadImage("product", setUploadProgress);
-      setImages((prev) => [...prev, url]);
+      const result = await pickAndUploadImage("product", setUploadProgress);
+      setImages((prev) => [...prev, result.url]);
+      onSuccess(result);
     } catch (error) {
       if (!(error instanceof ImagePickerCancelledError)) {
         setErrorMessage(getErrorMessage(error, "Could not upload that photo. Please try again."));
@@ -250,12 +242,8 @@ export function ProductFormScreen() {
           <Text style={styles.title}>{productId ? "Edit product" : "New product"}</Text>
         </View>
 
-        {errorMessage && (
-          <View style={styles.errorBanner}>
-            <Ionicons name="alert-circle" size={18} color={theme.colors.danger} />
-            <Text style={styles.errorBannerText}>{errorMessage}</Text>
-          </View>
-        )}
+        {errorMessage && <StatusBanner type="error" message={errorMessage} />}
+        {successMessage && <StatusBanner type="success" message={successMessage} />}
 
         <View style={styles.card}>
           <FormInput label="Title" value={title} onChangeText={setTitle} />
