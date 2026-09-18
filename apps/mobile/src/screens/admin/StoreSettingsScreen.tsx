@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Image, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Ionicons } from "@expo/vector-icons";
 import { SettingsApi } from "../../api/endpoints";
 import { getErrorMessage } from "../../api/errorMessage";
 import { pickAndUploadImage, uploadWebFile, ImagePickerCancelledError } from "../../api/upload";
 import { FormInput } from "../../components/FormInput";
 import { PrimaryButton } from "../../components/PrimaryButton";
+import { StatusBanner } from "../../components/StatusBanner";
 import { UploadProgressBar } from "../../components/UploadProgressBar";
 import { WebFileInputOverlay } from "../../components/WebFileInputOverlay";
 import { useTheme } from "../../theme/ThemeContext";
 import { useThemedStyles } from "../../theme/useThemedStyles";
+import { useUploadFeedback } from "../../hooks/useUploadFeedback";
 
 const PRESET_COLORS = [
   "#111827",
@@ -29,23 +30,11 @@ export function StoreSettingsScreen() {
   const queryClient = useQueryClient();
   const theme = useTheme();
   const settingsQuery = useQuery({ queryKey: ["settings"], queryFn: SettingsApi.get });
-  const styles = useThemedStyles((colors, t) => ({
+  const styles = useThemedStyles((colors) => ({
     container: { flex: 1, backgroundColor: colors.surface },
     center: { flex: 1, alignItems: "center" as const, justifyContent: "center" as const },
     content: { padding: 20, paddingTop: 60, paddingBottom: 40 },
     title: { fontSize: 28, fontWeight: "800" as const, color: colors.text, marginBottom: 16 },
-    errorBanner: {
-      flexDirection: "row" as const,
-      alignItems: "center" as const,
-      gap: 8,
-      backgroundColor: t.scheme === "dark" ? "#3A1518" : "#FEF2F2",
-      borderWidth: 1,
-      borderColor: t.scheme === "dark" ? "#5B2226" : "#FECACA",
-      borderRadius: 8,
-      padding: 12,
-      marginBottom: 16,
-    },
-    errorBannerText: { flex: 1, color: t.scheme === "dark" ? "#FCA5A5" : "#B91C1C", fontSize: 13, fontWeight: "600" as const },
     sectionLabel: { fontSize: 14, fontWeight: "700" as const, color: colors.text, marginBottom: 8, marginTop: 4 },
     logoRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: 16, marginBottom: 20 },
     logoPreview: { width: 72, height: 72, borderRadius: 8, backgroundColor: colors.border },
@@ -75,11 +64,10 @@ export function StoreSettingsScreen() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [referralBonusAmount, setReferralBonusAmount] = useState("500");
   const [deliveryFee, setDeliveryFee] = useState("0");
-  // Rendered inline rather than via Alert.alert — see ProductFormScreen for
-  // the same fix and why: Alert.alert can be silently suppressed on some
-  // mobile web browsers, which would otherwise leave a failed logo upload
-  // with no visible feedback at all.
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // Error AND success feedback rendered inline via <StatusBanner> — see
+  // ProductFormScreen for why (Alert.alert can be silently suppressed on
+  // some mobile web browsers).
+  const { errorMessage, successMessage, setErrorMessage, onStart, onSuccess } = useUploadFeedback();
 
   useEffect(() => {
     if (settingsQuery.data) {
@@ -92,12 +80,13 @@ export function StoreSettingsScreen() {
   }, [settingsQuery.data]);
 
   const handleWebLogoSelect = async (file: File) => {
-    setErrorMessage(null);
+    onStart();
     setUploadProgress(0);
     setUploadingLogo(true);
     try {
-      const url = await uploadWebFile(file, "logo", setUploadProgress);
-      setLogoUrl(url);
+      const result = await uploadWebFile(file, "logo", setUploadProgress);
+      setLogoUrl(result.url);
+      onSuccess(result, "Logo uploaded");
     } catch (error) {
       if (!(error instanceof ImagePickerCancelledError)) {
         setErrorMessage(getErrorMessage(error, "Could not upload the logo. Please try again."));
@@ -108,12 +97,13 @@ export function StoreSettingsScreen() {
   };
 
   const handleUploadLogo = async () => {
-    setErrorMessage(null);
+    onStart();
     setUploadProgress(0);
     setUploadingLogo(true);
     try {
-      const url = await pickAndUploadImage("logo", setUploadProgress);
-      setLogoUrl(url);
+      const result = await pickAndUploadImage("logo", setUploadProgress);
+      setLogoUrl(result.url);
+      onSuccess(result, "Logo uploaded");
     } catch (error) {
       if (!(error instanceof ImagePickerCancelledError)) {
         setErrorMessage(getErrorMessage(error, "Could not upload the logo. Please try again."));
@@ -158,12 +148,8 @@ export function StoreSettingsScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Store settings</Text>
 
-      {errorMessage && (
-        <View style={styles.errorBanner}>
-          <Ionicons name="alert-circle" size={18} color={theme.colors.danger} />
-          <Text style={styles.errorBannerText}>{errorMessage}</Text>
-        </View>
-      )}
+      {errorMessage && <StatusBanner type="error" message={errorMessage} />}
+      {successMessage && <StatusBanner type="success" message={successMessage} />}
 
       <Text style={styles.sectionLabel}>Logo</Text>
       <View style={styles.logoRow}>

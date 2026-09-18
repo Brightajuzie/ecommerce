@@ -472,11 +472,14 @@ export async function captureSelfieBase64(): Promise<string> {
  * canvas, and posts via FormData without overriding Content-Type so the
  * browser generates the required multipart boundary.
  */
+export type UploadResult = { url: string; originalBytes: number; finalBytes: number };
+
 export async function uploadWebFile(
   file: File,
   type?: UploadType,
   onProgress?: (percent: number) => void,
-): Promise<string> {
+): Promise<UploadResult> {
+  const originalBytes = file.size;
   const source = await convertHeicToJpegIfNeeded(file);
   let uploadBlob: Blob = source;
 
@@ -534,14 +537,16 @@ export async function uploadWebFile(
       : undefined,
   });
 
-  return response.data.url;
+  return { url: response.data.url, originalBytes, finalBytes: uploadBlob.size };
 }
 
 /**
  * Opens the system image picker, compresses the selected photo down to fit
  * the server's upload cap, and uploads it — returning the hosted (enhanced)
- * image URL. Throws ImagePickerCancelledError if the user backs out without
- * picking anything.
+ * image URL plus the original/final byte sizes (see UploadResult; screens
+ * use these to show the user what compression actually did, e.g. "Reduced
+ * from 4.2MB to 180KB"). Throws ImagePickerCancelledError if the user backs
+ * out without picking anything.
  *
  * `type: "product"` gets UploadsService's ecommerce-standard treatment
  * (square pad on a white background, on top of the usual improve/sharpen)
@@ -557,7 +562,7 @@ export async function uploadWebFile(
 export async function pickAndUploadImage(
   type?: UploadType,
   onProgress?: (percent: number) => void,
-): Promise<string> {
+): Promise<UploadResult> {
   if (Platform.OS === "web") {
     const file = await pickFileWeb();
     if (!file) throw new ImagePickerCancelledError();
@@ -565,7 +570,9 @@ export async function pickAndUploadImage(
   }
 
   const asset = await pickImage();
+  const originalBytes = await getFileSize(asset.uri);
   const { uri, mimeType } = await compressImageUnderLimit(asset.uri);
+  const finalBytes = await getFileSize(uri);
   const rawName = asset.fileName ?? `photo-${Date.now()}.jpg`;
   const name = rawName.replace(/\.[^.]+$/, "") + ".jpg";
 
@@ -588,5 +595,5 @@ export async function pickAndUploadImage(
       : undefined,
   });
 
-  return response.data.url;
+  return { url: response.data.url, originalBytes, finalBytes };
 }
