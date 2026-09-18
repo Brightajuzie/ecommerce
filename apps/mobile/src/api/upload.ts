@@ -93,6 +93,47 @@ function pickFileWeb(capture?: string): Promise<WebFile | null> {
   });
 }
 
+const HEIC_MIME_TYPES = new Set([
+  "image/heic",
+  "image/heif",
+  "image/heic-sequence",
+  "image/heif-sequence",
+]);
+
+// iOS Photos saves in HEIC/HEIF by default (has since iOS 11), and unlike
+// AirDrop/Mail, Safari hands a web page's <input type="file"> the *original*
+// HEIC bytes untouched — no automatic JPEG conversion. No mainstream browser
+// can decode HEIC in a canvas/<img> (see loadImageAsync in
+// expo-image-manipulator's web build), so without this, every compression
+// step in compressImageUnderLimit fails identically for any iPhone photo
+// still in its default format, and the upload errors out with "This device
+// couldn't process that photo" even though the file is perfectly valid.
+// Some browsers also report an empty/generic mimetype for HEIC files picked
+// from the Photos library, hence the filename-extension fallback.
+function looksLikeHeic(file: WebFile): boolean {
+  if (HEIC_MIME_TYPES.has(file.type.toLowerCase())) return true;
+  return /\.hei[cf]$/i.test(file.name);
+}
+
+// Converts a HEIC/HEIF file to JPEG in-browser before it ever reaches
+// ImageManipulator. No-op (returns the file as-is) for every other format,
+// so the ~2.5MB WASM decoder heic2any bundles is only ever fetched when a
+// HEIC file is actually picked — the vast majority of uploads never touch
+// this dynamic import.
+async function convertHeicToJpegIfNeeded(file: WebFile): Promise<Blob> {
+  if (!looksLikeHeic(file)) return file as unknown as Blob;
+  const heic2any = (await import("heic2any")).default;
+  const result = await heic2any({
+    blob: file as unknown as Blob,
+    toType: "image/jpeg",
+    quality: 0.9,
+  });
+  // heic2any only returns an array for a multi-image HEIC container (e.g. a
+  // Live Photo/burst) — a single photo always yields one Blob. Only the
+  // first frame matters for a product/document/selfie photo.
+  return Array.isArray(result) ? result[0] : result;
+}
+
 function webFileUrl(file: unknown): string {
   return (globalThis as unknown as { URL: { createObjectURL: (f: unknown) => string } }).URL
     .createObjectURL(file);
@@ -383,7 +424,13 @@ export async function captureSelfieBase64(): Promise<string> {
   if (Platform.OS === "web") {
     const file = await pickFileWeb("user");
     if (!file) throw new ImagePickerCancelledError();
-    return webFileToBase64(file);
+    // A "user"-facing capture hint usually opens the device camera directly
+    // (which encodes as JPEG), but browsers that lack camera-capture support
+    // fall back to the ordinary file browser — where an iPhone/Mac gallery
+    // pick can just as easily be HEIC as the product/document photos above,
+    // and the liveness-check provider downstream needs a real JPEG/PNG.
+    const converted = await convertHeicToJpegIfNeeded(file);
+    return webFileToBase64(converted);
   }
 
   const permission = await ImagePicker.requestCameraPermissionsAsync();
@@ -411,42 +458,35 @@ export async function captureSelfieBase64(): Promise<string> {
 }
 
 /**
- * Opens the system image picker, compresses the selected photo down to fit
- * the server's upload cap, and uploads it — returning the hosted (enhanced)
- * image URL. Throws ImagePickerCancelledError if the user backs out without
- * picking anything.
+ * Uploads a Web File — used by WebFileInputOverlay's real, directly-clicked
+ * <input type="file"> (see that component for why: a programmatic
+ * input.click() proved unreliable across mobile browsers even when
+ * synchronous/trusted-looking, so product/document/banner/logo uploads on
+ * web now go through a real file input the user clicks directly instead).
  *
- * `type: "product"` gets UploadsService's ecommerce-standard treatment
- * (square pad on a white background, on top of the usual improve/sharpen)
- * — leave it unset for anything that shouldn't be forced into a square
- * white frame: KYC documents, banner slides, the store logo.
- *
- * `onProgress`, if given, is called with 0-100 as the actual HTTP upload
- * (not the pick/compress steps before it, which have no comparable
- * byte-level progress to report and are normally fast) advances — driven
- * by axios's real onUploadProgress, not a fake animated placeholder. See
- * components/UploadProgressBar.
- */
-/**
- * Uploads a Web File (e.g. directly from a native <input type="file"> event).
- * Compresses large photos down to land safely under the server's 200KB cap
- * via browser canvas, and posts via FormData without overriding Content-Type
- * so the browser generates the required multipart boundary.
+ * Converts HEIC/HEIF first (see convertHeicToJpegIfNeeded) — iPhones save
+ * photos in that format by default and no mainstream browser can decode it
+ * in a canvas, which would otherwise make every compression attempt below
+ * fail identically for any unconverted iPhone photo. Then compresses large
+ * photos down to land safely under the server's 200KB cap via browser
+ * canvas, and posts via FormData without overriding Content-Type so the
+ * browser generates the required multipart boundary.
  */
 export async function uploadWebFile(
   file: File,
   type?: UploadType,
   onProgress?: (percent: number) => void,
 ): Promise<string> {
-  let uploadBlob: Blob = file;
+  const source = await convertHeicToJpegIfNeeded(file);
+  let uploadBlob: Blob = source;
 
-  if (file.size > MAX_UPLOAD_BYTES) {
+  if (source.size > MAX_UPLOAD_BYTES) {
     let lastGoodBlob: Blob | null = null;
     let anySuccess = false;
 
     for (const { width, quality } of COMPRESSION_STEPS) {
       try {
-        const res = await compressImageWeb(URL.createObjectURL(file), width, quality);
+        const res = await compressImageWeb(URL.createObjectURL(source), width, quality);
         anySuccess = true;
         const blobResp = await fetch(res.uri);
         const blob = await blobResp.blob();

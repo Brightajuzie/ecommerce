@@ -24,6 +24,7 @@
     "expo-splash-screen": "~57.0.5",
     "expo-status-bar": "~57.0.0",
     "expo-web-browser": "~57.0.3",
+    "heic2any": "^0.0.4",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-hook-form": "^7.54.2",
