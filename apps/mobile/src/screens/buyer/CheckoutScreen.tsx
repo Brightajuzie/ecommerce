@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, FlatList, Platform, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, Image, Platform, Pressable, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -14,6 +14,7 @@ import { useAuthStore } from "../../store/authStore";
 import { useTheme } from "../../theme/ThemeContext";
 import { useThemedStyles } from "../../theme/useThemedStyles";
 import { openBlankTab, redirectTab } from "../../utils/payment";
+import { optimizedImageUrl } from "../../utils/image";
 import type { BuyerStackParamList } from "../../navigation/types";
 
 const MAX_CONTENT_WIDTH = 700;
@@ -86,6 +87,12 @@ export function CheckoutScreen() {
     addAddressButton: { flexDirection: "row" as const, alignItems: "center" as const, gap: 6, marginTop: 4 },
     link: { fontWeight: "600" as const },
     newAddressForm: { marginTop: 12 },
+    itemRow: { flexDirection: "row" as const, alignItems: "center" as const, marginBottom: 10 },
+    itemImage: { width: 48, height: 48, borderRadius: 10, backgroundColor: colors.placeholderBg },
+    itemBody: { flex: 1, marginLeft: 10 },
+    itemTitle: { fontSize: 14, fontWeight: "700" as const, color: colors.text },
+    itemMeta: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+    itemLineTotal: { fontSize: 14, fontWeight: "700" as const, color: colors.text, marginLeft: 8 },
     providerRow: { flexDirection: "row" as const, flexWrap: "wrap" as const, gap: 10 },
     providerChip: {
       paddingHorizontal: 16,
@@ -297,10 +304,40 @@ export function CheckoutScreen() {
           )}
         </View>
 
+        {items.length > 0 && (
+          <View style={styles.card}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="bag-handle" size={16} color={theme.primaryColor} />
+              <Text style={styles.sectionLabel}>Items in your cart</Text>
+            </View>
+            {items.map((item) => (
+              <View key={item.id} style={styles.itemRow}>
+                <Image source={{ uri: optimizedImageUrl(item.product.images[0], 96) }} style={styles.itemImage} />
+                <View style={styles.itemBody}>
+                  <Text numberOfLines={1} style={styles.itemTitle}>
+                    {item.product.title}
+                  </Text>
+                  <Text style={styles.itemMeta}>
+                    Qty {item.quantity} · {item.product.currency} {Number(item.priceAtAdd).toLocaleString()} each
+                  </Text>
+                </View>
+                <Text style={styles.itemLineTotal}>
+                  {item.product.currency} {(Number(item.priceAtAdd) * item.quantity).toLocaleString()}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
+
         <View style={styles.card}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="card" size={16} color={theme.primaryColor} />
-            <Text style={styles.sectionLabel}>Payment method</Text>
+          <View style={[styles.sectionHeader, { justifyContent: "space-between" }]}>
+            <View style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 6 }}>
+              <Ionicons name="card" size={16} color={theme.primaryColor} />
+              <Text style={styles.sectionLabel}>Payment method</Text>
+            </View>
+            <Pressable onPress={() => navigation.goBack()} hitSlop={8} accessibilityRole="button">
+              <Text style={[styles.link, { color: theme.colors.danger }]}>Cancel</Text>
+            </Pressable>
           </View>
           <View style={styles.providerRow}>
             <Pressable
