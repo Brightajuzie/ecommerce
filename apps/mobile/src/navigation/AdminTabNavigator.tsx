@@ -51,6 +51,12 @@ export function AdminTabNavigator() {
         headerShown: false,
         tabBarPosition: Platform.OS === "web" ? "top" : "bottom",
         tabBarActiveTintColor: theme.primaryColor,
+        // Fallback so the browser tab title isn't the literal string
+        // "undefined" on first load — the initially-focused tab (Dashboard,
+        // or Products for an editor) has no explicit options.title of its
+        // own, and only this screenOptions-level default applies before any
+        // tab press happens.
+        title: route.name,
         tabBarIcon: ({ color, size }) => (
           <Ionicons name={TAB_ICONS[route.name as keyof AdminTabParamList]} color={color} size={size} />
         ),

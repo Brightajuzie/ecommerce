@@ -98,7 +98,11 @@ export function LoginScreen() {
 
       if (route.params?.redirectTo === "Checkout") {
         navigation.replace("Checkout");
-      } else {
+      } else if (!isAdmin) {
+        // Admin/editor accounts don't navigate here — setViewAsBuyer above
+        // makes RootNavigator swap to BuyerNavigator on its own, and firing
+        // this replace too races that swap and logs a "BuyerTabs not
+        // handled by any navigator" warning (harmless, but noisy).
         navigation.replace("BuyerTabs");
       }
     } catch (error) {
@@ -112,11 +116,12 @@ export function LoginScreen() {
     const isAdmin = [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.EDITOR].includes(role);
     if (route.params?.redirectTo === "Checkout") {
       navigation.replace("Checkout");
-    } else {
+    } else if (!isAdmin) {
+      // Admin/editor redirect is handled inside GoogleSignInButton via
+      // setViewAsBuyer (RootNavigator swaps to BuyerNavigator on its own);
+      // replacing here too races that swap — see handleLogin above.
       navigation.replace("BuyerTabs");
     }
-    // Admin redirect is handled inside GoogleSignInButton via setViewAsBuyer
-    void isAdmin;
   };
 
   return (
