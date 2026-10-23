@@ -11,6 +11,7 @@ import { useTheme, type ThemeModePreference } from "../../theme/ThemeContext";
 import { useThemedStyles } from "../../theme/useThemedStyles";
 import { useAuthStore } from "../../store/authStore";
 import type { BuyerStackParamList } from "../../navigation/types";
+import { ACCOUNT_DELETION_URL, PRIVACY_POLICY_URL, openLegalLink } from "../../utils/legalLinks";
 
 const MAX_CONTENT_WIDTH = 700;
 
@@ -146,6 +147,8 @@ export function ProfileScreen() {
     },
     appearanceOptionText: { fontSize: 12, fontWeight: "700" as const, color: colors.textMuted },
     appearanceOptionTextActive: { color: "#fff" },
+    legalLink: { alignSelf: "center" as const, paddingVertical: 10, marginTop: 6 },
+    legalLinkText: { fontSize: 13, fontWeight: "600" as const, color: colors.textMuted },
   }));
 
   const handleShareReferralCode = () => {
@@ -211,6 +214,16 @@ export function ProfileScreen() {
     </View>
   );
 
+  const legalLinks = PRIVACY_POLICY_URL && (
+    <Pressable
+      style={styles.legalLink}
+      onPress={() => openLegalLink(PRIVACY_POLICY_URL)}
+      accessibilityRole="link"
+    >
+      <Text style={styles.legalLinkText}>Privacy policy</Text>
+    </Pressable>
+  );
+
   if (!user) {
     return (
       <View style={styles.container}>
@@ -231,6 +244,7 @@ export function ProfileScreen() {
           />
           <View style={styles.spacer} />
           {appearanceCard}
+          {legalLinks}
         </View>
       </View>
     );
@@ -334,6 +348,17 @@ export function ProfileScreen() {
           leftIcon="log-out-outline"
           onPress={() => logout()}
         />
+
+        {ACCOUNT_DELETION_URL && (
+          <Pressable
+            style={styles.legalLink}
+            onPress={() => openLegalLink(ACCOUNT_DELETION_URL)}
+            accessibilityRole="link"
+          >
+            <Text style={[styles.legalLinkText, { color: theme.colors.danger }]}>Delete my account</Text>
+          </Pressable>
+        )}
+        {legalLinks}
       </View>
     </ScrollView>
   );
