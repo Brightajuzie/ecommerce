@@ -9,6 +9,9 @@ minimumReleaseAge: 0
 # pinning ahead of platform-express's own next bump rather than waiting.
 overrides:
   multer: ">=2.2.0"
+  # expo@57.0.32 requires ~57.0.1, but pnpm keeps reusing the older 57.0.0
+  # already in the lockfile (expo-doctor flags it as an incompatible override).
+  "@expo/dom-webview": "57.0.1"
 allowBuilds:
   '@prisma/client': true
   '@prisma/engines': true
