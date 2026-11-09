@@ -18,17 +18,22 @@ export const API_URL = __DEV__
 
 // The API runs on Render's free tier, which sleeps when idle and takes ~45s to
 // wake. The timeout leaves room for that, and idempotent requests that fail while
-// it's waking (network error / gateway 502-504) are retried with backoff.
+// it's waking (network error, timeout, 429, gateway 502-504) are retried with backoff.
 export const apiClient = axios.create({ baseURL: API_URL, timeout: 60_000 });
 
 const WAKE_RETRY_DELAYS_MS = [2_000, 5_000, 10_000];
 const RETRYABLE_METHODS = new Set(["get", "head", "options"]);
 
-function isWakingServerError(error: AxiosError): boolean {
+function isRetryableLoadError(error: AxiosError): boolean {
   if (!error.response) {
-    return error.code !== "ECONNABORTED" && error.code !== "ERR_CANCELED";
+    // A cold start can run past the 60s timeout (ECONNABORTED / ETIMEDOUT) —
+    // by then the instance is usually up, so a timed-out GET is worth
+    // retrying too. Only a deliberate cancellation isn't.
+    return error.code !== "ERR_CANCELED";
   }
-  return [502, 503, 504].includes(error.response.status);
+  // 429: the API's global throttle is per IP, and mobile carriers put many
+  // phones behind one shared (CGNAT) address — a short backoff clears it.
+  return [429, 502, 503, 504].includes(error.response.status);
 }
 
 apiClient.interceptors.request.use((config) => {
@@ -68,7 +73,7 @@ apiClient.interceptors.response.use(
     if (
       originalRequest &&
       RETRYABLE_METHODS.has((originalRequest.method ?? "get").toLowerCase()) &&
-      isWakingServerError(error)
+      isRetryableLoadError(error)
     ) {
       const attempt = originalRequest._wakeAttempt ?? 0;
       if (attempt < WAKE_RETRY_DELAYS_MS.length) {
