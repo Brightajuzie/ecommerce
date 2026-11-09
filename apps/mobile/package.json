@@ -12,6 +12,7 @@
     "axios": "^1.7.9",
     "expo": "~57.0.32",
     "expo-auth-session": "^57.0.16",
+    "expo-build-properties": "~57.0.23",
     "expo-constants": "^57.0.23",
     "expo-crypto": "^57.0.4",
     "expo-file-system": "~57.0.7",

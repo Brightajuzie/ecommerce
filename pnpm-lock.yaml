@@ -225,6 +225,9 @@ importers:
       expo-auth-session:
         specifier: ^57.0.16
         version: 57.0.16(expo@57.0.32)(react-native@0.86.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
+      expo-build-properties:
+        specifier: ~57.0.23
+        version: 57.0.23(expo@57.0.32)
       expo-constants:
         specifier: ^57.0.23
         version: 57.0.23(expo@57.0.32)(react-native@0.86.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3))
@@ -3059,6 +3062,11 @@ packages:
     peerDependencies:
       react: '*'
       react-native: '*'
+
+  expo-build-properties@57.0.23:
+    resolution: {integrity: sha512-O4N2m2ce4G1p4AvCZHhqpAIfHsQjbKxbvMOEMjuFh+MuAfgoxKyHa6tgsI2BFQxiPIBDL4aVWk8UEqeHXMmDfA==}
+    peerDependencies:
+      expo: '*'
 
   expo-constants@57.0.23:
     resolution: {integrity: sha512-U+VHchrt7/VcQCgJH5TUTQMon19e5GkB2fkyYJax8miNxoW1wtTIdhYHlF6zCljyWw995Hbcq8IIF9ktC9qxHA==}
@@ -9178,6 +9186,13 @@ snapshots:
     transitivePeerDependencies:
       - expo
       - supports-color
+
+  expo-build-properties@57.0.23(expo@57.0.32):
+    dependencies:
+      '@expo/schema-utils': 57.0.3
+      expo: 57.0.32(@babel/core@7.29.7)(@expo/dom-webview@57.0.1)(react-dom@19.2.3(react@19.2.3))(react-native-web@0.21.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-native-webview@13.16.1(react-native@0.86.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)(typescript@6.0.3)
+      resolve-from: 5.0.0
+      semver: 7.8.5
 
   expo-constants@57.0.23(expo@57.0.32)(react-native@0.86.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3)):
     dependencies:
