@@ -8,6 +8,13 @@
       "port": 8090
     },
     {
+      "name": "mobile-web-prod-api",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "mobile", "exec", "expo", "start", "--web", "--port", "8091", "--no-dev", "--minify"],
+      "env": { "EXPO_PUBLIC_API_URL": "https://ikaystores-api.onrender.com/api/v1" },
+      "port": 8091
+    },
+    {
       "name": "api",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "api", "run", "start:dev"],

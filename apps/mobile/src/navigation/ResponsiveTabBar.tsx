@@ -6,6 +6,7 @@ import { UserRole } from "@ikaystores/shared";
 import { useAuthStore } from "../store/authStore";
 import { useTheme } from "../theme/ThemeContext";
 import { useThemedStyles } from "../theme/useThemedStyles";
+import { PRIVACY_POLICY_URL, openLegalLink } from "../utils/legalLinks";
 
 const WEB_NAV_BREAKPOINT = 768;
 const BAR_HEIGHT = 60;
@@ -240,6 +241,17 @@ export function ResponsiveTabBar({ state, descriptors, navigation }: BottomTabBa
         {Brand}
         <View style={styles.navItemsRow}>
           {items.map((item) => renderItem(item, "row"))}
+          {PRIVACY_POLICY_URL && (
+            <Pressable
+              style={styles.navItemRow}
+              onPress={() => openLegalLink(PRIVACY_POLICY_URL)}
+              accessibilityRole="link"
+              accessibilityLabel="Privacy policy"
+            >
+              <Ionicons name="shield-checkmark-outline" size={18} color={INACTIVE_ON_BRAND} />
+              <Text style={[styles.navItemText, { color: INACTIVE_ON_BRAND }]}>Privacy</Text>
+            </Pressable>
+          )}
           {isAdmin && (
             <Pressable
               style={styles.roleSwitchButton}
@@ -290,6 +302,20 @@ export function ResponsiveTabBar({ state, descriptors, navigation }: BottomTabBa
               </Pressable>
             )}
             {dropdownItems.map((item) => renderItem(item, "block"))}
+            {PRIVACY_POLICY_URL && (
+              <Pressable
+                style={styles.navItemBlock}
+                onPress={() => {
+                  setMenuOpen(false);
+                  openLegalLink(PRIVACY_POLICY_URL);
+                }}
+                accessibilityRole="link"
+                accessibilityLabel="Privacy policy"
+              >
+                <Ionicons name="shield-checkmark-outline" size={18} color={theme.colors.textMuted} />
+                <Text style={[styles.navItemText, { color: theme.colors.textMuted }]}>Privacy Policy</Text>
+              </Pressable>
+            )}
           </View>
         </>
       )}
