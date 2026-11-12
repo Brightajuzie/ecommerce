@@ -68,7 +68,8 @@
             "enableShrinkResourcesInReleaseBuilds": true
           }
         }
-      ]
+      ],
+      "./plugins/withR8Optimization"
     ],
     "extra": {
       "eas": {
